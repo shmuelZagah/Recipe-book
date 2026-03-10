@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Recipe_book.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:Recipe_book"
+    xmlns:views="clr-namespace:Recipe_book.Views.Pages"
+    Shell.FlyoutBehavior="Flyout"
+    Title="Recipe_book">
+
+    <Shell.FlyoutHeader>
+        <Grid BackgroundColor="#2230A0" Padding="20" HeightRequest="70">
+            <Label Text="Bookie-Cookie" 
+                   TextColor="White" 
+                   FontSize="20" 
+                   FontAttributes="Bold"
+                   HorizontalOptions="Start"
+                   VerticalOptions="Center"
+                  />
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <FlyoutItem Title="דף הבית" Icon="home_icon.svg">
+        <ShellContent ContentTemplate="{DataTemplate local:MainPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="המתכונים שלי" Icon="menu_book_icon.svg">
+        <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="לו&quot;ז שבועי" Icon="calendar_meal_icon.svg">
+        <ShellContent ContentTemplate="{DataTemplate views:SchedulePage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="רשימת קניות" Icon="list_alt_icon.svg">
+        <ShellContent ContentTemplate="{DataTemplate views:ShoppingListPage}" />
+    </FlyoutItem>
+
+    <MenuItem Text="-----------------------------------" IsEnabled="False"/>
+
+    <Shell.FlyoutFooter>
+        <Grid Padding="20" BackgroundColor="#2230A0">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnSettingsTapped"/>
+            </Grid.GestureRecognizers>
+
+            <HorizontalStackLayout Spacing="20" >
+
+                
+                <Image 
+                    Source="settings_icon.svg" 
+                    WidthRequest="24" 
+                    HeightRequest="24"
+                    VerticalOptions="Center"
+                    />
+
+                <Label 
+                    Text="הגדרות ועזרה" 
+                       FontSize="16" 
+                       VerticalOptions="Center"
+                       TextColor="White"
+                       HorizontalTextAlignment="Center"/>
+
+            </HorizontalStackLayout>
+
+        </Grid>
+    </Shell.FlyoutFooter>
+
+</Shell>

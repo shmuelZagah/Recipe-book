@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Recipe_book.Views.SubPages.ManageMealsPage"
+             Title="ניהול ארוחות">
+
+    <Grid RowDefinitions="Auto, *, Auto" Margin="20">
+
+        <VerticalStackLayout Grid.Row="0" Margin="0,0,0,20" Spacing="5">
+            <Label Text="סידור וניהול ארוחות" FontSize="22" FontAttributes="Bold" TextColor="#1A73E8" HorizontalOptions="Center" />
+            <Label Text="{Binding TargetDay.DateString, StringFormat='מעדכן את יום {0}'}" FontSize="15" TextColor="Gray" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding TargetDay.MealGroups}" CanReorderItems="True">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border StrokeShape="RoundRectangle 8" Stroke="#E0E0E0" StrokeThickness="1" BackgroundColor="White" Padding="15,10" Margin="0,0,0,12">
+                        <Grid ColumnDefinitions="Auto, *, Auto" VerticalOptions="Center" ColumnSpacing="15">
+
+                            <Label Grid.Column="0" Text="≡" FontSize="26" TextColor="#B0B0B0" VerticalOptions="Center" />
+
+                            <Entry Grid.Column="1" Text="{Binding GroupName}" FontSize="18" FontAttributes="Bold" TextColor="#333333" BackgroundColor="Transparent" />
+
+                            <ImageButton Grid.Column="2" WidthRequest="24" HeightRequest="24" BackgroundColor="Transparent"
+                                         Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.RemoveMealCommand}"
+                                         CommandParameter="{Binding .}">
+                                <ImageButton.Source>
+                                    <FontImageSource FontFamily="OpenSansRegular" Glyph="✖" Color="#FF2E4C" Size="20" />
+                                </ImageButton.Source>
+                            </ImageButton>
+
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <VerticalStackLayout Grid.Row="2" Spacing="15" Margin="0,15,0,0">
+            <Button Text="+ הוסף ארוחה חדשה" BackgroundColor="#E8F0FE" TextColor="#1A73E8" FontAttributes="Bold" CornerRadius="12" HeightRequest="45"
+                    Command="{Binding AddMealCommand}" />
+            <Button Text="סיום ושמירה" BackgroundColor="#1A73E8" TextColor="White" FontAttributes="Bold" CornerRadius="12" HeightRequest="45"
+                    Command="{Binding SaveAndCloseCommand}" />
+        </VerticalStackLayout>
+
+    </Grid>
+</ContentPage>

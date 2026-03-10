@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Recipe_book.Views.SubPages.AllRecipesPage"
+             xmlns:vm="clr-namespace:Recipe_book.ViewModels"
+             xmlns:models="clr-namespace:Recipe_book.Models.Recipes"
+             Title="כל המתכונים"
+             FlowDirection="RightToLeft"
+             BackgroundColor="#F5F5F5">
+
+    <Grid RowDefinitions="*">
+
+        <CollectionView Grid.Row="0" ItemsSource="{Binding Recipes}" Margin="10,15,10,10">
+
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="20" HorizontalItemSpacing="10" />
+            </CollectionView.ItemsLayout>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:Recipe">
+
+                    <VerticalStackLayout Spacing="8" HorizontalOptions="Center">
+                        <VerticalStackLayout.GestureRecognizers>
+                            <TapGestureRecognizer 
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AllRecipesViewModel}}, Path=OpenRecipeCommand}" 
+                                CommandParameter="{Binding .}" />
+                        </VerticalStackLayout.GestureRecognizers>
+
+                        <Border StrokeThickness="0" 
+                                WidthRequest="70" 
+                                HeightRequest="70" 
+                                StrokeShape="RoundRectangle 35"
+                                HorizontalOptions="Center">
+                            <Border.Shadow>
+                                <Shadow Brush="Black" Offset="0,2" Opacity="0.1" Radius="3" />
+                            </Border.Shadow>
+
+                            <Image Source="{Binding ImagePath}" 
+                                   Aspect="AspectFill" 
+                                   WidthRequest="70" 
+                                   HeightRequest="70" />
+                        </Border>
+
+                        <Label Text="{Binding Title}" 
+                               FontSize="12" 
+                               FontAttributes="Bold" 
+                               TextColor="#333" 
+                               HorizontalTextAlignment="Center" 
+                               HorizontalOptions="Center" 
+                               LineBreakMode="TailTruncation" 
+                               MaxLines="2" />
+
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+</ContentPage>

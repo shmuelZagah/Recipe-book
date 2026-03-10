@@ -1,0 +1,1557 @@
+﻿[
+  {
+    "Keyword": "קמח חיטה מלא",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 125,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח כוסמין מלא",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 130,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח כוסמין לבן",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח שיפון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 125,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח שקדים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח תפוחי אדמה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח תירס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח קוקוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח אורז",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח חומוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 120,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח עדשים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 120,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח פסטה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח פיצה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח לחם",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח תופח",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח לבן",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קמח",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קורנפלור",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "טפיוקה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 130,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "סולת",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "אבקת אפייה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 160,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "סודה לשתייה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 160,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "שמרים יבשים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 160,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "שמרים טריים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 160,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קקאו",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 105,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "אבקת שוקולית",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "קפה נמס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 80,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "אבקת קפה שחור",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 80,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "סוכר חום דחוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סוכר חום דחוס קל",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 220,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סוכר חום כהה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סוכר חום בהיר",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סוכר דמררה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סוכר קנים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סוכר ענבים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 150,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סוכר וניל",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סוכר קוקוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 160,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "אבקת סוכר",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 120,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סוכר",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "דבש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סילאן",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סילאן טבעי",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "מייפל",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "מולסה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "אגבה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סירופ תירס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "סטיביה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 24,
+    "Category": "סוכרים וממתיקים"
+  },
+  {
+    "Keyword": "חמאת בוטנים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 256,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "חמאת שקדים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 256,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "חמאת אגוזי לוז",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 256,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "טחינה גולמית",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "טחינה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "ממרח תמרים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 288,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "ממרח שוקולד",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 288,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "ממרח חלבה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 288,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "ממרח לוטוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 288,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "ריבת חלב",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "ריבת תות",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "ריבה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "קונפיטורה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 320,
+    "Category": "ממרחים ומתוקים"
+  },
+  {
+    "Keyword": "חמאה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "מרגרינה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "שמן קוקוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "שמן זית",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "שמן קנולה",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "שמן חמניות",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "שמן תירס",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "שמן שומשום",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "שמן אגוזים",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "שמן",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "שומנים ושמנים"
+  },
+  {
+    "Keyword": "חלב סויה",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "חלב שקדים",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "חלב שיבולת שועל",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "חלב קוקוס",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "חלב מרוכז",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 300,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "חלב",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "שמנת מתוקה",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "שמנת להקצפה",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "שמנת לבישול",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "שמנת צמחית",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "קרם קוקוס",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "יוגורט",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "ריוויון",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "שמנת חמוצה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "גבינה לבנה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "גבינת קוטג",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "קוטג",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "גבינת שמנת",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "גבינת ריקוטה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "גבינת מסקרפונה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "אגוזי מלך קצוצים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "אגוזי מלך שלמים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 130,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "אגוזי פקאן קצוצים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "אגוזי פקאן שלמים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 130,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "אגוזי לוז קצוצים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "אגוזי לוז שלמים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "אגוזי ברזיל",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "אגוזי מקדמיה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "קשיו קלוף",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "קשיו",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "פיסטוק טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "פיסטוק קלוף",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "פיסטוק",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "בוטנים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "שקדים מולבנים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "שקדים פרוסים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "שקדים שלמים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "שקדים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "קוקוס טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "שומשום",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "פרג טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "פרג שלם",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "פרג",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "זרעי צ'יה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 160,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "זרעי פשתן",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "פשתן טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "גרעיני חמניה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "גרעיני דלעת",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "צנוברים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "אורז בסמטי",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "אורז פרסי",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "אורז יסמין",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "אורז מלא",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "אורז עגול",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "אורז לסושי",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "אורז",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "עדשים ירוקות",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "עדשים שחורות",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "עדשים כתומות",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "עדשים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "חומוס גרגירים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 180,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "חומוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 180,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "שעועית לבנה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "שעועית אדומה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "שעועית שחורה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "שעועית מש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "שעועית",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "אפונה יבשה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "אפונה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "פול יבש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 180,
+    "Category": "קטניות"
+  },
+  {
+    "Keyword": "קינואה אדומה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 170,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "קינואה לבנה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 170,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "קינואה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 170,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "בורגול גס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "בורגול דק",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "בורגול",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "קוסקוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "כוסמת",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 170,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "חיטה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "גריסי פנינה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "גריסים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "שיבולת שועל דקה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "שיבולת שועל עבה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "שיבולת שועל",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "קוואקר דק",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "קוואקר עבה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "קוואקר",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "פצפוצי אורז",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 50,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "קורנפלקס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 40,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "ברנפלקס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 50,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "גרנולה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 110,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "פירורי לחם מוזהבים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 120,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "פירורי לחם",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 120,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "פנקו",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 60,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "פסטה פנה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "פסטה יבשה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "פסטה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "פתיתים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 150,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "אטריות דקות",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 70,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "אטריות ביצים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 70,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "אטריות אורז",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 70,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "נודלס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 70,
+    "Category": "פחמימות יבשות ודגנים"
+  },
+  {
+    "Keyword": "מים",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "מיץ תפוזים",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "מיץ לימון",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "מיץ תפוחים",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "מיץ",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "יין אדום",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "יין לבן",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "יין",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "משקאות ומיצים"
+  },
+  {
+    "Keyword": "ציר עוף",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "ציר בקר",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "ציר ירקות",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "ציר",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "חומץ תפוחים",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "חומץ בלסמי",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "חומץ בן יין",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "חומץ",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "רוטב סויה",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "רוטב צ'ילי",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "רוטב טריאקי",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "רוטב ברביקיו",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "רסק עגבניות",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "רוטב עגבניות",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "קטשופ",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "מיונז",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "חרדל",
+    "BaseUnit": "מ\"ל",
+    "AmountPerCup": 240,
+    "Category": "רוטבים ומרינדות"
+  },
+  {
+    "Keyword": "מלח גס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "מלח דק",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "מלח",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 240,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "פלפל שחור גרוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "פלפל שחור טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "פלפל לבן",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "פפריקה מתוקה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "פפריקה חריפה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "פפריקה מעושנת",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "פפריקה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "כמון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "כורכום",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "קינמון טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "קינמון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "זעתר",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 80,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "סומאק",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "ראס אל חנות",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "בהרט",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "אבקת קארי",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "קארי",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "חוואיג",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "הל טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "ציפורן טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "אגוז מוסקט",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "צ'ילי גרוס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 80,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "אורגנו יבש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "בזיליקום יבש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "רוזמרין יבש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "טימין יבש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "שוקולד צ'יפס",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 175,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "שוקולד מריר קצוץ",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 170,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "צימוקים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 150,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "חמוציות",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 120,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "פירות יער קפואים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 140,
+    "Category": "קפואים"
+  },
+  {
+    "Keyword": "שזיפים מיובשים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 170,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "משמשים מיובשים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 150,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "תמרים מגולענים",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 150,
+    "Category": "אגוזים וזרעים"
+  },
+  {
+    "Keyword": "עדשים של שוקולד",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 200,
+    "Category": "מוצרי אפייה בסיסיים"
+  },
+  {
+    "Keyword": "ביצה",
+    "BaseUnit": "יחידות",
+    "AmountPerCup": 0,
+    "Category": "מוצרי חלב, ביצים ותחליפים"
+  },
+  {
+    "Keyword": "אבקת שום",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "שום גבישי",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "אבקת בצל",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "בצל יבש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 128,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "פלפל אנגלי",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "כוסברה יבשה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "ג'ינג'ר טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "זנגביל טחון",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "זרעי חרדל",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "זרעי כוסברה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 80,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "קצח",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "קימל",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "זרעי שומר",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "חילבה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 112,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "שמיר יבש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "פטרוזיליה יבשה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "טרגון יבש",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "מרווה יבשה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "נענע יבשה",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 48,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "עלי דפנה",
+    "BaseUnit": "יחידות",
+    "AmountPerCup": 0,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "כוכב אניס",
+    "BaseUnit": "יחידות",
+    "AmountPerCup": 0,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "זעפרן",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 10,
+    "Category": "תבלינים ועשבי תיבול"
+  },
+  {
+    "Keyword": "טבלת שוקולד",
+    "BaseUnit": "גרם",
+    "AmountPerCup": 100,
+    "Category": "מוצרי אפייה בסיסיים"
+  }
+
+]

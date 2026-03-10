@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Recipe_book.ViewModels"
+             x:Class="Recipe_book.Views.Pages.ShoppingListPage"
+             Title="רשימת קניות"
+             FlowDirection="RightToLeft">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="נקה סימונים 🗑️" 
+                     Command="{Binding ClearBoughtItemsCommand}" 
+                     IsEnabled="{Binding IsHeaderClosed}"
+                     Order="Secondary"
+                     />
+
+        <ToolbarItem Text="שתף 📤" 
+                     Command="{Binding ShareListCommand}" 
+                     IsEnabled="{Binding IsHeaderClosed}"
+                     Order="Secondary" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto, *">
+
+        <VerticalStackLayout Grid.Row="0" Padding="20,10,20,0">
+
+            <Button Text="📅 הגדר את טווח הקניות" 
+                    IsVisible="{Binding IsHeaderClosed}"
+                    Command="{Binding ToggleHeaderCommand}" 
+                    BackgroundColor="Transparent" 
+                    TextColor="#2B3A42" 
+                    FontAttributes="Bold" 
+                    HorizontalOptions="End"/>
+
+            <Frame IsVisible="{Binding IsHeaderOpen}" Padding="15,20" CornerRadius="12" BackgroundColor="White" HasShadow="True" BorderColor="Transparent" Margin="0,0,0,10">
+                <VerticalStackLayout Spacing="15">
+
+                    <Label Text="לכמה זמן להכין את הרשימה?" FontAttributes="Bold" FontSize="16" TextColor="#2B3A42" HorizontalOptions="Center" />
+
+                    <FlexLayout Wrap="Wrap" JustifyContent="Center" AlignItems="Center">
+                        <FlexLayout.Resources>
+                            <Style TargetType="Button">
+                                <Setter Property="BackgroundColor" Value="#F0F0F0"/>
+                                <Setter Property="TextColor" Value="Gray"/>
+                                <Setter Property="CornerRadius" Value="20"/>
+                                <Setter Property="HeightRequest" Value="40"/>
+                                <Setter Property="Padding" Value="15,0"/>
+                                <Setter Property="Margin" Value="5"/>
+                                <Setter Property="FontAttributes" Value="Bold"/>
+                            </Style>
+                        </FlexLayout.Resources>
+
+                        <Button Text="יום אחד" Command="{Binding SetDateRangeCommand}" CommandParameter="Day">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Day">
+                                    <Setter Property="BackgroundColor" Value="#2B3A42" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <Button Text="שבוע" Command="{Binding SetDateRangeCommand}" CommandParameter="Week">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Week">
+                                    <Setter Property="BackgroundColor" Value="#2B3A42" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <Button Text="שבועיים" Command="{Binding SetDateRangeCommand}" CommandParameter="TwoWeeks">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="TwoWeeks">
+                                    <Setter Property="BackgroundColor" Value="#2B3A42" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <Button Text="חודש" Command="{Binding SetDateRangeCommand}" CommandParameter="Month">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Month">
+                                    <Setter Property="BackgroundColor" Value="#2B3A42" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <Button Text="אחר..." Command="{Binding SetDateRangeCommand}" CommandParameter="Custom">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Custom">
+                                    <Setter Property="BackgroundColor" Value="#2B3A42" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </FlexLayout>
+
+                    <VerticalStackLayout IsVisible="{Binding IsCustomDateVisible}" Spacing="15" Margin="0,10,0,0">
+                        <BoxView HeightRequest="1" Color="#DDDDDD" />
+
+                        <Label Text="הגדרת טווח מותאם אישית מעכשיו:" FontSize="14" TextColor="Gray" HorizontalOptions="Center"/>
+
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,5">
+                            <Frame Grid.Column="0" Padding="0" CornerRadius="8" BorderColor="#CCCCCC" HasShadow="False" HeightRequest="45">
+                                <Entry Text="{Binding CustomNumber}" Keyboard="Numeric" HorizontalTextAlignment="Center" VerticalOptions="Center" TextColor="Black"/>
+                            </Frame>
+                            <Frame Grid.Column="1" Padding="0" CornerRadius="8" BorderColor="#CCCCCC" HasShadow="False" HeightRequest="45">
+                                <Picker ItemsSource="{Binding AvailableCustomUnits}" SelectedItem="{Binding CustomUnit}" HorizontalTextAlignment="Center" VerticalOptions="Center" TextColor="Black" Title="בחר..."/>
+                            </Frame>
+                        </Grid>
+
+                        <Button Text="סגור והצג רשימה" 
+                                Command="{Binding ToggleHeaderCommand}" 
+                                BackgroundColor="#2B3A42" 
+                                TextColor="White" 
+                                FontAttributes="Bold"
+                                FontSize="16"
+                                CornerRadius="8"
+                                HeightRequest="45"/>
+                    </VerticalStackLayout>
+
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding GroupedShoppingItems}" IsGrouped="True" Margin="20,5,20,0" IsVisible="{Binding IsHeaderClosed}">
+            <CollectionView.GroupHeaderTemplate>
+                <DataTemplate>
+                    <Label Text="{Binding CategoryName}" FontSize="18" FontAttributes="Bold" TextColor="#2B3A42" Margin="0,15,0,5" />
+                </DataTemplate>
+            </CollectionView.GroupHeaderTemplate>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Padding="10,5" Margin="0,5" CornerRadius="8" HasShadow="False" BorderColor="#EEEEEE">
+                        <HorizontalStackLayout Spacing="15" VerticalOptions="Center">
+                            <CheckBox IsChecked="{Binding IsBought}" Color="#2B3A42" />
+                            <Label Text="{Binding DisplayText}" VerticalOptions="Center" FontSize="16" TextColor="Black">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsBought}" Value="True">
+                                        <Setter Property="TextDecorations" Value="Strikethrough" />
+                                        <Setter Property="TextColor" Value="LightGray" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                        </HorizontalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.EmptyView>
+                <Label Text="אין מצרכים מתוכננים בטווח הנבחר 🛒" HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" FontSize="16" Margin="30" />
+            </CollectionView.EmptyView>
+        </CollectionView>
+
+    </Grid>
+</ContentPage>

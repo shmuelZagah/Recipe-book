@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Recipe_book.Views.Pages.SchedulePage"
+            >
+
+    <Shell.TitleView>
+        <Grid ColumnDefinitions="*, Auto" Margin="0,0,15,0">
+            <Label Grid.Column="0" Text="הלוז שלי" FontSize="20" FontAttributes="Bold" VerticalOptions="Center" />
+
+            <Grid Grid.Column="1" WidthRequest="40" HeightRequest="40" VerticalOptions="Center">
+                <Label Text="📅" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center"/>
+
+                <DatePicker Date="{Binding SelectedDatePickerDate}" Opacity="0" HorizontalOptions="Fill" VerticalOptions="Fill"/>
+            </Grid>
+        </Grid>
+    </Shell.TitleView>
+
+    <Grid RowDefinitions="Auto, Auto, *">
+
+        <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="15,15,15,5" VerticalOptions="Center">
+
+            <ImageButton Grid.Column="0" Command="{Binding PreviousWeekCommand}" 
+                         WidthRequest="40" HeightRequest="40" BackgroundColor="Transparent" VerticalOptions="Center">
+                <ImageButton.Source>
+                    <FontImageSource FontFamily="OpenSansRegular" Glyph="&gt;" Color="#1A73E8" Size="26" />
+                </ImageButton.Source>
+            </ImageButton>
+
+            <Label Grid.Column="1" Text="{Binding WeekDateRangeText}" 
+                   FontSize="20" FontAttributes="Bold" TextColor="#333333" 
+                   HorizontalOptions="Center" VerticalOptions="Center"/>
+
+            <ImageButton Grid.Column="2" Command="{Binding NextWeekCommand}" 
+                         WidthRequest="40" HeightRequest="40" BackgroundColor="Transparent" VerticalOptions="Center">
+                <ImageButton.Source>
+                    <FontImageSource FontFamily="OpenSansRegular" Glyph="&lt;" Color="#1A73E8" Size="26" />
+                </ImageButton.Source>
+            </ImageButton>
+
+        </Grid>
+
+        <CollectionView Grid.Row="1" x:Name="DaysCollectionView" ItemsSource="{Binding WeekDays}" SelectedItem="{Binding SelectedDay}" SelectionMode="Single" HeightRequest="75" Margin="0,10">
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border StrokeShape="RoundRectangle 15" WidthRequest="65" HeightRequest="65" Padding="0"
+                            Stroke="#E0E0E0" StrokeThickness="1">
+
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup Name="CommonStates">
+                                <VisualState Name="Normal">
+                                    <VisualState.Setters>
+                                        <Setter Property="BackgroundColor" Value="Transparent" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState Name="Selected">
+                                    <VisualState.Setters>
+                                        <Setter Property="BackgroundColor" Value="#6C8EBF" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
+                            <Label Text="{Binding DayName}" FontSize="14" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{Binding Source={RelativeSource AncestorType={x:Type Border}}, Path=BackgroundColor, Converter={StaticResource BlackOrWhiteConverter}, FallbackValue=Black}"/>
+                            <Label Text="{Binding DateString}" FontSize="12" HorizontalOptions="Center" TextColor="{Binding Source={RelativeSource AncestorType={x:Type Border}}, Path=BackgroundColor, Converter={StaticResource BlackOrWhiteConverter}, FallbackValue=Gray}"/>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <BoxView Grid.Row="1" HeightRequest="1" Color="#E0E0E0" VerticalOptions="End" Margin="0,0,0,0"/>
+
+        <Grid Grid.Row="2" RowDefinitions="Auto, *" Margin="15,15,15,0">
+
+            <Grid Grid.Row="0" Margin="0,0,0,15" ColumnDefinitions="*, Auto, Auto">
+
+                <Label Grid.Column="0" Text="{Binding SelectedDay.DayName, StringFormat='הארוחות של יום {0}'}" 
+                       FontSize="18" FontAttributes="Bold" TextColor="#555555" VerticalOptions="Center" HorizontalOptions="Start"/>
+
+                <Button Grid.Column="1" Text="פתח/סגור הכל" 
+                        BackgroundColor="Transparent" TextColor="#1A73E8" 
+                        FontSize="13" FontAttributes="Bold" Padding="10,0" Margin="0,0,10,0"
+                        VerticalOptions="Center"
+                        Command="{Binding ToggleAllMealsCommand}"/>
+
+                <ImageButton Grid.Column="2" HorizontalOptions="End" VerticalOptions="Center" 
+                             WidthRequest="28" HeightRequest="28" BackgroundColor="Transparent"
+                             Command="{Binding EditDayMealsCommand}">
+                    <ImageButton.Source>
+                        <FontImageSource FontFamily="OpenSansRegular" Glyph="✏" Color="#1A73E8" Size="22" />
+                    </ImageButton.Source>
+                </ImageButton>
+
+            </Grid>
+
+            <ScrollView Grid.Row="1">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding SelectedDay.MealGroups}" Spacing="25">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate>
+                            <Grid RowDefinitions="Auto, Auto">
+
+                                <Border Grid.Row="0" StrokeShape="RoundRectangle 10" StrokeThickness="0" BackgroundColor="#E8F0FE" Padding="15,8" Margin="0,0,0,12">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.ToggleMealGroupCommand}" CommandParameter="{Binding .}"/>
+                                    </Border.GestureRecognizers>
+
+                                    <Grid ColumnDefinitions="Auto, *, Auto">
+
+                                        <Label Grid.Column="0" FontSize="16" TextColor="#1A73E8" VerticalOptions="Center" Margin="0,0,10,0">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="True">
+                                                    <Setter Property="Text" Value="▲" />
+                                                </DataTrigger>
+                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="False">
+                                                    <Setter Property="Text" Value="▼" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+
+                                        <Label Grid.Column="1" Text="{Binding GroupName}" FontSize="20" FontAttributes="Bold" TextColor="#1A73E8" VerticalOptions="Center" HorizontalOptions="Start"/>
+
+                                        <Button Grid.Column="2" Text="+ הוסף מתכון" 
+                                                HorizontalOptions="End" VerticalOptions="Center"
+                                                HeightRequest="32" CornerRadius="16" 
+                                                BackgroundColor="White" TextColor="#1A73E8" 
+                                                FontAttributes="Bold" FontSize="13" Padding="15,0"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.AddRecipeToMealCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                    </Grid>
+                                </Border>
+
+                                <VerticalStackLayout Grid.Row="1" BindableLayout.ItemsSource="{Binding Meals}" Spacing="10" Margin="10,0,10,0"
+                                                       IsVisible="{Binding IsExpanded}">
+                                    <BindableLayout.EmptyView>
+                                        <Border StrokeShape="RoundRectangle 10" Stroke="#E0E0E0" StrokeThickness="1" StrokeDashArray="4,4" BackgroundColor="Transparent" Padding="15">
+                                            <Label Text="אין מתכונים מתוכננים לארוחה זו" TextColor="#A0A0A0" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                        </Border>
+                                    </BindableLayout.EmptyView>
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate>
+
+                                            <Border StrokeShape="RoundRectangle 10" Stroke="#E0E0E0" StrokeThickness="1" BackgroundColor="White" Padding="15,10">
+                                                <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
+
+                                                    <Label Grid.Column="0" Text="{Binding RecipeDetails.Title}" 
+                               FontSize="16" TextColor="#444444" FontAttributes="Bold"
+                               VerticalOptions="Center" LineBreakMode="TailTruncation">
+                                                        <Label.GestureRecognizers>
+                                                            <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.ViewRecipeCommand}"
+                                    CommandParameter="{Binding RecipeDetails}"/>
+                                                        </Label.GestureRecognizers>
+                                                    </Label>
+
+                                                    <ImageButton Grid.Column="1" 
+                                     WidthRequest="24" HeightRequest="24" 
+                                     BackgroundColor="Transparent"
+                                     Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.RemoveRecipeCommand}"
+                                     CommandParameter="{Binding .}">
+                                                        <ImageButton.Source>
+                                                            <FontImageSource FontFamily="OpenSansRegular" Glyph="-" Color="#FF2E4C" Size="24" />
+                                                        </ImageButton.Source>
+                                                    </ImageButton>
+
+                                                </Grid>
+                                            </Border>
+
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+    </Grid>
+</ContentPage>
