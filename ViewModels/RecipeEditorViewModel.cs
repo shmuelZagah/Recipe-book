@@ -220,6 +220,10 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
             }
         }
 
+        // Sync the fully constructed recipe to Cloud Firestore
+        await _database.SyncRecipeToCloudAsync(recipeToSave.Id);
+
+
         if (isNewRecipe)
         {
             var navigationParameter = new Dictionary<string, object>

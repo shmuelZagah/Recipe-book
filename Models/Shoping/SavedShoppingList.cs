@@ -1,0 +1,27 @@
+﻿using SQLite;
+using System;
+
+namespace Recipe_book.Models.Shopping;
+
+/// <summary>
+/// Represents a saved shopping list in the database.
+/// </summary>
+public class SavedShoppingList
+{
+    [PrimaryKey, AutoIncrement]
+    public int Id { get; set; }
+
+    public string Title { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+
+    // Nullable dates mean the list is not bound to a specific timeframe
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+
+    /// <summary>
+    /// True if the list is manually managed. False if it automatically 
+    /// updates when the scheduled meals change.
+    /// </summary>
+    public bool IsStatic { get; set; }
+}

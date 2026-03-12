@@ -9,5 +9,7 @@ public enum DateRangeType
     Week,
     TwoWeeks,
     Month,
-    Custom
+    NextWeek,      
+    CustomRolling,  
+    SpecificDates   
 }

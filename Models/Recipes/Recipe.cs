@@ -16,6 +16,8 @@ public partial class Recipe : ObservableObject
     public string Description { get; set; }
     public string ImagePath { get; set; }
 
+    public string CloudId { get; set; }
+
     [ObservableProperty]
     public bool isFavorite = false;
 

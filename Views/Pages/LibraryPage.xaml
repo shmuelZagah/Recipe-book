@@ -11,7 +11,8 @@
              BackgroundColor="#F5F5F5">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="תצוגה" Command="{Binding ToggleViewCommand}" />
+        <ToolbarItem Text="ייבא מהלוח 📥" Order="Secondary" Command="{Binding ImportFromClipboardCommand}" />
+        <ToolbarItem Text="תצוגה" Order="Secondary" Command="{Binding ToggleViewCommand}" />
     </ContentPage.ToolbarItems>
 
     <Grid RowDefinitions="Auto, Auto, *">

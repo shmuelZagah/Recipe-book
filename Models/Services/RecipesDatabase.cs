@@ -1,5 +1,6 @@
 ﻿using Recipe_book.Models.Organization;
 using Recipe_book.Models.Recipes;
+using Recipe_book.Models.Shopping;
 using SQLite;
 using System.Text.Json;
 
@@ -12,6 +13,7 @@ namespace Recipe_book.Services;
 public class RecipesDatabase
 {
     private SQLiteAsyncConnection Database;
+    private FirestoreService _firestoreService = new FirestoreService();
 
     public RecipesDatabase()
     {
@@ -35,7 +37,10 @@ public class RecipesDatabase
         await Database.CreateTableAsync<ScheduledMeal>();
         await Database.CreateTableAsync<DailyMealCategory>();
         await Database.CreateTableAsync<IngredientConversion>();
-        await Database.CreateTableAsync<BoughtItemRecord>();
+
+        // --- Shopping List Tables ---
+        await Database.CreateTableAsync<SavedShoppingList>();
+        await Database.CreateTableAsync<SavedShoppingListItem>();
 
         await SeedIngredientsFromJsonAsync();
     }
@@ -88,6 +93,33 @@ public class RecipesDatabase
         // 4. Finally, delete the recipe itself
         await Database.DeleteAsync(recipe);
     }
+
+    /// <summary>
+    /// Collects the recipe, its ingredients, and steps from the local database 
+    /// and pushes them as a single packaged document to Cloud Firestore.
+    /// </summary>
+    public async Task SyncRecipeToCloudAsync(int recipeId)
+    {
+        await Init();
+
+        // 1. Fetch the base recipe from the local SQLite database
+        var recipe = await GetRecipeAsync(recipeId);
+        if (recipe == null) return;
+
+        // 2. Fetch associated ingredients and steps to bundle them together
+        var ingredients = await GetIngredientsAsync(recipeId);
+        var steps = await GetStepsAsync(recipeId);
+
+        recipe.Ingredients = new System.Collections.ObjectModel.ObservableCollection<Ingredient>(ingredients);
+        recipe.Steps = new System.Collections.ObjectModel.ObservableCollection<RecipeStep>(steps);
+
+        // 3. Push the complete package to the cloud
+        await _firestoreService.SaveRecipeToCloudAsync(recipe);
+
+        // 4. Update the local recipe record with the generated CloudId
+        await Database.UpdateAsync(recipe);
+    }
+
     #endregion
     //--------------
 
@@ -393,26 +425,107 @@ public class RecipesDatabase
     //--------------
 
     //--------------
-    #region Shopping List State (Bought Items)
+    #region Saved Shopping Lists CRUD
     //--------------
 
-    public async Task<List<BoughtItemRecord>> GetBoughtItemsAsync()
+    /// <summary>
+    /// Retrieves all saved shopping lists, ordered by creation date (newest first).
+    /// </summary>
+    public async Task<List<SavedShoppingList>> GetSavedShoppingListsAsync()
     {
         await Init();
-        return await Database.Table<BoughtItemRecord>().ToListAsync();
+        return await Database.Table<SavedShoppingList>().OrderByDescending(l => l.CreatedAt).ToListAsync();
     }
 
-    public async Task AddBoughtItemAsync(string name)
+    /// <summary>
+    /// Retrieves a specific shopping list by its ID.
+    /// </summary>
+    public async Task<SavedShoppingList> GetSavedShoppingListAsync(int listId)
     {
         await Init();
-        await Database.InsertOrReplaceAsync(new BoughtItemRecord { ItemName = name });
+        return await Database.Table<SavedShoppingList>().Where(l => l.Id == listId).FirstOrDefaultAsync();
     }
 
-    public async Task RemoveBoughtItemAsync(string name)
+    /// <summary>
+    /// Inserts a new shopping list or updates an existing one.
+    /// </summary>
+    public async Task<int> SaveShoppingListAsync(SavedShoppingList list)
     {
         await Init();
-        await Database.DeleteAsync<BoughtItemRecord>(name);
+        if (list.Id != 0)
+        {
+            return await Database.UpdateAsync(list);
+        }
+        else
+        {
+            list.CreatedAt = DateTime.Now;
+            return await Database.InsertAsync(list);
+        }
     }
+
+    /// <summary>
+    /// Deletes a shopping list and all its associated items.
+    /// </summary>
+    public async Task DeleteShoppingListAsync(SavedShoppingList list)
+    {
+        await Init();
+
+        var items = await GetItemsForShoppingListAsync(list.Id);
+        foreach (var item in items)
+        {
+            await Database.DeleteAsync(item);
+        }
+
+        await Database.DeleteAsync(list);
+    }
+
+    /// <summary>
+    /// Retrieves all items belonging to a specific shopping list.
+    /// </summary>
+    public async Task<List<SavedShoppingListItem>> GetItemsForShoppingListAsync(int listId)
+    {
+        await Init();
+        return await Database.Table<SavedShoppingListItem>().Where(i => i.ListId == listId).ToListAsync();
+    }
+
+    public async Task<int> SaveShoppingListItemAsync(SavedShoppingListItem item)
+    {
+        await Init();
+        if (item.Id != 0)
+            return await Database.UpdateAsync(item);
+        else
+            return await Database.InsertAsync(item);
+    }
+
+    public async Task<int> DeleteShoppingListItemAsync(SavedShoppingListItem item)
+    {
+        await Init();
+        return await Database.DeleteAsync(item);
+    }
+
+    /// <summary>
+    /// Replaces all items in a specific list with a new set of items. 
+    /// Useful for updating dynamic lists generated from the meal planner.
+    /// </summary>
+    public async Task SyncShoppingListItemsAsync(int listId, List<SavedShoppingListItem> newItems)
+    {
+        await Init();
+
+        // 1. Delete old items
+        var existingItems = await GetItemsForShoppingListAsync(listId);
+        foreach (var item in existingItems)
+        {
+            await Database.DeleteAsync(item);
+        }
+
+        // 2. Insert new items
+        foreach (var newItem in newItems)
+        {
+            newItem.ListId = listId;
+            await Database.InsertAsync(newItem);
+        }
+    }
+
     #endregion
     //--------------
 }

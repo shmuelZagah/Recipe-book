@@ -3,6 +3,13 @@ using Recipe_book.Services;
 using Recipe_book.Views.Pages;
 using Recipe_book.Views.SubPages;
 
+// --- 1. Correct Firebase usings for v3 ---
+using Microsoft.Maui.LifecycleEvents;
+using Plugin.Firebase.Bundled.Shared;
+#if ANDROID
+using Plugin.Firebase.Bundled.Platforms.Android;
+#endif
+// -----------------------------------------
 
 namespace Recipe_book
 {
@@ -13,6 +20,7 @@ namespace Recipe_book
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .RegisterFirebaseServices() // <--- 2. Calling the Firebase init extension method
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -20,7 +28,7 @@ namespace Recipe_book
                 });
 
 #if DEBUG
-    		builder.Logging.AddDebug();
+            builder.Logging.AddDebug();
 #endif
 
             Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
@@ -30,9 +38,8 @@ namespace Recipe_book
 #endif
             });
 
-
             //pages
-            builder.Services.AddSingleton<RecipesDatabase>(); 
+            builder.Services.AddSingleton<RecipesDatabase>();
             builder.Services.AddSingleton<MainPage>();
             builder.Services.AddTransient<RecipeEditorPage>();
             builder.Services.AddTransient<RecipeViewerPage>();
@@ -57,10 +64,25 @@ namespace Recipe_book
 
             builder.Services.AddSingleton<ViewModels.MainViewModel>();
 
-         
-
-
             return builder.Build();
         }
+
+        // --- 3. Firebase initialization method ---
+        private static MauiAppBuilder RegisterFirebaseServices(this MauiAppBuilder builder)
+        {
+            builder.ConfigureLifecycleEvents(events =>
+            {
+#if ANDROID
+                events.AddAndroid(android => android.OnCreate((activity, state) =>
+                    CrossFirebase.Initialize(activity, new CrossFirebaseSettings(
+                        isFirestoreEnabled: true,
+                        isAnalyticsEnabled: false,
+                        isCrashlyticsEnabled: false)))); 
+#endif
+            });
+
+            return builder;
+        }
+        // -----------------------------------------
     }
 }
