@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+#data for myself
+Secrets.cs
+חלונות.txt
+תוכנית עבודה.txt
+working status.txt
