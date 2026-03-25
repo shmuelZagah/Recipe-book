@@ -83,7 +83,7 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
         _existingRecipeId = recipe.Id;
         RecipeTitle = recipe.Title;
         RecipeDescription = recipe.Description;
-        RecipeImage = recipe.ImagePath;
+        RecipeImage = recipe.DisplayImage;
 
         var ingredients = await _database.GetIngredientsAsync(recipe.Id);
         IngredientsList.Clear();
@@ -171,7 +171,7 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
 
         recipeToSave.Id = _existingRecipeId;
         recipeToSave.Title = RecipeTitle;
-        recipeToSave.ImagePath = RecipeImage;
+        recipeToSave.LocalImagePath = RecipeImage;
         recipeToSave.Description = RecipeDescription;
 
         await _database.SaveRecipeAsync(recipeToSave);
@@ -221,7 +221,7 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
         }
 
         // Sync the fully constructed recipe to Cloud Firestore
-        await _database.SyncRecipeToCloudAsync(recipeToSave.Id);
+        //await _database.SyncRecipeToCloudAsync(recipeToSave.Id);
 
 
         if (isNewRecipe)

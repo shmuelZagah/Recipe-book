@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text;
+using System.Web; 
 using Recipe_book.Models.Shopping;
 using Recipe_book.Services;
 using Recipe_book.ViewModels;
@@ -15,77 +16,129 @@ public partial class App : Application
         MainPage = new AppShell();
     }
 
-
     protected override async void OnAppLinkRequestReceived(Uri uri)
     {
         base.OnAppLinkRequestReceived(uri);
 
-        // Check if the link belongs to the shopping list deep link format
-        if (uri.Scheme.ToLower() == "http" && uri.Host.ToLower() == "recipebook.app")
+        // Check if the link belongs to our standard web domain
+        if (uri.Scheme.ToLower() == "https" && uri.Host.ToLower() == "recipe-book-d9389.web.app")
         {
             try
             {
-                // 1. Extract the encoded text from the URL query
-                string query = uri.Query;
-                string base64Data = query.Replace("?data=", "");
-                string decodedData = Uri.UnescapeDataString(base64Data);
+                var db = IPlatformApplication.Current.Services.GetService<RecipesDatabase>();
 
-                // Auto-fix Base64 padding if it was truncated by the URL formatting
-                int mod4 = decodedData.Length % 4;
-                if (mod4 > 0) decodedData += new string('=', 4 - mod4);
-
-                // 2. Decode the Base64 string back into the DTO object
-                byte[] bytes = Convert.FromBase64String(decodedData);
-                string json = Encoding.UTF8.GetString(bytes);
-
-                var sharedDto = JsonSerializer.Deserialize<SharedListDto>(json);
-
-                if (sharedDto != null)
+                // ==========================================
+                // Handle Shared Recipes (Cloud Download)
+                // ==========================================
+                if (uri.AbsolutePath.ToLower() == "/recipe")
                 {
-                    // 3. Get the database service instance
-                    var db = IPlatformApplication.Current.Services.GetService<RecipesDatabase>();
+                    // Extract the CloudId from the URL (e.g., ?id=XYZ123)
+                    var queryDictionary = HttpUtility.ParseQueryString(uri.Query);
+                    string cloudId = queryDictionary["id"];
 
-                    // 4. Create a new static shopping list
-                    var newList = new SavedShoppingList
+                    if (!string.IsNullOrEmpty(cloudId))
                     {
-                        Title = sharedDto.T + " (מיובא)", // Append "(Imported)" in Hebrew
-                        IsStatic = true, // Static list, detached from meal schedule
-                        CreatedAt = DateTime.Now
-                    };
+                        var firestoreService = new FirestoreService();
+                        var importedRecipe = await firestoreService.GetRecipeFromCloudAsync(cloudId);
 
-                    await db.SaveShoppingListAsync(newList); // Save to generate the new ID
-
-                    // 5. Convert the lightweight DTO items to actual database items
-                    var flatList = new List<SavedShoppingListItem>();
-                    foreach (var item in sharedDto.I)
-                    {
-                        string displayUnit = item.U == "יחידות" ? "" : item.U;
-                        string displayTxt = string.IsNullOrWhiteSpace(displayUnit) ? $"{item.Q} {item.N}" : $"{item.Q} {displayUnit} {item.N}";
-
-                        flatList.Add(new SavedShoppingListItem
+                        if (importedRecipe != null)
                         {
-                            ListId = newList.Id,
-                            Name = item.N,
-                            Quantity = item.Q,
-                            Unit = displayUnit,
-                            Category = item.C,
-                            DisplayText = displayTxt,
-                            IsBought = false
-                        });
+                            // --- THE CLONE MAGIC ---
+                            // 1. Disconnect it from the original cloud document
+                            importedRecipe.CloudId = null;
+                            importedRecipe.Id = 0; // Force SQLite to treat it as a new record
+
+                            // 2. Clean up personal data
+                            importedRecipe.IsFavorite = false;
+                            importedRecipe.LastCookedDate = null;
+                            importedRecipe.Title = importedRecipe.Title;
+
+                            // 3. Save the base recipe locally
+                            await db.SaveRecipeAsync(importedRecipe);
+
+                            // 4. Save Ingredients locally
+                            if (importedRecipe.Ingredients != null)
+                            {
+                                foreach (var ingredient in importedRecipe.Ingredients)
+                                {
+                                    ingredient.Id = 0; // Reset local ID
+                                    ingredient.RecipeId = importedRecipe.Id;
+                                    await db.SaveIngredientAsync(ingredient);
+                                }
+                            }
+
+                            // 5. Save Steps locally
+                            if (importedRecipe.Steps != null)
+                            {
+                                foreach (var step in importedRecipe.Steps)
+                                {
+                                    step.Id = 0; // Reset local ID
+                                    step.RecipeId = importedRecipe.Id;
+                                    step.IsCompleted = false; // Ensure it's not marked as done
+                                    await db.SaveStepAsync(step);
+                                }
+                            }
+
+                            await App.Current.MainPage.DisplayAlert("הצלחה!", $"המתכון '{importedRecipe.Title}' קפץ פנימה. בוא נבחר באיזו תיקייה לשמור אותו.", "המשך");
+
+                            var navParam = new Dictionary<string, object>
+                            {
+                                { "Recipe", importedRecipe },
+                                { "IsFromNewRecipe", false }
+                            };
+
+                            // Ensure navigation runs on the main UI thread
+                            MainThread.BeginInvokeOnMainThread(async () =>
+                            {
+                                await Shell.Current.GoToAsync(nameof(Views.SubPages.FolderSelectionPage), navParam);
+                            });
+                        }
                     }
+                }
 
-                    // Save all the converted items to the new list
-                    await db.SyncShoppingListItemsAsync(newList.Id, flatList);
+                // ==========================================
+                // Handle Shared Folders (Cloud Download)
+                // ==========================================
+                else if (uri.AbsolutePath.ToLower() == "/folder")
+                {
+                    var queryDictionary = HttpUtility.ParseQueryString(uri.Query);
+                    string cloudId = queryDictionary["id"];
 
-                    // 6. Notify the user of the successful import
-                    await App.Current.MainPage.DisplayAlert("רשימה יובאה! 🎉", $"הרשימה '{newList.Title}' נוספה בהצלחה. תוכל למצוא אותה בתפריט הרשימות שלך.", "מעולה");
+                    if (!string.IsNullOrEmpty(cloudId))
+                    {
+                        var firestoreService = new FirestoreService();
+                        var importedFolder = await firestoreService.GetSharedFolderFromCloudAsync(cloudId);
+
+                        if (importedFolder != null && !string.IsNullOrEmpty(importedFolder.RootFolderJson))
+                        {
+                            await App.Current.MainPage.DisplayAlert("תיקייה התקבלה!", $"התיקייה '{importedFolder.BookName}' מוכנה. בחר איפה לשמור אותה.", "המשך");
+
+                            // Create the exact parameters our smart FolderSelectionViewModel is waiting for!
+                            var navParam = new Dictionary<string, object>
+                            {
+                                { "IsImportMode", true },
+                                { "ImportedFolderJson", importedFolder.RootFolderJson }
+                            };
+
+                            // Ensure navigation runs on the main UI thread
+                            MainThread.BeginInvokeOnMainThread(async () =>
+                            {
+                                await Shell.Current.GoToAsync(nameof(Views.SubPages.FolderSelectionPage), navParam);
+                            });
+                        }
+                        else
+                        {
+                            await App.Current.MainPage.DisplayAlert("שגיאה", "לא הצלחנו למצוא את התיקייה בענן. ייתכן שהקישור שבור או שהתיקייה נמחקה.", "אישור");
+                        }
+                    }
                 }
             }
+
             catch (Exception ex)
             {
-                // Handle corrupted or invalid deep links
-                await App.Current.MainPage.DisplayAlert("שגיאה בייבוא", "הקישור לא תקין או פגום.", "אישור");
+                await App.Current.MainPage.DisplayAlert("שגיאה בייבוא", $"הקישור לא תקין או שגיאת רשת: {ex.Message}", "אישור");
             }
         }
     }
 }
+

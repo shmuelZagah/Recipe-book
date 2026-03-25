@@ -14,9 +14,6 @@ namespace Recipe_book.ViewModels;
 #region Helper Classes
 //--------------
 
-/// <summary>
-/// A wrapper class for a RecipeFolder that adds a selectable state for the UI.
-/// </summary>
 public partial class SelectableFolder : ObservableObject
 {
     public RecipeFolder Folder { get; set; }
@@ -28,11 +25,10 @@ public partial class SelectableFolder : ObservableObject
 #endregion
 //--------------
 
-/// <summary>
-/// ViewModel for selecting and managing which folders a specific recipe belongs to.
-/// </summary>
 [QueryProperty(nameof(TargetRecipe), "Recipe")]
 [QueryProperty(nameof(IsFromNewRecipe), "IsFromNewRecipe")]
+[QueryProperty(nameof(IsImportMode), "IsImportMode")]
+[QueryProperty(nameof(ImportedFolderJson), "ImportedFolderJson")]
 public partial class FolderSelectionViewModel : ObservableObject
 {
     private readonly RecipesDatabase _database;
@@ -48,6 +44,27 @@ public partial class FolderSelectionViewModel : ObservableObject
     [ObservableProperty]
     private bool isFromNewRecipe;
 
+    // --- NEW: Import Mode Properties ---
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRecipeMode))]
+    [NotifyPropertyChangedFor(nameof(PageTitle))]
+    [NotifyPropertyChangedFor(nameof(SaveButtonText))]
+    private bool isImportMode;
+
+    public bool IsRecipeMode => !IsImportMode; // Simple flag for the XAML to hide/show things
+    public string PageTitle => IsImportMode ? "בחר מיקום לתיקייה" : "שמירה בתיקיות";
+    public string SaveButtonText => IsImportMode ? "שמור כאן" : "שמור";
+
+    [ObservableProperty]
+    private string importedFolderJson;
+
+    // --- NEW: Loading Overlay Properties ---
+    [ObservableProperty]
+    private bool isLoading;
+
+    [ObservableProperty]
+    private string loadingText = "טוען...";
+
     [ObservableProperty]
     private string searchQuery;
 
@@ -58,8 +75,6 @@ public partial class FolderSelectionViewModel : ObservableObject
     public bool IsInnerFolder => CurrentFolder != null;
 
     public ObservableCollection<SelectableFolder> DisplayedFolders { get; } = new();
-
-    // The collection of chips displayed at the bottom for currently selected folders
     public ObservableCollection<RecipeFolder> SelectedFolders { get; } = new();
 
     #endregion
@@ -76,10 +91,12 @@ public partial class FolderSelectionViewModel : ObservableObject
 
     partial void OnTargetRecipeChanged(Recipe value)
     {
-        if (value != null)
-        {
-            _ = InitializeAsync();
-        }
+        if (value != null && IsRecipeMode) _ = InitializeAsync();
+    }
+
+    partial void OnIsImportModeChanged(bool value)
+    {
+        if (value) _ = InitializeAsync(); // Trigger init if we opened in Import mode (since TargetRecipe will be null)
     }
 
     partial void OnSearchQueryChanged(string value)
@@ -91,13 +108,14 @@ public partial class FolderSelectionViewModel : ObservableObject
     {
         _allFolders = await _database.GetFoldersAsync();
 
-        // Load previously selected folders for this recipe
-        var currentMappings = await _database.GetFoldersForRecipeAsync(TargetRecipe.Id);
-
-        SelectedFolders.Clear();
-        foreach (var folder in currentMappings)
+        if (IsRecipeMode && TargetRecipe != null)
         {
-            SelectedFolders.Add(folder);
+            var currentMappings = await _database.GetFoldersForRecipeAsync(TargetRecipe.Id);
+            SelectedFolders.Clear();
+            foreach (var folder in currentMappings)
+            {
+                SelectedFolders.Add(folder);
+            }
         }
 
         LoadCurrentLevelFolders();
@@ -134,14 +152,12 @@ public partial class FolderSelectionViewModel : ObservableObject
 
     private async void CloseScreen()
     {
-        if (IsFromNewRecipe)
+        if (IsFromNewRecipe || IsImportMode)
         {
-            // Closes both the modal and the underlying editor, returning to the main screen
             await Shell.Current.GoToAsync("../..");
         }
         else
         {
-            // Closes only the modal, returning to the recipe viewer
             await Shell.Current.GoToAsync("..");
         }
     }
@@ -156,50 +172,35 @@ public partial class FolderSelectionViewModel : ObservableObject
     [RelayCommand]
     public void ToggleFolderSelection(SelectableFolder selectableFolder)
     {
-        if (selectableFolder == null) return;
+        if (selectableFolder == null || IsImportMode) return; // Disable checkboxes in import mode
 
         selectableFolder.IsSelected = !selectableFolder.IsSelected;
-
         var existingInSelected = SelectedFolders.FirstOrDefault(f => f.Id == selectableFolder.Folder.Id);
 
         if (selectableFolder.IsSelected && existingInSelected == null)
-        {
             SelectedFolders.Add(selectableFolder.Folder);
-        }
         else if (!selectableFolder.IsSelected && existingInSelected != null)
-        {
             SelectedFolders.Remove(existingInSelected);
-        }
     }
 
     [RelayCommand]
     public void RemoveFromSelected(RecipeFolder folderToRemove)
     {
         if (folderToRemove == null) return;
-
         SelectedFolders.Remove(folderToRemove);
 
-        // Update the UI if the removed folder is currently displayed on screen
         var displayedItem = DisplayedFolders.FirstOrDefault(d => d.Folder.Id == folderToRemove.Id);
-        if (displayedItem != null)
-        {
-            displayedItem.IsSelected = false;
-        }
+        if (displayedItem != null) displayedItem.IsSelected = false;
     }
 
     [RelayCommand]
     public void OpenFolder(RecipeFolder folder)
     {
         CurrentFolder = folder;
-
         if (!string.IsNullOrEmpty(SearchQuery))
-        {
-            SearchQuery = string.Empty; // Triggers OnSearchQueryChanged automatically
-        }
+            SearchQuery = string.Empty;
         else
-        {
             LoadCurrentLevelFolders();
-        }
     }
 
     [RelayCommand]
@@ -218,8 +219,29 @@ public partial class FolderSelectionViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveAsync()
     {
-        await _database.UpdateRecipeFoldersAsync(TargetRecipe.Id, SelectedFolders.Select(f => f.Id).ToList());
-        CloseScreen();
+        if (IsImportMode)
+        {
+            // --- THE IMPORT ENGINE TRIGGER ---
+            IsLoading = true;
+            LoadingText = "מוריד מתכונים ובונה את התיקייה...";
+
+            try
+            {
+                int? targetParentId = CurrentFolder?.Id;
+                await _database.ImportSharedFolderAsync(ImportedFolderJson, targetParentId);
+            }
+            finally
+            {
+                IsLoading = false;
+                CloseScreen();
+            }
+        }
+        else
+        {
+            // Existing recipe mapping logic
+            await _database.UpdateRecipeFoldersAsync(TargetRecipe.Id, SelectedFolders.Select(f => f.Id).ToList());
+            CloseScreen();
+        }
     }
 
     [RelayCommand]

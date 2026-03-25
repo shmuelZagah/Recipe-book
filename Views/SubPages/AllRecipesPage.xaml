@@ -35,7 +35,7 @@
                                 <Shadow Brush="Black" Offset="0,2" Opacity="0.1" Radius="3" />
                             </Border.Shadow>
 
-                            <Image Source="{Binding ImagePath}" 
+                            <Image Source="{Binding DisplayImage}" 
                                    Aspect="AspectFill" 
                                    WidthRequest="70" 
                                    HeightRequest="70" />

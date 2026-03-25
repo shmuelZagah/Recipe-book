@@ -44,6 +44,12 @@ public partial class RecipeViewerViewModel : ObservableObject, IQueryAttributabl
     public ObservableCollection<Ingredient> IngredientsList { get; } = new();
     public ObservableCollection<RecipeStep> StepsList { get; } = new();
 
+    [ObservableProperty]
+    private bool isLoading;
+
+    [ObservableProperty]
+    private string loadingText = "טוען...";
+
     #endregion
     //--------------
 
@@ -265,6 +271,40 @@ public partial class RecipeViewerViewModel : ObservableObject, IQueryAttributabl
             }
 
             await Shell.Current.GoToAsync("..");
+        }
+    }
+
+    [RelayCommand]
+    public async Task ShareRecipeAsync()
+    {
+        if (CurrentRecipe == null) return;
+
+        LoadingText = "אורז את המתכון ויוצר קישור, נא להמתין";
+        IsLoading = true;
+
+        try
+        {
+            CurrentRecipe.Ingredients = new ObservableCollection<Ingredient>(IngredientsList);
+            CurrentRecipe.Steps = new ObservableCollection<RecipeStep>(StepsList);
+
+            var firestoreService = new FirestoreService();
+            await firestoreService.SaveRecipeToCloudAsync(CurrentRecipe);
+
+            await _database.SaveRecipeAsync(CurrentRecipe);
+
+            string shareLink = $"https://recipe-book-d9389.web.app/recipe?id={CurrentRecipe.CloudId}";
+
+            await Microsoft.Maui.ApplicationModel.DataTransfer.Share.Default.RequestAsync(new ShareTextRequest
+            {
+                Title = "שתף מתכון",
+                Text = $"היי! שמרתי פה מתכון מעולה ל-{CurrentRecipe.Title}. לחץ על הקישור כדי לשמור אותו אצלך:",
+                Uri = shareLink
+            });
+        }
+        finally
+        {
+            IsLoading = false;
+            LoadingText = "טוען...";
         }
     }
 

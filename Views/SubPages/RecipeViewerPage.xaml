@@ -4,6 +4,7 @@
              x:Class="Recipe_book.Views.SubPages.RecipeViewerPage"
              xmlns:vm="clr-namespace:Recipe_book.ViewModels"
              xmlns:models="clr-namespace:Recipe_book.Models.Recipes"
+             xmlns:items="clr-namespace:Recipe_book.Views.Items"
              Title="{Binding CurrentRecipe.Title}"
              FlowDirection="RightToLeft"
              BackgroundColor="White">
@@ -24,6 +25,12 @@
         <ToolbarItem Text="הוסף לארוחה" 
              Command="{Binding OpenScheduleOverlayCommand}"
              Order="Secondary" />
+
+        <ToolbarItem Text="שתף" 
+                     Command="{Binding ShareRecipeCommand}" 
+                     Order="Secondary" 
+                        />
+
     </ContentPage.ToolbarItems>
     <Grid>
 
@@ -34,7 +41,7 @@
 
                 <VerticalStackLayout x:Name="HeaderSection">
                     <Grid HeightRequest="200">
-                        <Image Source="{Binding CurrentRecipe.ImagePath}"
+                        <Image Source="{Binding CurrentRecipe.DisplayImage}"
                                Aspect="AspectFill"
                                HorizontalOptions="Fill"
                                VerticalOptions="Fill"/>
@@ -293,6 +300,9 @@
                 </VerticalStackLayout>
             </Frame>
         </Grid>
+        
+        <items:LoadingOverlayControl IsLoading="{Binding IsLoading}" 
+                                     LoadingText="{Binding LoadingText}" />
     </Grid>
 </ContentPage>
     

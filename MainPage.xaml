@@ -29,7 +29,7 @@
                             <DataTemplate x:DataType="models:Recipe">
                                 <controls:RecipeCardControl 
                                     RecipeName="{Binding Title}" 
-                                    RecipeImage="{Binding ImagePath}">
+                                    RecipeImage="{Binding DisplayImage}">
 
                                     <controls:RecipeCardControl.GestureRecognizers>
                                         <TapGestureRecognizer 
@@ -56,7 +56,7 @@
                             <DataTemplate x:DataType="models:Recipe">
                                 <controls:RecipeCardControl 
                                     RecipeName="{Binding Title}" 
-                                    RecipeImage="{Binding ImagePath}">
+                                    RecipeImage="{Binding DisplayImage}">
 
                                     <controls:RecipeCardControl.GestureRecognizers>
                                         <TapGestureRecognizer 
@@ -125,7 +125,7 @@
                             <DataTemplate x:DataType="models:Recipe">
                                 <controls:RecipeCardControl 
                                     RecipeName="{Binding Title}" 
-                                    RecipeImage="{Binding ImagePath}">
+                                    RecipeImage="{Binding DisplayImage}">
 
                                     <controls:RecipeCardControl.GestureRecognizers>
                                         <TapGestureRecognizer 

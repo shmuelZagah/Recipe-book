@@ -11,28 +11,29 @@
              BackgroundColor="#F5F5F5">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="ייבא מהלוח 📥" Order="Secondary" Command="{Binding ImportFromClipboardCommand}" />
         <ToolbarItem Text="תצוגה" Order="Secondary" Command="{Binding ToggleViewCommand}" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto, Auto, *">
+    <Grid>
 
-        <controls:SearchBarControl Grid.Row="0" SearchText="{Binding SearchQuery}" PlaceholderText="חפש תיקייה או מתכון..." />
-        
-        <HorizontalStackLayout Grid.Row="1" 
+        <Grid RowDefinitions="Auto, Auto, *">
+
+            <controls:SearchBarControl Grid.Row="0" SearchText="{Binding SearchQuery}" PlaceholderText="חפש תיקייה או מתכון..." />
+
+            <HorizontalStackLayout Grid.Row="1" 
                                IsVisible="{Binding IsInnerFolder}"
                                Margin="15,10,15,0"
                                Spacing="8">
-            <HorizontalStackLayout.GestureRecognizers>
-                <TapGestureRecognizer Command="{Binding GoUpCommand}" />
-            </HorizontalStackLayout.GestureRecognizers>
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GoUpCommand}" />
+                </HorizontalStackLayout.GestureRecognizers>
 
-            <Label Text="➔" FontSize="18" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
-            <Label Text="חזור" FontSize="16" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
-        </HorizontalStackLayout>
+                <Label Text="➔" FontSize="18" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
+                <Label Text="חזור" FontSize="16" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
+            </HorizontalStackLayout>
 
 
-        <Border Grid.Row="1"
+            <Border Grid.Row="1"
                 IsVisible="{Binding IsRootFolder}"
                 StrokeThickness="1" 
                 Stroke="#D9EAF2"
@@ -40,86 +41,86 @@
                 Margin="15,10,15,15" 
                 HeightRequest="50" 
                 StrokeShape="RoundRectangle 25">
-            <Border.GestureRecognizers>
-                <TapGestureRecognizer Command="{Binding OpenAllRecipesCommand}" />
-            </Border.GestureRecognizers>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenAllRecipesCommand}" />
+                </Border.GestureRecognizers>
 
-            <Grid ColumnDefinitions="*, Auto" Padding="20,0">
-                <Label Grid.Column="0" Text=" 📖   כל המתכונים שלי" FontSize="15" FontAttributes="Bold" TextColor="#0570A0" VerticalOptions="Center" />
-                <Label Grid.Column="1" Text="←" FontSize="18" FontAttributes="Bold" TextColor="#0570A0" VerticalOptions="Center" />
-            </Grid>
-        </Border>
+                <Grid ColumnDefinitions="*, Auto" Padding="20,0">
+                    <Label Grid.Column="0" Text=" 📖   כל המתכונים שלי" FontSize="15" FontAttributes="Bold" TextColor="#0570A0" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="←" FontSize="18" FontAttributes="Bold" TextColor="#0570A0" VerticalOptions="Center" />
+                </Grid>
+            </Border>
 
 
-        <ScrollView Grid.Row="2" Margin="15">
-            <VerticalStackLayout Spacing="25">
+            <ScrollView Grid.Row="2" Margin="15">
+                <VerticalStackLayout Spacing="25">
 
-                <CollectionView ItemsSource="{Binding Folders}">
-                    <CollectionView.ItemsLayout>
-                        <GridItemsLayout Orientation="Vertical"
+                    <CollectionView ItemsSource="{Binding Folders}">
+                        <CollectionView.ItemsLayout>
+                            <GridItemsLayout Orientation="Vertical"
                                          Span="{Binding GridSpan}"
                                          HorizontalItemSpacing="15"
                                          VerticalItemSpacing="15" />
-                    </CollectionView.ItemsLayout>
+                        </CollectionView.ItemsLayout>
 
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="models:RecipeFolder">
-                            <Border StrokeThickness="0"
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:RecipeFolder">
+                                <Border StrokeThickness="0"
                                     BackgroundColor="White"
                                     HeightRequest="160"
                                     StrokeShape="RoundRectangle 15">
 
-                                <Border.Shadow>
-                                    <Shadow Brush="Black" Offset="0,4" Opacity="0.1" Radius="5" />
-                                </Border.Shadow>
+                                    <Border.Shadow>
+                                        <Shadow Brush="Black" Offset="0,4" Opacity="0.1" Radius="5" />
+                                    </Border.Shadow>
 
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer 
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer 
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=OpenFolderCommand}"
                                         CommandParameter="{Binding .}"/>
-                                </Border.GestureRecognizers>
+                                    </Border.GestureRecognizers>
 
-                                <Grid>
-                                    <Grid RowDefinitions="*, Auto">
-                                        <BoxView Grid.Row="0" Color="#E0E0E0" />
-                                        <Label Grid.Row="0" Text="📁" FontSize="50" HorizontalOptions="Center" VerticalOptions="Center" />
-                                        <Label Grid.Row="1" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" TextColor="#333" HorizontalTextAlignment="Center" Padding="10" LineBreakMode="TailTruncation" />
-                                    </Grid>
+                                    <Grid>
+                                        <Grid RowDefinitions="*, Auto">
+                                            <BoxView Grid.Row="0" Color="#E0E0E0" />
+                                            <Label Grid.Row="0" Text="📁" FontSize="50" HorizontalOptions="Center" VerticalOptions="Center" />
+                                            <Label Grid.Row="1" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" TextColor="#333" HorizontalTextAlignment="Center" Padding="10" LineBreakMode="TailTruncation" />
+                                        </Grid>
 
-                                    <Label Text="⋮" FontSize="28" FontAttributes="Bold" TextColor="#555" HorizontalOptions="Start" VerticalOptions="Start" Padding="15,5,15,15" Margin="0">
-                                        <Label.GestureRecognizers>
-                                            <TapGestureRecognizer 
+                                        <Label Text="⋮" FontSize="28" FontAttributes="Bold" TextColor="#555" HorizontalOptions="Start" VerticalOptions="Start" Padding="15,5,15,15" Margin="0">
+                                            <Label.GestureRecognizers>
+                                                <TapGestureRecognizer 
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=FolderOptionsCommand}"
                                                 CommandParameter="{Binding .}"/>
-                                        </Label.GestureRecognizers>
-                                    </Label>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
+                                            </Label.GestureRecognizers>
+                                        </Label>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
 
-                <CollectionView ItemsSource="{Binding FolderRecipes}">
-                    <CollectionView.ItemsLayout>
-                        <GridItemsLayout Orientation="Vertical"
+                    <CollectionView ItemsSource="{Binding FolderRecipes}">
+                        <CollectionView.ItemsLayout>
+                            <GridItemsLayout Orientation="Vertical"
                                          Span="{Binding GridSpan}"
                                          HorizontalItemSpacing="15"
                                          VerticalItemSpacing="15" />
-                    </CollectionView.ItemsLayout>
+                        </CollectionView.ItemsLayout>
 
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="recipes:Recipe">
-                            <Grid>
-                                <controls:RecipeCardControl RecipeName="{Binding Title}" 
-                                                            RecipeImage="{Binding ImagePath}">
-                                    <controls:RecipeCardControl.GestureRecognizers>
-                                        <TapGestureRecognizer 
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="recipes:Recipe">
+                                <Grid>
+                                    <controls:RecipeCardControl RecipeName="{Binding Title}" 
+                                                            RecipeImage="{Binding DisplayImage}">
+                                        <controls:RecipeCardControl.GestureRecognizers>
+                                            <TapGestureRecognizer 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=OpenRecipeCommand}"
                                             CommandParameter="{Binding .}"/>
-                                    </controls:RecipeCardControl.GestureRecognizers>
-                                </controls:RecipeCardControl>
+                                        </controls:RecipeCardControl.GestureRecognizers>
+                                    </controls:RecipeCardControl>
 
-                                <Border StrokeThickness="0" 
+                                    <Border StrokeThickness="0" 
                                         BackgroundColor="#80000000" 
                                         HorizontalOptions="Start" 
                                         VerticalOptions="Start"
@@ -127,29 +128,29 @@
                                         WidthRequest="35"
                                         HeightRequest="35"
                                         StrokeShape="RoundRectangle 20">
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer 
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=RecipeOptionsCommand}"
                                             CommandParameter="{Binding .}"/>
-                                    </Border.GestureRecognizers>
+                                        </Border.GestureRecognizers>
 
-                                    <Label Text="⋮" 
+                                        <Label Text="⋮" 
                                            FontSize="24" 
                                            FontAttributes="Bold" 
                                            TextColor="White" 
                                            HorizontalOptions="Center" 
                                            VerticalOptions="Center"
                                            Margin="0,-5,0,0"/>
-                                </Border>
-                            </Grid>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
 
-            </VerticalStackLayout>
-        </ScrollView>
+                </VerticalStackLayout>
+            </ScrollView>
 
-        <Button Grid.Row="2"
+            <Button Grid.Row="2"
                 Text="+"
                 Command="{Binding AddFolderCommand}"
                 FontSize="30"
@@ -163,5 +164,12 @@
                 VerticalOptions="End"
                 Margin="20"
                 Shadow="{Shadow Brush=Black, Offset='0,4', Opacity=0.3, Radius=5}" />
+
+        </Grid>
+
+        <controls:LoadingOverlayControl IsLoading="{Binding IsLoading}"
+                                        LoadingText="{Binding LoadingText}"/>
     </Grid>
+
+
 </ContentPage>

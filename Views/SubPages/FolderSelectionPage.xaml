@@ -5,95 +5,102 @@
              xmlns:vm="clr-namespace:Recipe_book.ViewModels"
              xmlns:models="clr-namespace:Recipe_book.Models.Organization"
              xmlns:controls="clr-namespace:Recipe_book.Views.Items"
-             Title="בחר תיקיות"
+             Title="{Binding PageTitle}"
              FlowDirection="RightToLeft"
              BackgroundColor="#F5F5F5"
              Shell.PresentationMode="ModalAnimated">
 
-    <Grid RowDefinitions="Auto, Auto, Auto, *, Auto">
+    <Grid>
 
-        <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="15" BackgroundColor="White">
-            <Button Grid.Column="0" Text="ביטול" Command="{Binding CancelCommand}" BackgroundColor="Transparent" TextColor="Gray" FontSize="16" />
-            <Label Grid.Column="1" Text="שמירה בתיקיות" FontAttributes="Bold" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center" />
-            <Button Grid.Column="2" Text="שמור" Command="{Binding SaveCommand}" BackgroundColor="Transparent" TextColor="#0570A0" FontAttributes="Bold" FontSize="16" />
+        <Grid RowDefinitions="Auto, Auto, Auto, *, Auto">
+
+            <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Padding="15" BackgroundColor="White">
+                <Button Grid.Column="0" Text="ביטול" Command="{Binding CancelCommand}" BackgroundColor="Transparent" TextColor="Gray" FontSize="16" />
+                <Label Grid.Column="1" Text="{Binding PageTitle}" FontAttributes="Bold" FontSize="18" HorizontalOptions="Center" VerticalOptions="Center" />
+                <Button Grid.Column="2" Text="{Binding SaveButtonText}" Command="{Binding SaveCommand}" BackgroundColor="Transparent" TextColor="#0570A0" FontAttributes="Bold" FontSize="16" />
+            </Grid>
+
+            <controls:SearchBarControl Grid.Row="1" SearchText="{Binding SearchQuery}" PlaceholderText="חפש תיקייה..." />
+
+            <HorizontalStackLayout Grid.Row="2" IsVisible="{Binding IsInnerFolder}" Margin="15,0,15,10" Spacing="8">
+                <HorizontalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding GoUpCommand}" />
+                </HorizontalStackLayout.GestureRecognizers>
+                <Label Text="➔" FontSize="18" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
+                <Label Text="חזור" FontSize="16" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
+            </HorizontalStackLayout>
+
+            <CollectionView Grid.Row="3" ItemsSource="{Binding DisplayedFolders}" Margin="15,0,15,15">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SelectableFolder">
+                        <Border StrokeThickness="0" BackgroundColor="White" Margin="0,0,0,10" StrokeShape="RoundRectangle 10" HeightRequest="60">
+                            <Grid ColumnDefinitions="*, Auto" Padding="15,0">
+
+                                <HorizontalStackLayout Grid.Column="0" Spacing="15" VerticalOptions="Center" BackgroundColor="Transparent">
+                                    <HorizontalStackLayout.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FolderSelectionViewModel}}, Path=OpenFolderCommand}" CommandParameter="{Binding Folder}" />
+                                    </HorizontalStackLayout.GestureRecognizers>
+                                    <Label Text="📁" FontSize="24" VerticalOptions="Center" />
+                                    <Label Text="{Binding Folder.Name}" FontSize="16" FontAttributes="Bold" TextColor="#333" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+
+                                <Border Grid.Column="1" WidthRequest="28" HeightRequest="28" StrokeShape="RoundRectangle 14" Stroke="#0570A0" StrokeThickness="2" VerticalOptions="Center"
+                                        IsVisible="{Binding Source={RelativeSource AncestorType={x:Type vm:FolderSelectionViewModel}}, Path=IsRecipeMode}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FolderSelectionViewModel}}, Path=ToggleFolderSelectionCommand}" CommandParameter="{Binding .}"/>
+                                    </Border.GestureRecognizers>
+
+                                    <Label Text="✓" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" IsVisible="{Binding IsSelected}" />
+
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="#0570A0" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="False">
+                                            <Setter Property="BackgroundColor" Value="Transparent" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Border Grid.Row="4" BackgroundColor="White" Padding="15" StrokeThickness="0" IsVisible="{Binding IsRecipeMode}">
+                <Border.Shadow>
+                    <Shadow Brush="Black" Offset="0,-4" Opacity="0.05" Radius="5" />
+                </Border.Shadow>
+                <Grid RowDefinitions="Auto, Auto">
+                    <Label Grid.Row="0" Text="תיקיות שנבחרו:" FontSize="14" FontAttributes="Bold" TextColor="Gray" Margin="0,0,0,10" />
+
+                    <ScrollView Grid.Row="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding SelectedFolders}" Spacing="10">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:RecipeFolder">
+                                    <Border BackgroundColor="#E3F2FD" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="10,5">
+                                        <HorizontalStackLayout Spacing="8">
+                                            <Label Text="{Binding Name}" TextColor="#0570A0" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
+                                            <Label Text="✕" TextColor="#0570A0" FontSize="14" VerticalOptions="Center" FontAttributes="Bold">
+                                                <Label.GestureRecognizers>
+                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FolderSelectionViewModel}}, Path=RemoveFromSelectedCommand}" CommandParameter="{Binding .}" />
+                                                </Label.GestureRecognizers>
+                                            </Label>
+                                        </HorizontalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+
+                            <BindableLayout.EmptyView>
+                                <Label Text="לא נבחרו תיקיות (המתכון יופיע במסך הראשי)" TextColor="LightGray" FontSize="14" FontAttributes="Italic" VerticalOptions="Center" />
+                            </BindableLayout.EmptyView>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+                </Grid>
+            </Border>
         </Grid>
 
-        <controls:SearchBarControl Grid.Row="1" SearchText="{Binding SearchQuery}" PlaceholderText="חפש תיקייה..." />
-
-        <HorizontalStackLayout Grid.Row="2" IsVisible="{Binding IsInnerFolder}" Margin="15,0,15,10" Spacing="8">
-            <HorizontalStackLayout.GestureRecognizers>
-                <TapGestureRecognizer Command="{Binding GoUpCommand}" />
-            </HorizontalStackLayout.GestureRecognizers>
-            <Label Text="➔" FontSize="18" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
-            <Label Text="חזור" FontSize="16" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
-        </HorizontalStackLayout>
-
-        <CollectionView Grid.Row="3" ItemsSource="{Binding DisplayedFolders}" Margin="15,0,15,15">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="vm:SelectableFolder">
-                    <Border StrokeThickness="0" BackgroundColor="White" Margin="0,0,0,10" StrokeShape="RoundRectangle 10" HeightRequest="60">
-                        <Grid ColumnDefinitions="*, Auto" Padding="15,0">
-
-                            <HorizontalStackLayout Grid.Column="0" Spacing="15" VerticalOptions="Center" BackgroundColor="Transparent">
-                                <HorizontalStackLayout.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FolderSelectionViewModel}}, Path=OpenFolderCommand}" CommandParameter="{Binding Folder}" />
-                                </HorizontalStackLayout.GestureRecognizers>
-                                <Label Text="📁" FontSize="24" VerticalOptions="Center" />
-                                <Label Text="{Binding Folder.Name}" FontSize="16" FontAttributes="Bold" TextColor="#333" VerticalOptions="Center" />
-                            </HorizontalStackLayout>
-
-                            <Border Grid.Column="1" WidthRequest="28" HeightRequest="28" StrokeShape="RoundRectangle 14" Stroke="#0570A0" StrokeThickness="2" VerticalOptions="Center">
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FolderSelectionViewModel}}, Path=ToggleFolderSelectionCommand}" CommandParameter="{Binding .}"/>
-                                </Border.GestureRecognizers>
-
-                                <Label Text="✓" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16" IsVisible="{Binding IsSelected}" />
-
-                                <Border.Triggers>
-                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="True">
-                                        <Setter Property="BackgroundColor" Value="#0570A0" />
-                                    </DataTrigger>
-                                    <DataTrigger TargetType="Border" Binding="{Binding IsSelected}" Value="False">
-                                        <Setter Property="BackgroundColor" Value="Transparent" />
-                                    </DataTrigger>
-                                </Border.Triggers>
-                            </Border>
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
-
-        <Border Grid.Row="4" BackgroundColor="White" Padding="15" StrokeThickness="0">
-            <Border.Shadow>
-                <Shadow Brush="Black" Offset="0,-4" Opacity="0.05" Radius="5" />
-            </Border.Shadow>
-            <Grid RowDefinitions="Auto, Auto">
-                <Label Grid.Row="0" Text="תיקיות שנבחרו:" FontSize="14" FontAttributes="Bold" TextColor="Gray" Margin="0,0,0,10" />
-
-                <ScrollView Grid.Row="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
-                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding SelectedFolders}" Spacing="10">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="models:RecipeFolder">
-                                <Border BackgroundColor="#E3F2FD" StrokeThickness="0" StrokeShape="RoundRectangle 15" Padding="10,5">
-                                    <HorizontalStackLayout Spacing="8">
-                                        <Label Text="{Binding Name}" TextColor="#0570A0" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
-                                        <Label Text="✕" TextColor="#0570A0" FontSize="14" VerticalOptions="Center" FontAttributes="Bold">
-                                            <Label.GestureRecognizers>
-                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FolderSelectionViewModel}}, Path=RemoveFromSelectedCommand}" CommandParameter="{Binding .}" />
-                                            </Label.GestureRecognizers>
-                                        </Label>
-                                    </HorizontalStackLayout>
-                                </Border>
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-
-                        <BindableLayout.EmptyView>
-                            <Label Text="לא נבחרו תיקיות (המתכון יופיע במסך הראשי)" TextColor="LightGray" FontSize="14" FontAttributes="Italic" VerticalOptions="Center" />
-                        </BindableLayout.EmptyView>
-                    </HorizontalStackLayout>
-                </ScrollView>
-            </Grid>
-        </Border>
+        <controls:LoadingOverlayControl IsLoading="{Binding IsLoading}" 
+                                        LoadingText="{Binding LoadingText}" />
     </Grid>
 </ContentPage>

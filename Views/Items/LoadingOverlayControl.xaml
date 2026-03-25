@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Recipe_book.Views.Items.LoadingOverlayControl"
+             x:Name="thisControl"
+             IsVisible="{Binding IsLoading, Source={x:Reference thisControl}}"
+             InputTransparent="False"
+             ZIndex="999">
+
+    <Grid BackgroundColor="#99000000">
+        <Grid.GestureRecognizers>
+            <TapGestureRecognizer />
+        </Grid.GestureRecognizers>
+
+        <Frame HorizontalOptions="Center" 
+               VerticalOptions="Center"
+               BackgroundColor="{AppThemeBinding Light=White, Dark=#1E1E1E}"
+               CornerRadius="15"
+               Padding="30"
+               HasShadow="True">
+
+            <VerticalStackLayout Spacing="15" HorizontalOptions="Center">
+
+                <ActivityIndicator IsRunning="True" 
+                                   Color="MediumPurple" 
+                                   WidthRequest="50" 
+                                   HeightRequest="50"/>
+
+                <Label Text="{Binding LoadingText, Source={x:Reference thisControl}}" 
+                       FontSize="18" 
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"
+                       HorizontalTextAlignment="Center"/>
+
+            </VerticalStackLayout>
+        </Frame>
+    </Grid>
+</ContentView>

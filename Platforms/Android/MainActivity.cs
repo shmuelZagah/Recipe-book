@@ -2,23 +2,45 @@
 using Android.Content.PM;
 using Android.Views;
 
+namespace com.shmuel.recipebook;
+
 [Activity(
     Theme = "@style/Maui.SplashTheme",
     MainLauncher = true,
     Exported = true,
     //WindowSoftInputMode = SoftInput.AdjustPan,
+    LaunchMode = LaunchMode.SingleTop,
 
-    ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | 
+    ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode |
     ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
 
 // ==========================================
-// Listen for ://recipebook.app/sharelist
+// Listen for ://recipebook.app/sharelist (Shopping Lists)
 // ==========================================
 [IntentFilter(new[] { Android.Content.Intent.ActionView },
     Categories = new[] { Android.Content.Intent.CategoryDefault, Android.Content.Intent.CategoryBrowsable },
-    DataScheme = "http",
-    DataHost = "recipebook.app",
-    DataPathPrefix = "/sharelist")]
+    DataScheme = "https",
+    DataHost = "recipe-book-d9389.web.app",
+    DataPathPrefix = "/sharelist",
+    AutoVerify = true)]
+// ==========================================
+// Listen for ://recipebook.app/recipe (Cloud Recipes)
+// ==========================================
+[IntentFilter(new[] { Android.Content.Intent.ActionView },
+    Categories = new[] { Android.Content.Intent.CategoryDefault, Android.Content.Intent.CategoryBrowsable },
+    DataScheme = "https",
+    DataHost = "recipe-book-d9389.web.app",
+    DataPathPrefix = "/recipe",
+    AutoVerify = true)]
+// ==========================================
+// Listen for ://recipebook.app/folder (Shared Folders)
+// ==========================================
+[IntentFilter(new[] { Android.Content.Intent.ActionView },
+    Categories = new[] { Android.Content.Intent.CategoryDefault, Android.Content.Intent.CategoryBrowsable },
+    DataScheme = "https",
+    DataHost = "recipe-book-d9389.web.app",
+    DataPathPrefix = "/folder",
+    AutoVerify = true)]
 // ==========================================
 public class MainActivity : MauiAppCompatActivity
 {
@@ -36,4 +58,18 @@ public class MainActivity : MauiAppCompatActivity
             System.Diagnostics.Debug.WriteLine($"FIREBASE CRASH: {ex.Message}");
         }
     }
+
+    protected override void OnNewIntent(Android.Content.Intent intent)
+    {
+        base.OnNewIntent(intent);
+
+        Intent = intent;
+
+
+        if (intent.Action == Android.Content.Intent.ActionView && !string.IsNullOrWhiteSpace(intent.DataString))
+        {
+            Microsoft.Maui.Controls.Application.Current?.SendOnAppLinkRequestReceived(new Uri(intent.DataString));
+        }
+    }
+
 }

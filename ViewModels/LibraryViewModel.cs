@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.Json;
 using System.IO;
 using System.IO.Compression;
+using Microsoft.Maui.Controls.Compatibility;
 
 namespace Recipe_book.ViewModels;
 
@@ -47,12 +48,26 @@ public partial class LibraryViewModel : ObservableObject
     [ObservableProperty]
     private int gridSpan = 2;
 
+    [ObservableProperty]
+    private bool isLoading = false;
+
+    private string defaultLoadingText = "טוען, נא להמתין";
+
+    [ObservableProperty]
+    private string loadingText = string.Empty;
+
     #endregion
     //--------------
 
     public LibraryViewModel(RecipesDatabase database)
     {
         _database = database;
+        InitializeVariables();
+    }
+
+    private void InitializeVariables()
+    {
+        LoadingText = defaultLoadingText;
     }
 
     //--------------
@@ -345,245 +360,90 @@ public partial class LibraryViewModel : ObservableObject
     //--------------
 
     //--------------
-    #region Sharing & Importing Logic
+    #region Sharing & Cloud Logic
     //--------------
-
-    private string EncodePayload(object dto)
-    {
-        string json = JsonSerializer.Serialize(dto);
-        byte[] bytes = Encoding.UTF8.GetBytes(json);
-
-        // כיווץ הנתונים (מכווץ תיקיות ענקיות לטקסט קצר)
-        using var mso = new MemoryStream();
-        using (var gs = new GZipStream(mso, CompressionLevel.Optimal))
-        {
-            gs.Write(bytes, 0, bytes.Length);
-        }
-
-        // המרה לטקסט בטוח לקישורים (URL-Safe Base64) שמונע קריסות
-        return Convert.ToBase64String(mso.ToArray())
-            .Replace("+", "-")
-            .Replace("/", "_")
-            .Replace("=", "");
-    }
-
-    private T DecodePayload<T>(string text, string searchKey)
-    {
-        int startIndex = text.IndexOf(searchKey);
-        string payload = text.Substring(startIndex + searchKey.Length).Trim().Split('\n', '\r', ' ')[0];
-
-        // פענוח חזרה מ-URL-Safe
-        payload = Uri.UnescapeDataString(payload);
-        string base64 = payload.Replace("-", "+").Replace("_", "/");
-        int padding = base64.Length % 4;
-        if (padding > 0) base64 += new string('=', 4 - padding);
-
-        byte[] compressed = Convert.FromBase64String(base64);
-
-        // חילוץ הכיווץ חזרה לטקסט
-        using var msi = new MemoryStream(compressed);
-        using var mso = new MemoryStream();
-        using (var gs = new GZipStream(msi, CompressionMode.Decompress))
-        {
-            gs.CopyTo(mso);
-        }
-
-        string json = Encoding.UTF8.GetString(mso.ToArray());
-        return JsonSerializer.Deserialize<T>(json);
-    }
 
     private async Task ShareRecipeAsync(Recipe recipe)
     {
-        var dto = new SharedRecipeDto { T = recipe.Title, D = recipe.Description };
+        if (recipe == null) return;
 
-        var ingredients = await _database.GetIngredientsAsync(recipe.Id);
-        foreach (var ing in ingredients) dto.I.Add(new SharedIngDto { N = ing.Name, Q = ing.Quantity, U = ing.Unit });
+        IsLoading = true;
+        LoadingText = "אורז את המתכון, נא להמתין";
 
-        var steps = await _database.GetStepsAsync(recipe.Id);
-        foreach (var step in steps) dto.S.Add(new SharedStepDto { D = step.Description });
+        try
+        {
+            var ingredients = await _database.GetIngredientsAsync(recipe.Id);
+            var steps = await _database.GetStepsAsync(recipe.Id);
+            recipe.Ingredients = new ObservableCollection<Ingredient>(ingredients);
+            recipe.Steps = new ObservableCollection<RecipeStep>(steps);
 
-        string safeBase64 = EncodePayload(dto);
-        string deepLink = $"recipebook://sharerecipe?data={safeBase64}";
+            var firestoreService = new FirestoreService();
+            await firestoreService.SaveRecipeToCloudAsync(recipe);
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"👨‍🍳 *{recipe.Title}*");
-        sb.AppendLine("שלחתי לך מתכון מהאפליקציה!");
-        sb.AppendLine("📌 *איך לייבא?* העתק את כל ההודעה הזו, כנס לאפליקציית המתכונים ולחץ על 'ייבא מהלוח'.");
-        sb.AppendLine();
-        sb.AppendLine(deepLink);
+            await _database.SaveRecipeAsync(recipe);
 
-        await Share.Default.RequestAsync(new ShareTextRequest { Text = sb.ToString(), Title = "שתף מתכון" });
+            if (string.IsNullOrEmpty(recipe.CloudId))
+            {
+                await Application.Current.MainPage.DisplayAlert("שגיאה", "לא הצלחנו לייצר קישור לענן. אנא בדוק את החיבור לאינטרנט.", "אישור");
+                return;
+            }
+
+            string shareLink = $"https://recipe-book-d9389.web.app/recipe?id={recipe.CloudId}";
+
+            await Share.Default.RequestAsync(new ShareTextRequest
+            {
+                Title = "שתף מתכון",
+                Text = $"היי! שמרתי פה מתכון מעולה ל-{recipe.Title}. לחץ על הקישור כדי לשמור אותו אצלך:\n{shareLink}"
+            });
+        }
+        finally
+        {
+            IsLoading = false;
+            LoadingText = defaultLoadingText;
+        }
     }
 
     private async Task ShareFolderAsync(RecipeFolder folder)
     {
-        var dto = new SharedFolderDto { N = folder.Name };
-        var recipesInFolder = await _database.GetRecipesInFolderAsync(folder.Id);
+        if (folder == null) return;
 
-        foreach (var r in recipesInFolder)
-        {
-            var rDto = new SharedRecipeDto { T = r.Title, D = r.Description };
-            var ingredients = await _database.GetIngredientsAsync(r.Id);
-            var steps = await _database.GetStepsAsync(r.Id);
+        IsLoading = true;
+        LoadingText = "אורז את התיקייה לענן, זה עשוי לקחת כמה שניות...";
 
-            foreach (var ing in ingredients) rDto.I.Add(new SharedIngDto { N = ing.Name, Q = ing.Quantity, U = ing.Unit });
-            foreach (var step in steps) rDto.S.Add(new SharedStepDto { D = step.Description });
-            dto.R.Add(rDto);
-        }
-
-        string safeBase64 = EncodePayload(dto);
-        string deepLink = $"recipebook://sharefolder?data={safeBase64}";
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"📁 *תיקיית מתכונים: {folder.Name}*");
-        sb.AppendLine($"כוללת {recipesInFolder.Count} מתכונים שווים!");
-        sb.AppendLine("📌 *איך לייבא?* העתק את כל ההודעה הזו, כנס לאפליקציית המתכונים ולחץ על 'ייבא מהלוח'.");
-        sb.AppendLine();
-        sb.AppendLine(deepLink);
-
-        await Share.Default.RequestAsync(new ShareTextRequest { Text = sb.ToString(), Title = "שתף תיקייה" });
-    }
-
-    [RelayCommand]
-    public async Task ImportFromClipboardAsync()
-    {
         try
         {
-            if (!Clipboard.Default.HasText)
+            // Build the tree (this will upload any unsynced recipes automatically)
+            var sharedFolderTree = await _database.BuildSharedFolderTreeAsync(folder);
+
+            // Upload the finished tree to Firestore
+            var firestoreService = new FirestoreService();
+            string newCloudId = await firestoreService.UploadSharedFolderAsync(sharedFolderTree);
+
+            if (string.IsNullOrEmpty(newCloudId))
             {
-                await Application.Current.MainPage.DisplayAlert("שגיאה", "אין טקסט מועתק בלוח.", "אישור");
+                await Application.Current.MainPage.DisplayAlert("שגיאה", "לא הצלחנו לייצר קישור לתיקייה. אנא בדוק את החיבור לאינטרנט.", "אישור");
                 return;
             }
 
-            string clipboardText = await Clipboard.Default.GetTextAsync();
-            if (string.IsNullOrWhiteSpace(clipboardText)) return;
+            await _database.RegisterSharedFolderForDeletionAsync(newCloudId, sharedFolderTree.ExpiresAt);
 
-            if (clipboardText.Contains("recipebook://sharerecipe?data="))
+
+            // Generate the link and open the Android share sheet
+            string shareLink = $"https://recipe-book-d9389.web.app/folder?id={newCloudId}";
+
+            await Share.Default.RequestAsync(new ShareTextRequest
             {
-                await ImportRecipeAsync(clipboardText, "recipebook://sharerecipe?data=");
-            }
-            else if (clipboardText.Contains("recipebook://sharefolder?data="))
-            {
-                await ImportFolderAsync(clipboardText, "recipebook://sharefolder?data=");
-            }
-            else
-            {
-                await Application.Current.MainPage.DisplayAlert("לא נמצא קישור", "לא זיהינו מתכון או תיקייה בטקסט שהעתקת. ודא שהעתקת את כל ההודעה.", "אישור");
-            }
-        }
-        catch (Exception)
-        {
-            await Application.Current.MainPage.DisplayAlert("שגיאה בייבוא", "הטקסט שהעתקת אינו תקין או פגום.", "אישור");
-        }
-    }
-
-    private async Task ImportRecipeAsync(string text, string searchKey)
-    {
-        var dto = DecodePayload<SharedRecipeDto>(text, searchKey);
-        if (dto != null)
-        {
-            var newRecipe = await SaveDtoToRecipeAsync(dto);
-
-            await Application.Current.MainPage.DisplayAlert("הצלחה!", $"המתכון '{newRecipe.Title}' קפץ פנימה. בוא נבחר באיזו תיקייה לשמור אותו.", "המשך");
-
-            var navParam = new Dictionary<string, object>
-            {
-                { "Recipe", newRecipe },
-                { "IsFromNewRecipe", false }
-            };
-            await Shell.Current.GoToAsync(nameof(Views.SubPages.FolderSelectionPage), navParam);
-
-            await LoadFoldersAsync();
-        }
-    }
-
-    private async Task ImportFolderAsync(string text, string searchKey)
-    {
-        var dto = DecodePayload<SharedFolderDto>(text, searchKey);
-        if (dto != null)
-        {
-            var newFolder = new RecipeFolder
-            {
-                Name = dto.N + " (מיובא)",
-                ParentFolderId = CurrentFolder?.Id
-            };
-            await _database.SaveFolderAsync(newFolder);
-
-            int recipeCount = 0;
-            foreach (var rDto in dto.R)
-            {
-                var newRecipe = await SaveDtoToRecipeAsync(rDto);
-                await _database.AddRecipeToFolderAsync(newRecipe.Id, newFolder.Id);
-                recipeCount++;
-            }
-
-            await Application.Current.MainPage.DisplayAlert("תיקייה יובאה! 🎉", $"התיקייה '{newFolder.Name}' יובאה בהצלחה יחד עם {recipeCount} מתכונים.", "מעולה");
-            await LoadFoldersAsync();
-        }
-    }
-
-    private async Task<Recipe> SaveDtoToRecipeAsync(SharedRecipeDto dto)
-    {
-        var recipe = new Recipe { Title = dto.T, Description = dto.D };
-        await _database.SaveRecipeAsync(recipe);
-
-        for (int i = 0; i < dto.I.Count; i++)
-        {
-            await _database.SaveIngredientAsync(new Ingredient
-            {
-                RecipeId = recipe.Id,
-                Name = dto.I[i].N,
-                Quantity = dto.I[i].Q,
-                Unit = dto.I[i].U ?? "יחידות",
-                OrderIndex = i
+                Title = "שתף תיקיית מתכונים",
+                Text = $"היי! הכנתי לך אוסף מתכונים מעולה: '{folder.Name}'. לחץ על הקישור כדי לשמור אותו אצלך:\n{shareLink}"
             });
         }
-
-        for (int i = 0; i < dto.S.Count; i++)
+        finally
         {
-            await _database.SaveStepAsync(new RecipeStep
-            {
-                RecipeId = recipe.Id,
-                Description = dto.S[i].D,
-                StepNumber = i + 1
-            });
+            IsLoading = false;
+            LoadingText = defaultLoadingText;
         }
-        return recipe;
     }
+
     #endregion
     //--------------
 }
-
-
-// -------------------------------------------------------------------------
-#region Data Transfer Objects (DTOs) for Recipe & Folder Sharing
-// -------------------------------------------------------------------------
-
-public class SharedRecipeDto
-{
-    public string T { get; set; }
-    public string D { get; set; }
-    public List<SharedIngDto> I { get; set; } = new();
-    public List<SharedStepDto> S { get; set; } = new();
-}
-
-public class SharedIngDto
-{
-    public string N { get; set; }
-    public double? Q { get; set; }
-    public string U { get; set; }
-}
-
-public class SharedStepDto
-{
-    public string D { get; set; }
-}
-
-public class SharedFolderDto
-{
-    public string N { get; set; }
-    public List<SharedRecipeDto> R { get; set; } = new();
-}
-
-#endregion
-// -------------------------------------------------------------------------

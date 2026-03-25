@@ -77,7 +77,7 @@ namespace Recipe_book
                     CrossFirebase.Initialize(activity, new CrossFirebaseSettings(
                         isFirestoreEnabled: true,
                         isAnalyticsEnabled: false,
-                        isCrashlyticsEnabled: false)))); 
+                        isCrashlyticsEnabled: false)))); //need to be true in the futur 
 #endif
             });
 
