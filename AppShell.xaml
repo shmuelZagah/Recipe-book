@@ -33,7 +33,7 @@
     </FlyoutItem>
 
     <FlyoutItem Title="רשימת קניות" Icon="list_alt_icon.svg">
-        <ShellContent ContentTemplate="{DataTemplate views:ShoppingListPage}" />
+        <ShellContent Route="ShoppingListPage" ContentTemplate="{DataTemplate views:ShoppingListPage}" />
     </FlyoutItem>
 
     <MenuItem Text="-----------------------------------" IsEnabled="False"/>

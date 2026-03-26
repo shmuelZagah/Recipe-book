@@ -57,6 +57,13 @@ public class MainActivity : MauiAppCompatActivity
         {
             System.Diagnostics.Debug.WriteLine($"FIREBASE CRASH: {ex.Message}");
         }
+
+
+        Android.Content.Intent currentIntent = Intent;
+        if (currentIntent?.Action == Android.Content.Intent.ActionView && !string.IsNullOrWhiteSpace(currentIntent.DataString))
+        {
+            Recipe_book.App.PendingDeepLinkUrl = currentIntent.DataString;
+        }
     }
 
     protected override void OnNewIntent(Android.Content.Intent intent)

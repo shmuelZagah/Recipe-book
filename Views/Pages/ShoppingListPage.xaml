@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Recipe_book.ViewModels"
+             xmlns:items ="clr-namespace:Recipe_book.Views.Items"
              x:Class="Recipe_book.Views.Pages.ShoppingListPage"
              Title="רשימת קניות"
              FlowDirection="RightToLeft">
@@ -16,11 +17,6 @@
                      Command="{Binding ShareListCommand}" 
                      IsEnabled="{Binding IsHeaderClosed}"
                      Order="Secondary" />
-
-        <ToolbarItem Text="ייבא רשימה 📥" 
-                     Command="{Binding ImportFromClipboardCommand}" 
-                     IsEnabled="{Binding IsHeaderClosed}"
-                     Order="Secondary" />
     </ContentPage.ToolbarItems>
 
     <Grid>
@@ -31,7 +27,7 @@
 
                 <Button Text="📅 שנה זמנים" 
                         Command="{Binding OpenHeaderCommand}" 
-                        IsVisible="{Binding IsHeaderClosed}"
+                        IsVisible="{Binding HasValidList}"
                         BackgroundColor="#F0F0F0" 
                         TextColor="#2B3A42" 
                         FontAttributes="Bold"
@@ -235,7 +231,8 @@
                 </Frame>
             </VerticalStackLayout>
 
-            <CollectionView Grid.Row="1" ItemsSource="{Binding GroupedShoppingItems}" IsGrouped="True" Margin="20,0,20,0">
+            <CollectionView Grid.Row="1" ItemsSource="{Binding GroupedShoppingItems}" IsGrouped="True" Margin="20,0,20,0"
+                            IsVisible="{Binding HasValidList}">
                 <CollectionView.Triggers>
                     <DataTrigger TargetType="CollectionView" Binding="{Binding IsHeaderClosed}" Value="False">
                         <Setter Property="Opacity" Value="0.2" />
@@ -272,7 +269,7 @@
                 </CollectionView.ItemTemplate>
 
                 <CollectionView.EmptyView>
-                    <Label Text="אין מצרכים מתוכננים בטווח הנבחר 🛒" HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" FontSize="16" Margin="30" />
+                    <Label Text="{Binding EmptyViewText}" HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" FontSize="16" Margin="30" />
                 </CollectionView.EmptyView>
             </CollectionView>
 
@@ -303,5 +300,7 @@
             </Frame>
         </Grid>
 
+        <items:LoadingOverlayControl IsLoading="{Binding IsLoading}"
+                                         LoadingText="{Binding LoadingText}"/>
     </Grid>
 </ContentPage>

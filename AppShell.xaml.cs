@@ -17,7 +17,7 @@ namespace Recipe_book
             Routing.RegisterRoute(nameof(SchedulePage), typeof(SchedulePage));
             Routing.RegisterRoute(nameof(SelectRecipePage), typeof(SelectRecipePage));
             Routing.RegisterRoute(nameof(ManageMealsPage), typeof(ManageMealsPage));
-            Routing.RegisterRoute(nameof(ShoppingListPage), typeof(ShoppingListPage));
+           // Routing.RegisterRoute(nameof(ShoppingListPage), typeof(ShoppingListPage));
         }
 
         private async void OnSettingsTapped(object sender, EventArgs e)

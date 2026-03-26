@@ -26,6 +26,7 @@ public class RecipesDatabase
         {
             _ = Task.Run(async () => await ProcessPendingDeletionsAsync());
             _ = Task.Run(async () => await ProcessExpiredSharedFoldersAsync());
+            _ = Task.Run(async () => await ProcessExpiredSharedListsAsync()); // <--- NEW
         }
 
         Connectivity.Current.ConnectivityChanged += (s, e) =>
@@ -35,6 +36,7 @@ public class RecipesDatabase
                 System.Diagnostics.Debug.WriteLine("Internet is BACK! Waking up the Garbage Collector...");
                 _ = Task.Run(async () => await ProcessPendingDeletionsAsync());
                 _ = Task.Run(async () => await ProcessExpiredSharedFoldersAsync());
+                _ = Task.Run(async () => await ProcessExpiredSharedListsAsync()); // <--- NEW
             }
         };
     }
@@ -68,6 +70,7 @@ public class RecipesDatabase
         // --- Cloud & Garbage Collection ---
         await Database.CreateTableAsync<PendingCloudDeletion>();
         await Database.CreateTableAsync<PendingSharedFolderDeletion>();
+        await Database.CreateTableAsync<PendingSharedListDeletion>();
 
         if (Connectivity.Current.NetworkAccess == NetworkAccess.Internet)
         {
@@ -633,6 +636,57 @@ public class RecipesDatabase
                 await ProcessFolderNodeAsync(subNode, currentLocalFolderId);
             }
         }
+    }
+
+    /// <summary>
+    /// Processes the dedicated Shared Shopping Lists TTL queue in O(1).
+    /// </summary>
+    private async Task ProcessExpiredSharedListsAsync()
+    {
+        try
+        {
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet) return;
+            await Init();
+
+            var oldestItem = await Database.Table<PendingSharedListDeletion>()
+                                           .OrderBy(x => x.ExpiresAt)
+                                           .FirstOrDefaultAsync();
+
+            if (oldestItem == null) return;
+
+            if (DateTime.UtcNow < oldestItem.ExpiresAt)
+            {
+                System.Diagnostics.Debug.WriteLine("List GC: Oldest item still valid. Exiting early.");
+                return;
+            }
+
+            var expiredItems = await Database.Table<PendingSharedListDeletion>()
+                                             .Where(x => x.ExpiresAt <= DateTime.UtcNow)
+                                             .ToListAsync();
+
+            foreach (var item in expiredItems)
+            {
+                bool deleted = await _firestoreService.DeleteSharedListFromCloudAsync(item.SharedListId);
+                if (deleted) await Database.DeleteAsync(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error processing expired lists: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Adds a shared shopping list to the TTL queue.
+    /// </summary>
+    public async Task RegisterSharedListForDeletionAsync(string cloudId, DateTime expirationDate)
+    {
+        await Init();
+        await Database.InsertAsync(new PendingSharedListDeletion
+        {
+            SharedListId = cloudId,
+            ExpiresAt = expirationDate
+        });
     }
 
     #endregion

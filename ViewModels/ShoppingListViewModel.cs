@@ -1,20 +1,21 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Recipe_book.Models.Recipes;
-using Recipe_book.Services;
+using Microsoft.Maui.ApplicationModel.DataTransfer;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Storage;
 using Recipe_book.Helpers;
+using Recipe_book.Models.Cloud;
 using Recipe_book.Models.Enums;
+using Recipe_book.Models.Recipes;
+using Recipe_book.Models.Shopping;
+using Recipe_book.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Storage;
-using Microsoft.Maui.ApplicationModel.DataTransfer;
-using Recipe_book.Models.Shopping;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Recipe_book.ViewModels;
 
@@ -25,6 +26,12 @@ public partial class ShoppingListViewModel : ObservableObject
     //--------------
     #region Properties
     //--------------
+
+    public static int? PendingImportId { get; set; }
+    public static Action RefreshActivePage;
+
+    [ObservableProperty]
+    private string emptyViewText = "אין מצרכים מתוכננים בטווח הנבחר 🛒";
 
     [ObservableProperty]
     private SavedShoppingList currentShoppingList;
@@ -44,6 +51,14 @@ public partial class ShoppingListViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsHeaderClosed))]
     private bool isHeaderOpen = false;
 
+    [ObservableProperty]
+    private bool isLoading = false;
+
+    [ObservableProperty]
+    private string loadingText = String.Empty;
+
+    private string defaultLoadingText = "טוען, נא להמתין";
+
     public bool IsHeaderClosed => !IsHeaderOpen;
 
     public ObservableCollection<ShoppingItemGroup> GroupedShoppingItems { get; } = new();
@@ -54,12 +69,46 @@ public partial class ShoppingListViewModel : ObservableObject
 
     public ObservableCollection<SelectableListDto> MergeableLists { get; } = new();
 
+    [ObservableProperty]
+    private bool hasValidList = true;
+
+    private int? importedListId;
+    public int? ImportedListId
+    {
+        get => importedListId;
+        set
+        {
+            importedListId = value;
+            if (value.HasValue)
+            {
+                MainThread.BeginInvokeOnMainThread(async () => await HandleImportedListAsync(value.Value));
+            }
+        }
+    }
+
     #endregion
     //--------------
+
 
     public ShoppingListViewModel(RecipesDatabase database)
     {
         _database = database;
+
+        RefreshActivePage = () =>
+        {
+            MainThread.BeginInvokeOnMainThread(async () => await InitializeAutoLoadAsync());
+        };
+    }
+
+    private async Task HandleImportedListAsync(int id)
+    {
+        await LoadAllListsAsync();
+        var list = SavedLists.FirstOrDefault(l => l.Id == id);
+        if (list != null)
+        {
+            await SwitchListAsync(list);
+        }
+        importedListId = null; 
     }
 
     //--------------
@@ -262,97 +311,24 @@ public partial class ShoppingListViewModel : ObservableObject
 
             if (CurrentShoppingList?.Id == listToDelete.Id)
             {
-                var fallbackList = SavedLists.FirstOrDefault(l => !l.IsStatic);
-                await SwitchListAsync(fallbackList);
-            }
-        }
-    }
-
-    [RelayCommand]
-    public async Task ImportFromClipboardAsync()
-    {
-        try
-        {
-            // 1. Ensure payload exists in the system clipboard
-            if (!Clipboard.Default.HasText)
-            {
-                await Application.Current.MainPage.DisplayAlert("שגיאה", "אין טקסט מועתק בלוח.", "אישור");
-                return;
-            }
-
-            string clipboardText = await Clipboard.Default.GetTextAsync();
-            if (string.IsNullOrWhiteSpace(clipboardText)) return;
-
-            // 2. Identify the application-specific URI scheme payload boundary
-            string searchKey = "recipebook://sharelist?data=";
-            int startIndex = clipboardText.IndexOf(searchKey);
-
-            if (startIndex == -1)
-            {
-                await Application.Current.MainPage.DisplayAlert("לא נמצא קישור", "לא זיהינו קישור של רשימת קניות בטקסט שהעתקת. ודא שהעתקת את ההודעה המלאה מוואטסאפ.", "אישור");
-                return;
-            }
-
-            // 3. Extract and sanitize the Base64 payload
-            string base64Data = clipboardText.Substring(startIndex + searchKey.Length).Trim();
-            base64Data = base64Data.Split('\n', '\r', ' ')[0];
-
-            // Normalize Base64 padding structure
-            int mod4 = base64Data.Length % 4;
-            if (mod4 > 0) base64Data += new string('=', 4 - mod4);
-
-            // Decode serialized payload
-            string decodedData = Uri.UnescapeDataString(base64Data);
-            byte[] bytes = Convert.FromBase64String(decodedData);
-            string json = Encoding.UTF8.GetString(bytes);
-
-            var sharedDto = JsonSerializer.Deserialize<SharedListDto>(json);
-
-            if (sharedDto != null)
-            {
-                // 4. Register the imported list as a static data set
-                var newList = new SavedShoppingList
+                if (SavedLists.Any())
                 {
-                    Title = sharedDto.T + " (מיובא)",
-                    IsStatic = true,
-                    CreatedAt = DateTime.Now
-                };
-
-                await _database.SaveShoppingListAsync(newList);
-
-                // 5. Transform DTOs back into native entity models
-                var flatList = new List<SavedShoppingListItem>();
-                foreach (var item in sharedDto.I)
-                {
-                    string displayUnit = item.U == "יחידות" ? "" : item.U;
-                    string displayTxt = string.IsNullOrWhiteSpace(displayUnit) ? $"{item.Q} {item.N}" : $"{item.Q} {displayUnit} {item.N}";
-
-                    flatList.Add(new SavedShoppingListItem
-                    {
-                        ListId = newList.Id,
-                        Name = item.N,
-                        Quantity = item.Q,
-                        Unit = displayUnit,
-                        Category = item.C,
-                        DisplayText = displayTxt,
-                        IsBought = false
-                    });
+                    var fallbackList = SavedLists.FirstOrDefault(l => !l.IsStatic) ?? SavedLists.First();
+                    await SwitchListAsync(fallbackList);
                 }
-
-                await _database.SyncShoppingListItemsAsync(newList.Id, flatList);
-
-                // 6. Refresh interface context
-                await LoadAllListsAsync();
-                await SwitchListAsync(newList);
-
-                await Application.Current.MainPage.DisplayAlert("הצלחה! 🎉", "הרשימה יובאה בהצלחה והיא פתוחה עכשיו.", "מעולה");
+                else
+                {
+                    // No lists left! Apply the "Empty State"
+                    CurrentShoppingList = new SavedShoppingList { Title = "אין רשימות כרגע", Id = -1, IsStatic = true };
+                    HasValidList = false;
+                    EmptyViewText = "";
+                    GroupedShoppingItems.Clear();
+                    StatusText = "לא קיימות רשימות. לחץ על התפריט ליצירת רשימה חדשה.";
+                }
             }
         }
-        catch (Exception ex)
-        {
-            await Application.Current.MainPage.DisplayAlert("שגיאה בייבוא", "הטקסט שהעתקת אינו תקין או שהקישור פגום.", "אישור");
-        }
-    }
+    } 
+
 
     #endregion
     //--------------
@@ -376,15 +352,34 @@ public partial class ShoppingListViewModel : ObservableObject
     {
         await LoadAllListsAsync();
 
-        if (CurrentShoppingList == null)
+        if (SavedLists.Count == 0)
         {
-            CurrentShoppingList = SavedLists.FirstOrDefault(l => !l.IsStatic)
-                                  ?? new SavedShoppingList { Title = "קניות השבוע", IsStatic = false, CreatedAt = DateTime.Now };
-            if (CurrentShoppingList.Id == 0)
+            CurrentShoppingList = new SavedShoppingList { Title = "אין רשימות כרגע", Id = -1, IsStatic = true };
+            HasValidList = false;
+            EmptyViewText = ""; 
+            GroupedShoppingItems.Clear();
+            StatusText = "לא קיימות רשימות. לחץ על התפריט ליצירת רשימה חדשה.";
+            return;
+        }
+
+        HasValidList = true;
+        EmptyViewText = "אין מצרכים מתוכננים בטווח הנבחר 🛒"; 
+
+
+        if (PendingImportId.HasValue)
+        {
+            var targetList = SavedLists.FirstOrDefault(l => l.Id == PendingImportId.Value);
+            PendingImportId = null; 
+            if (targetList != null)
             {
-                await _database.SaveShoppingListAsync(CurrentShoppingList);
-                await LoadAllListsAsync();
+                await SwitchListAsync(targetList);
+                return; 
             }
+        }
+
+        if (CurrentShoppingList == null || CurrentShoppingList.Id == -1)
+        {
+            CurrentShoppingList = SavedLists.FirstOrDefault(l => !l.IsStatic) ?? SavedLists.First();
         }
 
         LoadPreferences();
@@ -962,40 +957,87 @@ public partial class ShoppingListViewModel : ObservableObject
         }
         else if (shareOption == "קישור לאפליקציה")
         {
-            var sharedDto = new SharedListDto
+            IsLoading = true;
+            LoadingText = "מייצר קישור לשיתוף רשימת הקניות, נא להמתין";
+            try
             {
-                T = CurrentShoppingList?.Title ?? "רשימה משותפת"
-            };
-
-            foreach (var group in GroupedShoppingItems)
-            {
-                foreach (var item in group)
+                var sharedDto = new SharedListDto
                 {
-                    sharedDto.I.Add(new SharedItemDto
+                    T = CurrentShoppingList?.Title ?? "רשימה משותפת"
+                };
+
+                var allItemNames = new HashSet<string>();
+
+                foreach (var group in GroupedShoppingItems)
+                {
+                    foreach (var item in group)
                     {
-                        N = item.Name,
-                        Q = item.Quantity,
-                        U = item.Unit,
-                        C = item.Category
+                        allItemNames.Add(item.Name);
+                        sharedDto.I.Add(new SharedItemDto
+                        {
+                            N = item.Name,
+                            Q = item.Quantity,
+                            U = item.Unit,
+                            C = item.Category
+                        });
+                    }
+                }
+
+                // --- THE MAGIC: Extract only relevant conversions for these items! ---
+                var allConversions = await _database.GetIngredientConversionsAsync();
+                var relevantConversions = allConversions.Where(c => allItemNames.Contains(c.Keyword)).ToList();
+
+                foreach (var conv in relevantConversions)
+                {
+                    sharedDto.C.Add(new SharedConversionDto
+                    {
+                        K = conv.Keyword,
+                        B = conv.BaseUnit,
+                        A = conv.AmountPerCup,
+                        C = conv.Category
                     });
                 }
+
+                // 1. Serialize the full payload (Items + Conversions)
+                string jsonPayload = JsonSerializer.Serialize(sharedDto);
+
+                // 2. Create the Cloud Model (TTL is set automatically)
+                var cloudModel = new SharedShoppingListCloudModel
+                {
+                    ListName = sharedDto.T,
+                    PayloadJson = jsonPayload
+                };
+
+                // 3. Upload to Firestore
+                var firestoreService = new FirestoreService();
+                string newCloudId = await firestoreService.UploadSharedListAsync(cloudModel);
+
+                if (string.IsNullOrEmpty(newCloudId))
+                {
+                    await Application.Current.MainPage.DisplayAlert("שגיאה", "לא הצלחנו לייצר קישור לענן. אנא בדוק את החיבור לאינטרנט.", "אישור");
+                    return;
+                }
+
+                // 4. Register for Garbage Collection
+                await _database.RegisterSharedListForDeletionAsync(newCloudId, cloudModel.ExpiresAt);
+
+                // 5. Generate the standardized Deep Link
+                string deepLink = $"https://recipe-book-d9389.web.app/sharelist?id={newCloudId}";
+
+                var sbLink = new StringBuilder();
+                sbLink.AppendLine($"🛒 *{cloudModel.ListName}*");
+                sbLink.AppendLine("שלחתי לך רשימת קניות מרוכזת באפליקציה!");
+                sbLink.AppendLine("לחץ על הקישור כדי לייבא אותה (כולל המרות מצרכים):");
+                sbLink.AppendLine();
+                sbLink.AppendLine(deepLink);
+
+                textToShare = sbLink.ToString();
             }
-
-            // Serialize and encode payload
-            string json = JsonSerializer.Serialize(sharedDto);
-            string base64Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
-
-            // Generate custom scheme URI link
-            string deepLink = $"recipebook://sharelist?data={Uri.EscapeDataString(base64Data)}";
-
-            var sbLink = new StringBuilder();
-            sbLink.AppendLine($"🛒 *{CurrentShoppingList?.Title ?? "רשימת קניות"}*");
-            sbLink.AppendLine("שלחתי לך רשימת קניות לאפליקציה!");
-            sbLink.AppendLine("📌 *איך לייבא?* פשוט העתק את כל ההודעה הזו, כנס לאפליקציה ולחץ על כפתור הייבוא.");
-            sbLink.AppendLine();
-            sbLink.AppendLine(deepLink);
-
-            textToShare = sbLink.ToString();
+            finally
+            {
+                LoadingText = defaultLoadingText;
+                IsLoading = false;
+            }
         }
 
         // Invoke native OS share functionality
@@ -1004,13 +1046,13 @@ public partial class ShoppingListViewModel : ObservableObject
             Text = textToShare,
             Title = "שיתוף רשימת קניות"
         });
+        #endregion
+        //--------------
     }
-    #endregion
-    //--------------
 }
 
 // -------------------------------------------------------------------------
-// Support classes placed outside the main ViewModel
+// Support classes 
 // -------------------------------------------------------------------------
 
 // Helper class to bind checkboxes to the merge overlay interface
@@ -1027,6 +1069,9 @@ public class SharedListDto
 {
     public string T { get; set; } // List Title
     public List<SharedItemDto> I { get; set; } = new(); // Aggregated Items
+
+    // --- NEW: Relevant Ingredient Conversions ---
+    public List<SharedConversionDto> C { get; set; } = new();
 }
 
 public class SharedItemDto
@@ -1035,4 +1080,13 @@ public class SharedItemDto
     public double Q { get; set; } // Computed Quantity
     public string U { get; set; } // Metric Unit
     public string C { get; set; } // General Category
+}
+
+// --- NEW: DTO for packaging conversions ---
+public class SharedConversionDto
+{
+    public string K { get; set; } // Keyword
+    public string B { get; set; } // BaseUnit
+    public double A { get; set; } // AmountPerCup
+    public string C { get; set; } // Category
 }

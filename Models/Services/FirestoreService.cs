@@ -238,4 +238,77 @@ public class FirestoreService
         }
     }
 
+    // ==========================================
+    #region SHOPPING LISTS CLOUD OPERATIONS
+    // ==========================================
+
+    public async Task<string> UploadSharedListAsync(SharedShoppingListCloudModel sharedList)
+    {
+        try
+        {
+            var firestore = CrossFirebaseFirestore.Current;
+            var collection = firestore.GetCollection("SharedLists");
+
+            var doc = collection.CreateDocument();
+            sharedList.CloudId = doc.Id;
+
+            // The model is completely flat, so it uploads safely and easily
+            await doc.SetDataAsync(sharedList);
+
+            System.Diagnostics.Debug.WriteLine($"Shared list uploaded successfully! ID: {doc.Id}");
+            return doc.Id;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error uploading shared list: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<SharedShoppingListCloudModel> GetSharedListFromCloudAsync(string cloudId)
+    {
+        if (string.IsNullOrEmpty(cloudId)) return null;
+
+        try
+        {
+            var firestore = CrossFirebaseFirestore.Current;
+            var snapshot = await firestore.GetCollection("SharedLists").GetDocument(cloudId).GetDocumentSnapshotAsync<SharedShoppingListCloudModel>();
+
+            if (snapshot != null)
+            {
+                var list = snapshot.Data;
+                list.CloudId = cloudId;
+                return list;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error fetching shared list from cloud: {ex.Message}");
+        }
+
+        return null;
+    }
+
+    public async Task<bool> DeleteSharedListFromCloudAsync(string cloudId)
+    {
+        if (string.IsNullOrEmpty(cloudId)) return true;
+
+        try
+        {
+            var firestore = CrossFirebaseFirestore.Current;
+            await firestore.GetCollection("SharedLists").GetDocument(cloudId).DeleteDocumentAsync();
+
+            System.Diagnostics.Debug.WriteLine($"Shared list {cloudId} automatically deleted by Garbage Collector.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error deleting shared list: {ex.Message}");
+            return false;
+        }
+    }
+
+    #endregion
+    // ==========================================
+
 }
