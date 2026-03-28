@@ -15,6 +15,8 @@ public class RecipesDatabase
 {
     private SQLiteAsyncConnection Database;
     private FirestoreService _firestoreService = new FirestoreService();
+    private Task _initTask;
+    private readonly object _initLock = new();
 
     //--------------
     #region Constructor & Initialization
@@ -26,7 +28,7 @@ public class RecipesDatabase
         {
             _ = Task.Run(async () => await ProcessPendingDeletionsAsync());
             _ = Task.Run(async () => await ProcessExpiredSharedFoldersAsync());
-            _ = Task.Run(async () => await ProcessExpiredSharedListsAsync()); // <--- NEW
+            _ = Task.Run(async () => await ProcessExpiredSharedListsAsync());
         }
 
         Connectivity.Current.ConnectivityChanged += (s, e) =>
@@ -36,16 +38,29 @@ public class RecipesDatabase
                 System.Diagnostics.Debug.WriteLine("Internet is BACK! Waking up the Garbage Collector...");
                 _ = Task.Run(async () => await ProcessPendingDeletionsAsync());
                 _ = Task.Run(async () => await ProcessExpiredSharedFoldersAsync());
-                _ = Task.Run(async () => await ProcessExpiredSharedListsAsync()); // <--- NEW
+                _ = Task.Run(async () => await ProcessExpiredSharedListsAsync());
             }
         };
     }
 
     private async Task Init()
     {
-        if (Database is not null)
-            return;
+        if (_initTask == null)
+        {
+            lock (_initLock)
+            {
+                if (_initTask == null)
+                {
+                    _initTask = InitializeDatabaseAsync();
+                }
+            }
+        }
 
+        await _initTask;
+    }
+
+    private async Task InitializeDatabaseAsync()
+    {
         string dbPath = Path.Combine(FileSystem.AppDataDirectory, "MyRecipes.db3");
         Database = new SQLiteAsyncConnection(dbPath);
 
