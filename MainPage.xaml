@@ -6,143 +6,144 @@
              x:Class="Recipe_book.MainPage"
              x:DataType="vm:MainViewModel"
              xmlns:controls="clr-namespace:Recipe_book.Views.Items"
+             Shell.TabBarIsVisible="False"
              Title="ספר המתכונים שלי"
              FlowDirection="RightToLeft">
 
+    <Grid>
+        <Grid RowDefinitions="Auto, *, Auto">
 
-    <Grid RowDefinitions="Auto, *, Auto">
+            <controls:SearchBarControl Grid.Row="0" SearchText="{Binding SearchQuery}" PlaceholderText="חפש מתכון..." />
 
-        <controls:SearchBarControl Grid.Row="0" SearchText="{Binding SearchQuery}" PlaceholderText="חפש מתכון..." />
+            <ScrollView Grid.Row="1">
+                <VerticalStackLayout Padding="20" Spacing="20">
 
-        <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="20" Spacing="20">
+                    <VerticalStackLayout IsVisible="{Binding IsSearching}" Spacing="10">
+                        <Label Text="תוצאות חיפוש" FontAttributes="Bold" FontSize="18"/>
 
-                <VerticalStackLayout IsVisible="{Binding IsSearching}" Spacing="10">
-                    <Label Text="תוצאות חיפוש" FontAttributes="Bold" FontSize="18"/>
+                        <CollectionView ItemsSource="{Binding Recipes}">
+                            <CollectionView.ItemsLayout>
+                                <GridItemsLayout Orientation="Vertical" Span="2" VerticalItemSpacing="10" HorizontalItemSpacing="10"/>
+                            </CollectionView.ItemsLayout>
 
-                    <CollectionView ItemsSource="{Binding Recipes}">
-                        <CollectionView.ItemsLayout>
-                            <GridItemsLayout Orientation="Vertical" Span="2" VerticalItemSpacing="10" HorizontalItemSpacing="10"/>
-                        </CollectionView.ItemsLayout>
-
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:Recipe">
-                                <controls:RecipeCardControl 
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:Recipe">
+                                    <controls:RecipeCardControl 
                                     RecipeName="{Binding Title}" 
                                     RecipeImage="{Binding DisplayImage}">
 
-                                    <controls:RecipeCardControl.GestureRecognizers>
-                                        <TapGestureRecognizer 
+                                        <controls:RecipeCardControl.GestureRecognizers>
+                                            <TapGestureRecognizer 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=OpenRecipeCommand}"
                                             CommandParameter="{Binding .}"/>
-                                    </controls:RecipeCardControl.GestureRecognizers>
+                                        </controls:RecipeCardControl.GestureRecognizers>
 
-                                </controls:RecipeCardControl>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </VerticalStackLayout>
+                                    </controls:RecipeCardControl>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
 
 
-                <VerticalStackLayout IsVisible="{Binding IsSearching, Converter={StaticResource BoolToVis}, ConverterParameter='Invert'}" Spacing="20">
+                    <VerticalStackLayout IsVisible="{Binding IsSearching, Converter={StaticResource BoolToVis}, ConverterParameter='Invert'}" Spacing="20">
 
-                    <Label Text="מועדפים" FontAttributes="Bold" FontSize="18"/>
-                    <CollectionView ItemsSource="{Binding FavoriteRecipes}" HeightRequest="150">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10"/>
-                        </CollectionView.ItemsLayout>
+                        <Label Text="מועדפים" FontAttributes="Bold" FontSize="18"/>
+                        <CollectionView ItemsSource="{Binding FavoriteRecipes}" HeightRequest="150">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10"/>
+                            </CollectionView.ItemsLayout>
 
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:Recipe">
-                                <controls:RecipeCardControl 
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:Recipe">
+                                    <controls:RecipeCardControl 
                                     RecipeName="{Binding Title}" 
                                     RecipeImage="{Binding DisplayImage}">
 
-                                    <controls:RecipeCardControl.GestureRecognizers>
-                                        <TapGestureRecognizer 
+                                        <controls:RecipeCardControl.GestureRecognizers>
+                                            <TapGestureRecognizer 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=OpenRecipeCommand}"
                                             CommandParameter="{Binding .}"/>
-                                    </controls:RecipeCardControl.GestureRecognizers>
+                                        </controls:RecipeCardControl.GestureRecognizers>
 
-                                </controls:RecipeCardControl>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                                    </controls:RecipeCardControl>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
 
-                    <Label Text="הלו''ז להיום" FontAttributes="Bold" FontSize="18"/>
+                        <Label Text="הלו''ז להיום" FontAttributes="Bold" FontSize="18"/>
 
-                    <ScrollView x:Name="MealsScrollView"
+                        <ScrollView x:Name="MealsScrollView"
                                 Orientation="Horizontal" HorizontalScrollBarVisibility="Never" Margin="0,0,0,20" 
                                 FlowDirection="RightToLeft">
-                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding TodayMeals}" Spacing="15" FlowDirection="RightToLeft">
-                            <BindableLayout.ItemTemplate>
-                                <DataTemplate x:DataType="vm:MealGroup">
+                            <HorizontalStackLayout BindableLayout.ItemsSource="{Binding TodayMeals}" Spacing="15" FlowDirection="RightToLeft">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:MealGroup">
 
-                                    <Border StrokeShape="RoundRectangle 10" 
+                                        <Border StrokeShape="RoundRectangle 10" 
                                             Stroke="#E0E0E0" StrokeThickness="1" 
                                             BackgroundColor="White" Padding="12" 
                                             WidthRequest="150" 
                                             MinimumHeightRequest="130"
                                             VerticalOptions="Fill">
 
-                                        <Border.GestureRecognizers>
-                                            <TapGestureRecognizer 
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer 
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=GoToScheduleCommand}" 
                                                 CommandParameter="{Binding .}" />
-                                        </Border.GestureRecognizers>
+                                            </Border.GestureRecognizers>
 
-                                        <Grid RowDefinitions="Auto, *">
+                                            <Grid RowDefinitions="Auto, *">
 
-                                            <Border Grid.Row="0" StrokeShape="RoundRectangle 10" BackgroundColor="#045A6B">
-                                                <Label Text="{Binding GroupName}" FontSize="20" FontAttributes="Bold" TextColor="#FFFFFF" Margin="3" HorizontalOptions="Center"/>
-                                            </Border>
+                                                <Border Grid.Row="0" StrokeShape="RoundRectangle 10" BackgroundColor="#045A6B">
+                                                    <Label Text="{Binding GroupName}" FontSize="20" FontAttributes="Bold" TextColor="#FFFFFF" Margin="3" HorizontalOptions="Center"/>
+                                                </Border>
 
-                                            <VerticalStackLayout Grid.Row="1" BindableLayout.ItemsSource="{Binding Meals}" Spacing="8" VerticalOptions="Start" Margin="0,10,0,0">
-                                                <BindableLayout.EmptyView>
-                                                    <Label Text="אין מתכונים להיום" TextColor="#B0B0B0" FontSize="13"/>
-                                                </BindableLayout.EmptyView>
-                                                <BindableLayout.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:ScheduledMealDisplay">
-                                                        <Label Text="{Binding RecipeDetails.Title}" FontSize="16" TextColor="#444444" FontAttributes="Bold" LineBreakMode="WordWrap"/>
-                                                    </DataTemplate>
-                                                </BindableLayout.ItemTemplate>
-                                            </VerticalStackLayout>
+                                                <VerticalStackLayout Grid.Row="1" BindableLayout.ItemsSource="{Binding Meals}" Spacing="8" VerticalOptions="Start" Margin="0,10,0,0">
+                                                    <BindableLayout.EmptyView>
+                                                        <Label Text="אין מתכונים להיום" TextColor="#B0B0B0" FontSize="13"/>
+                                                    </BindableLayout.EmptyView>
+                                                    <BindableLayout.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ScheduledMealDisplay">
+                                                            <Label Text="{Binding RecipeDetails.Title}" FontSize="16" TextColor="#444444" FontAttributes="Bold" LineBreakMode="WordWrap"/>
+                                                        </DataTemplate>
+                                                    </BindableLayout.ItemTemplate>
+                                                </VerticalStackLayout>
 
-                                        </Grid>
-                                    </Border>
+                                            </Grid>
+                                        </Border>
 
-                                </DataTemplate>
-                            </BindableLayout.ItemTemplate>
-                        </HorizontalStackLayout>
-                    </ScrollView>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
 
-                    <Label Text="אולי הגיע הזמן להכין?" FontAttributes="Bold" FontSize="18"/>
-                    <CollectionView ItemsSource="{Binding DidntUsedForLongTime}" HeightRequest="150">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10"/>
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:Recipe">
-                                <controls:RecipeCardControl 
+                        <Label Text="אולי הגיע הזמן להכין?" FontAttributes="Bold" FontSize="18"/>
+                        <CollectionView ItemsSource="{Binding DidntUsedForLongTime}" HeightRequest="150">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10"/>
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:Recipe">
+                                    <controls:RecipeCardControl 
                                     RecipeName="{Binding Title}" 
                                     RecipeImage="{Binding DisplayImage}">
 
-                                    <controls:RecipeCardControl.GestureRecognizers>
-                                        <TapGestureRecognizer 
+                                        <controls:RecipeCardControl.GestureRecognizers>
+                                            <TapGestureRecognizer 
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=OpenRecipeCommand}"
                                             CommandParameter="{Binding .}"/>
-                                    </controls:RecipeCardControl.GestureRecognizers>
+                                        </controls:RecipeCardControl.GestureRecognizers>
 
-                                </controls:RecipeCardControl>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                                    </controls:RecipeCardControl>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
 
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
-            </VerticalStackLayout>
-        </ScrollView>
+            </ScrollView>
 
-        <Button Grid.Row="1"
+            <Button Grid.Row="1"
             Text="+"
             FontSize="30"
             FontAttributes="Bold"
@@ -157,17 +158,9 @@
             Shadow="{Shadow Brush=Black, Offset='2,2', Opacity=0.3}"
             Command="{Binding AddRecipeCommand}"/>
 
-        <Button Grid.Row="2"
-            Text="רשימת הקניות שלי"
-            FontAttributes="Bold"
-            BackgroundColor="#2230A0"
-            TextColor="White"
-            HeightRequest="50"
-            Margin="20"
-            CornerRadius="10"
-            Command="{Binding GoToShoppingListCommand}"
-           />
+            <controls:LiquidBottomBar x:Name="TestBottomBar" Grid.Row="2" Margin="0,10,0,0" />
 
+        </Grid>
     </Grid>
 
 </ContentPage>

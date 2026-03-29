@@ -90,9 +90,33 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <None Remove="Resources\Images\botoom_bar_navigation\calendar_clicked_icon.svg" />
+	  <None Remove="Resources\Images\botoom_bar_navigation\calendar_icon.svg" />
+	  <None Remove="Resources\Images\botoom_bar_navigation\home_clicked_icon.svg" />
+	  <None Remove="Resources\Images\botoom_bar_navigation\home_icon.svg" />
+	  <None Remove="Resources\Images\botoom_bar_navigation\recipe_clicked_icon.svg" />
+	  <None Remove="Resources\Images\botoom_bar_navigation\recipe_icon.svg" />
+	  <None Remove="Resources\Images\botoom_bar_navigation\shopping_clicked_icon.svg" />
+	  <None Remove="Resources\Images\botoom_bar_navigation\shopping_icon.svg" />
+	</ItemGroup>
+
 
 	<ItemGroup>
 	  <GoogleServicesJson Include="Platforms\Android\google-services.json" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+	  <MauiImage Include="Resources\Images\botoom_bar_navigation\calendar_clicked_icon.svg" />
+	  <MauiImage Include="Resources\Images\botoom_bar_navigation\calendar_icon.svg" />
+	  <MauiImage Include="Resources\Images\botoom_bar_navigation\home_clicked_icon.svg" />
+	  <MauiImage Include="Resources\Images\botoom_bar_navigation\home_icon.svg" />
+	  <MauiImage Include="Resources\Images\botoom_bar_navigation\recipe_clicked_icon.svg" />
+	  <MauiImage Include="Resources\Images\botoom_bar_navigation\recipe_icon.svg" />
+	  <MauiImage Include="Resources\Images\botoom_bar_navigation\shopping_clicked_icon.svg" />
+	  <MauiImage Include="Resources\Images\botoom_bar_navigation\shopping_icon.svg" />
+	  <MauiImage Include="Resources\Raw\book_texture.png" />
 	</ItemGroup>
 
 	<ItemGroup>
