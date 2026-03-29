@@ -4,26 +4,9 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:Recipe_book"
-    xmlns:views="clr-namespace:Recipe_book.Views.Pages"
     Shell.FlyoutBehavior="Disabled"
     Title="Recipe_book">
 
-    <TabBar>
-        <Tab Title="דף הבית" Icon="home_icon.svg">
-            <ShellContent ContentTemplate="{DataTemplate local:MainPage}" />
-        </Tab>
-
-        <Tab Title="המתכונים שלי" Icon="menu_book_icon.svg">
-            <ShellContent ContentTemplate="{DataTemplate views:LibraryPage}" />
-        </Tab>
-
-        <Tab Title="לו&quot;ז שבועי" Icon="calendar_meal_icon.svg">
-            <ShellContent ContentTemplate="{DataTemplate views:SchedulePage}" />
-        </Tab>
-
-        <Tab Title="רשימת קניות" Icon="list_alt_icon.svg">
-            <ShellContent Route="ShoppingListPage" ContentTemplate="{DataTemplate views:ShoppingListPage}" />
-        </Tab>
-    </TabBar>
+    <ShellContent ContentTemplate="{DataTemplate local:MainPage}" />
 
 </Shell>

@@ -38,18 +38,15 @@ namespace Recipe_book
 #endif
             });
 
-            //pages
-            builder.Services.AddSingleton<RecipesDatabase>();
+            //Content pages
             builder.Services.AddSingleton<MainPage>();
+            builder.Services.AddSingleton<RecipesDatabase>();
             builder.Services.AddTransient<RecipeEditorPage>();
             builder.Services.AddTransient<RecipeViewerPage>();
-            builder.Services.AddTransient<LibraryPage>();
             builder.Services.AddTransient<FolderSelectionPage>();
             builder.Services.AddTransient<AllRecipesPage>();
-            builder.Services.AddTransient<SchedulePage>();
             builder.Services.AddTransient<SelectRecipePage>();
             builder.Services.AddTransient<ManageMealsPage>();
-            builder.Services.AddTransient<ShoppingListPage>();
 
             //ViewModels
             builder.Services.AddTransient<Recipe_book.ViewModels.WeeklyScheduleViewModel>();
@@ -63,6 +60,13 @@ namespace Recipe_book
             builder.Services.AddTransient<Recipe_book.ViewModels.ShoppingListViewModel>();
 
             builder.Services.AddSingleton<ViewModels.MainViewModel>();
+
+            //Content views
+            builder.Services.AddTransient<HomePage>();
+            builder.Services.AddTransient<SchedulePage>();
+            builder.Services.AddTransient<LibraryPage>();
+            builder.Services.AddTransient<ShoppingListPage>();
+
 
             return builder.Build();
         }

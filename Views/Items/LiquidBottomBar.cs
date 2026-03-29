@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using Animation = Microsoft.Maui.Controls.Animation;
 using IImage = Microsoft.Maui.Graphics.IImage;
-using Microsoft.Maui.Graphics.Platform; // ללא התנאים, עובד בכל הפלטפורמות
+using Microsoft.Maui.Graphics.Platform; 
 
 namespace Recipe_book.Views.Items;
 
@@ -23,7 +23,7 @@ public class LiquidBottomBar : ContentView
     // ──────────────────────────────────────────
     // מהירות האנימציה
     // ──────────────────────────────────────────
-    private const uint AnimDuration = 650;
+    private const uint AnimDuration = 540;
 
     private Grid _mainGrid;
     private GraphicsView _graphicsView;
@@ -33,6 +33,7 @@ public class LiquidBottomBar : ContentView
 
     private int _selectedIndex = 0;
     private bool _isAnimating = false;
+    public event EventHandler<int> TabSelected;
 
     public LiquidBottomBar()
     {
@@ -156,6 +157,7 @@ public class LiquidBottomBar : ContentView
         int oldIndex = _selectedIndex;
         _selectedIndex = newIndex;
         _isAnimating = true;
+        TabSelected?.Invoke(this, newIndex);
 
         // 1. האייקון הישן חוזר מיד לצבע הרגיל שלו (לא מחכה לכדור!)
         if (oldIndex >= 0 && oldIndex < _icons.Count)

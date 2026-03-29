@@ -2,7 +2,7 @@ using Recipe_book.ViewModels;
 
 namespace Recipe_book.Views.Pages;
 
-public partial class LibraryPage : ContentPage
+public partial class LibraryPage : ContentView
 {
     private readonly LibraryViewModel _vm;
 
@@ -11,12 +11,13 @@ public partial class LibraryPage : ContentPage
         InitializeComponent();
         _vm = vm;
         BindingContext = _vm;
+
+        // טעינת הנתונים דרך האירוע Loaded במקום OnAppearing
+        this.Loaded += OnPageLoaded;
     }
 
-    protected override async void OnAppearing()
+    private async void OnPageLoaded(object sender, EventArgs e)
     {
-        base.OnAppearing();
-
         // Load the folders first
         await _vm.LoadFoldersCommand.ExecuteAsync(null);
 

@@ -1,20 +1,19 @@
 using Recipe_book.ViewModels;
 
-namespace Recipe_book.Views.Pages; // או התיקייה שבה המסך נמצא
+namespace Recipe_book.Views.Pages;
 
-public partial class ShoppingListPage : ContentPage
+public partial class ShoppingListPage : ContentView
 {
     public ShoppingListPage(ShoppingListViewModel viewModel)
     {
         InitializeComponent();
-        BindingContext = viewModel; // מחבר את ה"מוח" למסך
+        BindingContext = viewModel;
+
+        this.Loaded += OnPageLoaded;
     }
 
-    protected override async void OnAppearing()
+    private async void OnPageLoaded(object sender, EventArgs e)
     {
-        base.OnAppearing();
-
-        // ברגע שהמסך מופיע, הוא טוען את הרשימה אוטומטית לפי ההעדפה השמורה!
         if (BindingContext is ShoppingListViewModel vm)
         {
             await vm.InitializeAutoLoadAsync();

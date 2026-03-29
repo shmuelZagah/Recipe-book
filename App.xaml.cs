@@ -217,7 +217,7 @@ public partial class App : Application
 
                                     ShoppingListViewModel.PendingImportId = newList.Id;
 
-                                    await Shell.Current.GoToAsync("//ShoppingListPage");
+                                    Recipe_book.MainPage.SwitchTabAction?.Invoke(3);
 
                                     ShoppingListViewModel.RefreshActivePage?.Invoke();
                                 });

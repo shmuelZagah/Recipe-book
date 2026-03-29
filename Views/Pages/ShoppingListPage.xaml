@@ -1,29 +1,21 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Recipe_book.ViewModels"
              xmlns:items ="clr-namespace:Recipe_book.Views.Items"
              x:Class="Recipe_book.Views.Pages.ShoppingListPage"
-             Title="רשימת קניות"
              FlowDirection="RightToLeft">
-
-    <ContentPage.ToolbarItems>
-        <ToolbarItem Text="נקה סימונים 🗑️" 
-                     Command="{Binding ClearBoughtItemsCommand}" 
-                     IsEnabled="{Binding IsHeaderClosed}"
-                     Order="Secondary"/>
-
-        <ToolbarItem Text="שתף 📤" 
-                     Command="{Binding ShareListCommand}" 
-                     IsEnabled="{Binding IsHeaderClosed}"
-                     Order="Secondary" />
-    </ContentPage.ToolbarItems>
 
     <Grid>
 
         <Grid RowDefinitions="Auto, *">
 
             <VerticalStackLayout Grid.Row="0" Padding="20,10,20,0">
+
+                <Grid IsVisible="{Binding IsHeaderClosed}" Margin="0,0,0,15" ColumnDefinitions="Auto, Auto, *">
+                    <Button Grid.Column="0" Text="נקה סימונים 🗑️" Command="{Binding ClearBoughtItemsCommand}" BackgroundColor="Transparent" TextColor="#FF2E4C" FontAttributes="Bold" Padding="5,0" Margin="0,0,15,0" HeightRequest="35"/>
+                    <Button Grid.Column="1" Text="שתף 📤" Command="{Binding ShareListCommand}" BackgroundColor="Transparent" TextColor="#1A73E8" FontAttributes="Bold" Padding="5,0" HeightRequest="35"/>
+                </Grid>
 
                 <Button Text="📅 שנה זמנים" 
                         Command="{Binding OpenHeaderCommand}" 
@@ -303,4 +295,4 @@
         <items:LoadingOverlayControl IsLoading="{Binding IsLoading}"
                                          LoadingText="{Binding LoadingText}"/>
     </Grid>
-</ContentPage>
+</ContentView>

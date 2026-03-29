@@ -2,7 +2,7 @@ using Recipe_book.ViewModels;
 
 namespace Recipe_book.Views.Pages;
 
-public partial class SchedulePage : ContentPage
+public partial class SchedulePage : ContentView
 {
     private readonly WeeklyScheduleViewModel _viewModel;
 
@@ -11,11 +11,13 @@ public partial class SchedulePage : ContentPage
         InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
+
+        // טעינת הנתונים דרך Loaded
+        this.Loaded += OnPageLoaded;
     }
 
-    protected override async void OnAppearing()
+    private async void OnPageLoaded(object sender, EventArgs e)
     {
-        base.OnAppearing();
         await _viewModel.LoadScheduleAsync();
 
         var todayItem = _viewModel.WeekDays.FirstOrDefault(d => d.Date.Date == DateTime.Today);
@@ -27,6 +29,3 @@ public partial class SchedulePage : ContentPage
         }
     }
 }
-
-
-

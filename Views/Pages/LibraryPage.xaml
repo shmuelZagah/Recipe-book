@@ -1,21 +1,15 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Recipe_book.Views.Pages.LibraryPage"
              xmlns:vm="clr-namespace:Recipe_book.ViewModels"
              xmlns:models="clr-namespace:Recipe_book.Models.Organization"
              xmlns:recipes="clr-namespace:Recipe_book.Models.Recipes"
              xmlns:controls="clr-namespace:Recipe_book.Views.Items"
-             Title="{Binding PageTitle}" 
              FlowDirection="RightToLeft"
              BackgroundColor="#F5F5F5">
 
-    <ContentPage.ToolbarItems>
-        <ToolbarItem Text="תצוגה" Order="Secondary" Command="{Binding ToggleViewCommand}" />
-    </ContentPage.ToolbarItems>
-
     <Grid>
-
         <Grid RowDefinitions="Auto, Auto, *">
 
             <controls:SearchBarControl Grid.Row="0" SearchText="{Binding SearchQuery}" PlaceholderText="חפש תיקייה או מתכון..." />
@@ -171,5 +165,4 @@
                                         LoadingText="{Binding LoadingText}"/>
     </Grid>
 
-
-</ContentPage>
+</ContentView>
