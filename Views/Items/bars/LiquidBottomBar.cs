@@ -5,23 +5,23 @@ using System.Reflection;
 using System.Collections.Generic;
 using Animation = Microsoft.Maui.Controls.Animation;
 using IImage = Microsoft.Maui.Graphics.IImage;
-using Microsoft.Maui.Graphics.Platform; 
+using Microsoft.Maui.Graphics.Platform;
 
-namespace Recipe_book.Views.Items;
+namespace Recipe_book.Views.Items.bars;
 
 public class LiquidBottomBar : ContentView
 {
     public static readonly BindableProperty ItemsProperty =
-        BindableProperty.Create(nameof(Items), typeof(IList<AnimatedBottomBarItem>), typeof(LiquidBottomBar), propertyChanged: OnItemsChanged);
+        BindableProperty.Create(nameof(Items), typeof(IList<AnimatedBarItem>), typeof(LiquidBottomBar), propertyChanged: OnItemsChanged);
 
-    public IList<AnimatedBottomBarItem> Items
+    public IList<AnimatedBarItem> Items
     {
-        get => (IList<AnimatedBottomBarItem>)GetValue(ItemsProperty);
+        get => (IList<AnimatedBarItem>)GetValue(ItemsProperty);
         set => SetValue(ItemsProperty, value);
     }
 
     // ──────────────────────────────────────────
-    // מהירות האנימציה
+    // Animation Speed
     // ──────────────────────────────────────────
     private const uint AnimDuration = 540;
 
@@ -30,6 +30,7 @@ public class LiquidBottomBar : ContentView
     private LiquidBackground _liquidBackground;
     private Grid _iconsGrid;
     private List<Image> _icons = new();
+    private List<Label> _labels = new(); // Added list for the text labels
 
     private int _selectedIndex = 0;
     private bool _isAnimating = false;
@@ -41,15 +42,15 @@ public class LiquidBottomBar : ContentView
         VerticalOptions = LayoutOptions.End;
         HorizontalOptions = LayoutOptions.Fill;
 
-        // משיכת צבע הבר מ-Colors.xaml
-        Color secondary = GetResourceColor("BarNavigation", Color.FromArgb("#FFF3E3"));
+        // Fetch bar color from Colors.xaml
+        Color secondary = GetResourceColor("Primary", Color.FromArgb("#FFF3E3"));
 
         _liquidBackground = new LiquidBackground
         {
             BarColor = secondary,
         };
 
-        // טעינת הטקסטורה של הספר מתוך Resources/Raw
+        // Load book texture from Resources/Raw
         LoadTextureImage("book_texture.png");
 
         _graphicsView = new GraphicsView
@@ -69,7 +70,7 @@ public class LiquidBottomBar : ContentView
         SizeChanged += OnSizeChanged;
     }
 
-    // מתודת עזר אסינכרונית לטעינת התמונה (מתאים לאנדרואיד ול-Windows)
+    // Async helper method to load the image (supports Android and Windows)
     private async void LoadTextureImage(string fileName)
     {
         try
@@ -79,7 +80,7 @@ public class LiquidBottomBar : ContentView
 
             if (_graphicsView != null)
             {
-                _graphicsView.Invalidate(); // ריענון הקנבס ברגע שהתמונה נטענה
+                _graphicsView.Invalidate(); // Refresh canvas once image is loaded
             }
         }
         catch (Exception ex)
@@ -114,6 +115,7 @@ public class LiquidBottomBar : ContentView
         _iconsGrid.ColumnDefinitions.Clear();
         _iconsGrid.Children.Clear();
         _icons.Clear();
+        _labels.Clear();
 
         for (int i = 0; i < Items.Count; i++)
         {
@@ -132,16 +134,30 @@ public class LiquidBottomBar : ContentView
                 HorizontalOptions = LayoutOptions.Center
             };
 
+            var label = new Label
+            {
+                Text = Items[i].Title,
+                FontSize = 12,
+                TextColor = GetResourceColor("Secondary", Color.FromArgb("#FFF3E3")), // Dark gray for inactive tabs
+                FontAttributes = FontAttributes.Bold,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Start,
+                TranslationY = 66 // Positioned beautifully right below the icon
+            };
+
             var tap = new TapGestureRecognizer();
             tap.Tapped += (_, _) => OnTabTapped(index);
 
             var cell = new Grid { BackgroundColor = Colors.Transparent };
             cell.Children.Add(icon);
+            cell.Children.Add(label);
             cell.GestureRecognizers.Add(tap);
 
             Grid.SetColumn(cell, i);
             _iconsGrid.Children.Add(cell);
+
             _icons.Add(icon);
+            _labels.Add(label);
         }
 
         if (Width > 0)
@@ -159,7 +175,7 @@ public class LiquidBottomBar : ContentView
         _isAnimating = true;
         TabSelected?.Invoke(this, newIndex);
 
-        // 1. האייקון הישן חוזר מיד לצבע הרגיל שלו (לא מחכה לכדור!)
+        // 1. Old icon returns to its normal color immediately (doesn't wait for the ball!)
         if (oldIndex >= 0 && oldIndex < _icons.Count)
         {
             _icons[oldIndex].Source = Items[oldIndex].IconSource;
@@ -176,10 +192,10 @@ public class LiquidBottomBar : ContentView
             UpdatePhysicsFrame(oldIndex, newIndex, 1.0);
         });
 
-        // 2. ממתינים שהכדור יגיע (חצי מזמן האנימציה)
+        // 2. Wait for the ball to arrive (half the animation duration)
         await Task.Delay((int)(AnimDuration / 2));
 
-        // 3. רק עכשיו מחליפים את האייקון החדש לגרסה הלבנה הלחוצה
+        // 3. Now change the new icon to the pressed white version
         if (newIndex >= 0 && newIndex < _icons.Count && !string.IsNullOrEmpty(Items[newIndex].SelectedIconSource))
         {
             _icons[newIndex].Source = Items[newIndex].SelectedIconSource;
@@ -218,6 +234,9 @@ public class LiquidBottomBar : ContentView
             double targetScale = 1.0;
             double targetOpacity = 0.4;
 
+            // Text label starts fully visible
+            double labelOpacity = 1.0;
+
             double dentRadius = Math.Min(65, tabWidth * 0.85);
 
             if (distDent < dentRadius)
@@ -228,6 +247,9 @@ public class LiquidBottomBar : ContentView
                 targetY = 38 + (dentEase * 65);
                 targetX = (_liquidBackground.DentX - baseX) * 0.25 * dentEase;
                 targetOpacity = 0.4 - (dentEase * 0.4);
+
+                // Fade out label quickly when the liquid pushes down on it
+                labelOpacity = Math.Max(0, 1.0 - (dentEase * 2.0));
             }
 
             if (i == oldIndex || i == newIndex)
@@ -247,6 +269,9 @@ public class LiquidBottomBar : ContentView
                     targetX = targetX + (riderX - targetX) * ballEase;
                     targetScale = targetScale + (riderScale - targetScale) * ballEase;
                     targetOpacity = targetOpacity + (riderOpacity - targetOpacity) * ballEase;
+
+                    // Fade out the label smoothly as the ball picks up the icon
+                    labelOpacity = Math.Max(0, labelOpacity - ballFactor);
                 }
             }
 
@@ -254,11 +279,21 @@ public class LiquidBottomBar : ContentView
             _icons[i].TranslationY = targetY;
             _icons[i].Scale = targetScale;
             _icons[i].Opacity = targetOpacity;
+
+            // Apply opacity physics to the label
+            _labels[i].Opacity = labelOpacity;
         }
     }
 
+    public void SelectTab(int index)
+    {
+        OnTabTapped(index);
+    }
+
+
+
     // ──────────────────────────────────────────────────────────────────
-    // מנוע הציור - משתני הציור נמצאים אך ורק כאן!
+    // Drawing Engine - Drawing variables belong here only!
     // ──────────────────────────────────────────────────────────────────
     class LiquidBackground : IDrawable
     {
@@ -279,11 +314,11 @@ public class LiquidBottomBar : ContentView
             float bx = (float)BallX;
             float by = (float)BallY;
 
-            // מיקום הכדור וגודלו (ריבוע של 50x50 פיקסלים)
+            // Ball position and size (50x50 pixels square)
             RectF ballRect = new RectF(bx - 25, by, 50, 50);
 
-            // --- שינוי מרכזי 1: מחקנו לגמרי את שלב 1 (ציור הצל האחורי). ---
-            // זה יעלים את ה"מסגרת" הלבנה שראית מסביב.
+            // --- Major Change 1: Completely removed step 1 (drawing the back shadow). ---
+            // This removes the white "frame" you saw around it.
 
             canvas.SaveState();
             canvas.SetShadow(new SizeF(0, 6), 15, Colors.Black.WithAlpha(0.6f));
@@ -291,40 +326,40 @@ public class LiquidBottomBar : ContentView
             canvas.FillEllipse(ballRect);
             canvas.RestoreState();
 
-            // 1. ציור הכדור עם הטקסטורה בלבד (המראה הנקי והשטוח)
+            // 1. Draw the ball with texture only (clean and flat look)
             if (BallTexture != null)
             {
-                canvas.SaveState(); // שמירת מצב נקי עבור החיתוך (Clip)
+                canvas.SaveState(); // Save clean state for clipping
 
-                // חותכים את אזור הציור לעיגול מושלם כדי שהתמונה לא תגלוש לפינות
+                // Clip the drawing area to a perfect circle so the image doesn't overflow to corners
                 PathF clipPath = new PathF();
                 clipPath.AppendEllipse(ballRect);
                 canvas.ClipPath(clipPath);
 
-                // --- שינוי מרכזי 2: ציור התמונה על כל שטח הריבוע (בלי ה-+2 ו--4). ---
-                // זה מבטיח שהתמונה תמלא את העיגול עד הקצה ותיראה "נקייה".
+                // --- Major Change 2: Draw the image on the full square area (without +2 and -4). ---
+                // This ensures the image fills the circle to the edge and looks "clean".
                 float zoom = 3;
 
-                // מציירים את התמונה גדולה יותר, ומזיזים את נקודת ההתחלה אחורה ולמעלה כדי שתישאר ממורכזת
+                // Draw the image larger, and move the starting point back and up to keep it centered
                 canvas.DrawImage(BallTexture,
                                  ballRect.X - zoom,
                                  ballRect.Y - zoom,
                                  ballRect.Width + (zoom * 2),
                                  ballRect.Height + (zoom * 2));
 
-                // --- שינוי מרכזי 3: מחקנו לגמרי את ה-Spherical Shading וה-BlendMode. Overlay. ---
-                // עכשיו אין שום צבע או הילה מעל הטפט המקורי שלך.
+                // --- Major Change 3: Completely removed Spherical Shading and BlendMode.Overlay. ---
+                // Now there is no color or halo above your original wallpaper.
 
-                canvas.RestoreState(); // ניקוי החיתוך
+                canvas.RestoreState(); // Clear clipping
             }
             else
             {
-                // Fallback למקרה שהתמונה עדיין נטענה (משאירים את האפור)
+                // Fallback in case the image hasn't loaded yet (leave gray)
                 canvas.FillColor = Colors.LightGray;
                 canvas.FillEllipse(ballRect);
             }
 
-            // 2. חישוב מסלול הבר (נשאר ללא שינוי)
+            // 2. Calculate bar path (remains unchanged)
             PathF path = new PathF();
             path.MoveTo(0, 25);
             path.LineTo(dx - 50, 25);
@@ -335,7 +370,7 @@ public class LiquidBottomBar : ContentView
             path.LineTo(0, h);
             path.Close();
 
-            // 3. ציור הבר עם צל כלפי מעלה כדי שיבלוט (נשאר ללא שינוי)
+            // 3. Draw the bar with an upward shadow so it pops out (remains unchanged)
             canvas.SaveState();
             canvas.SetShadow(new SizeF(0, -6), 15, Colors.Black.WithAlpha(0.2f));
             canvas.FillColor = BarColor;

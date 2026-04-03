@@ -24,4 +24,15 @@ public partial class HomePage : ContentView
         double fullWidth = MealsScrollView.ContentSize.Width;
         await MealsScrollView.ScrollToAsync(fullWidth, 0, animated: false);
     }
+
+    // זהו. רק הפונקציה הזו! בלי Overlay.
+    public bool HandleBackPressed()
+    {
+        if (MainSearchBar.IsSearchOpen)
+        {
+            MainSearchBar.CloseSearch();
+            return true;
+        }
+        return false;
+    }
 }

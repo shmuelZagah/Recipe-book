@@ -1,4 +1,5 @@
 ﻿using Recipe_book.ViewModels;
+using Recipe_book.Views.Items.bars;
 using Recipe_book.Views.Pages;
 
 namespace Recipe_book;
@@ -25,19 +26,26 @@ public partial class MainPage : ContentPage
         _schedulePage = new SchedulePage(schedVm);
         _shoppingPage = new ShoppingListPage(shopVm);
 
-        BottomBar.Items = new List<Views.Items.AnimatedBottomBarItem>
+        BottomBar.Items = new List<AnimatedBarItem>
         {
-            new() { IconSource = "home_icon.svg", SelectedIconSource = "home_clicked_icon.svg" },
-            new() { IconSource = "menu_book_icon.svg" },
-            new() { IconSource = "calendar_meal_icon.svg" },
-            new() { IconSource = "list_alt_icon.svg" }
+            new() { Title = "בית", IconSource = "home_icon.svg", SelectedIconSource = "home_clicked_icon.svg" },
+            new() { Title = "ספרייה", IconSource = "recipe_icon.svg", SelectedIconSource = "recipe_clicked_icon.svg" },
+            new() { Title = "לוז", IconSource = "calendar_icon.svg", SelectedIconSource = "calendar_clicked_icon.svg" },
+            new() { Title = "קניות", IconSource = "shopping_icon.svg", SelectedIconSource = "shopping_clicked_icon.svg" }
         };
-
 
         _currentView = _homePage;
         ContentHost.Children.Add(_currentView);
 
-        SwitchTabAction = SwitchToTab;
+        SwitchTabAction = async (index) =>
+        {
+
+            BottomBar.SelectTab(index);
+
+            await SwitchToTab(index);
+        };
+
+
     }
 
     protected override async void OnAppearing()
@@ -51,7 +59,7 @@ public partial class MainPage : ContentPage
         {
             if (!ContentHost.Children.Contains(page))
             {
-                page.TranslationX = 5000; 
+                page.TranslationX = 5000;
                 ContentHost.Children.Add(page);
                 await Task.Delay(50);
             }
@@ -63,7 +71,7 @@ public partial class MainPage : ContentPage
         SwitchToTab(index);
     }
 
-    private async void SwitchToTab(int newIndex)
+    private async Task SwitchToTab(int newIndex)
     {
         if (newIndex == _currentIndex || _isAnimating) return;
 
@@ -105,5 +113,20 @@ public partial class MainPage : ContentPage
         _currentView = incomingView;
         _currentIndex = newIndex;
         _isAnimating = false;
+
+    }
+
+    protected override bool OnBackButtonPressed()
+    {
+
+        if (_currentIndex == 0 && _homePage is Recipe_book.Views.Pages.HomePage home)
+        {
+            if (home.HandleBackPressed())
+            {
+                return true;
+            }
+        }
+
+        return base.OnBackButtonPressed();
     }
 }

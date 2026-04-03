@@ -1,18 +1,48 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Recipe_book.Views.Items.SearchBarControl">
+             x:Class="Recipe_book.Views.Items.SearchBarControl"
+             x:Name="ThisControl">
 
-    <VerticalStackLayout Grid.Row="0" Padding="20,20,20,10" BackgroundColor="#F5F5F5">
-        <Border StrokeShape="RoundRectangle 10" 
-            StrokeThickness="0"
-            BackgroundColor="White"
+    <Border x:Name="SearchBorder"
+            StrokeShape="RoundRectangle 25"
+            StrokeThickness="0" 
+            BackgroundColor="Transparent"
+            HorizontalOptions="End"
+            WidthRequest="50"
             HeightRequest="50"
-            Shadow="{Shadow Brush=Gray, Offset='0,2', Opacity=0.2}">
+            Padding="0">
 
-            <SearchBar x:Name="MainSearchBar"
-             BackgroundColor="Transparent"
-             TextColor="Black"/>
-        </Border>
-    </VerticalStackLayout>
+        <!-- באג 1: הוספת BackgroundColor="Transparent" לגריד -->
+        <Grid ColumnDefinitions="Auto, *"
+              BackgroundColor="Transparent">
+
+            <Image x:Name="ActionIcon"
+                   Grid.Column="0"
+                   Source="search_icon.svg"
+                   WidthRequest="26"
+                   HeightRequest="26"
+                   BackgroundColor="Transparent"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"
+                   Margin="12,0,0,0">
+                <Image.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnToggleSearchClicked"/>
+                </Image.GestureRecognizers>
+            </Image>
+
+            <Entry x:Name="SearchInput"
+                   Grid.Column="1"
+                   Placeholder="{Binding PlaceholderText, Source={x:Reference ThisControl}}"
+                   Text="{Binding SearchText, Source={x:Reference ThisControl}}"
+                   IsVisible="False"
+                   Opacity="0"
+                   BackgroundColor="Transparent"
+                   VerticalOptions="Center"
+                   Margin="10,0,10,0"
+                   Completed="OnSearchCompleted"
+                   Unfocused="OnSearchInputUnfocused"/>
+        </Grid>
+    </Border>
+
 </ContentView>

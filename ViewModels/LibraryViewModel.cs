@@ -1,25 +1,16 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
-using Recipe_book.Models.Organization;
-using Recipe_book.Services;
-using Recipe_book.Models.Recipes;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using Microsoft.Maui.Controls;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Maui.ApplicationModel.DataTransfer;
-using System.Text;
-using System.Text.Json;
-using System.IO;
-using System.IO.Compression;
-using Microsoft.Maui.Controls.Compatibility;
+using Microsoft.Maui.Controls;
+using Recipe_book.Models.Organization;
+using Recipe_book.Models.Recipes;
+using Recipe_book.Services;
+using System.Collections.ObjectModel;
+using Recipe_book.Views.Items.bars;
 
 namespace Recipe_book.ViewModels;
 
-/// <summary>
-/// ViewModel for managing the recipe library, including folder navigation, search, and recipe operations.
-/// </summary>
 public partial class LibraryViewModel : ObservableObject
 {
     private readonly RecipesDatabase _database;
@@ -28,11 +19,15 @@ public partial class LibraryViewModel : ObservableObject
     #region Properties
     //--------------
 
+    public ObservableCollection<TabItem> LibraryTabs { get; } = new();
     public ObservableCollection<RecipeFolder> Folders { get; } = new();
     public ObservableCollection<Recipe> FolderRecipes { get; } = new();
 
     [ObservableProperty]
     private string searchQuery;
+
+    [ObservableProperty]
+    private string currentTab = "Folders"; // "Folders", "AllRecipes", "Favorites", "Uncategorized"
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PageTitle))]
@@ -63,6 +58,18 @@ public partial class LibraryViewModel : ObservableObject
     {
         _database = database;
         InitializeVariables();
+
+        LibraryTabs.Add(new TabItem { Id = "Folders", Title = "תיקיות" });
+        LibraryTabs.Add(new TabItem { Id = "AllRecipes", Title = "כל המתכונים" });
+        LibraryTabs.Add(new TabItem { Id = "Favorites", Title = "מועדפים" });
+        LibraryTabs.Add(new TabItem { Id = "Uncategorized", Title = "ללא תיקייה" });
+
+
+        WeakReferenceMessenger.Default.Register<string>(this, async (r, m) =>
+        {
+            if (m == "RefreshRecipes" || m == "FoldersChanged" || m == "RecipesChanged")
+                await LoadFoldersCommand.ExecuteAsync(null);
+        });
     }
 
     private void InitializeVariables()
@@ -79,9 +86,18 @@ public partial class LibraryViewModel : ObservableObject
         _ = LoadFoldersAsync();
     }
 
-    /// <summary>
-    /// Recursively finds a folder and all its descendant subfolders.
-    /// </summary>
+    [RelayCommand]
+    public async Task SelectTabAsync(string tabName)
+    {
+        if (CurrentTab == tabName) return;
+
+        CurrentTab = tabName;
+        CurrentFolder = null; // איפוס ניווט פנימי כשמחליפים טאב
+        SearchQuery = string.Empty; // איפוס חיפוש
+
+        await LoadFoldersAsync();
+    }
+
     private List<RecipeFolder> GetFolderAndDescendants(RecipeFolder targetFolder, List<RecipeFolder> allFolders)
     {
         var result = new List<RecipeFolder> { targetFolder };
@@ -115,8 +131,8 @@ public partial class LibraryViewModel : ObservableObject
             {
                 await _database.RemoveAllRecipesFromFolderAsync(fToDelete.Id);
                 await _database.DeleteFolderAsync(fToDelete);
-                Folders.Remove(fToDelete);
             }
+            WeakReferenceMessenger.Default.Send("FoldersChanged");
         }
         else if (deleteOption == "מחק תיקייה וגם את המתכונים שבתוכה")
         {
@@ -130,11 +146,10 @@ public partial class LibraryViewModel : ObservableObject
 
                 await _database.RemoveAllRecipesFromFolderAsync(fToDelete.Id);
                 await _database.DeleteFolderAsync(fToDelete);
-                Folders.Remove(fToDelete);
             }
+            WeakReferenceMessenger.Default.Send("FoldersChanged");
+            WeakReferenceMessenger.Default.Send("RecipesChanged");
         }
-
-        await LoadFoldersAsync();
     }
 
     #endregion
@@ -147,47 +162,75 @@ public partial class LibraryViewModel : ObservableObject
     [RelayCommand]
     public async Task LoadFoldersAsync()
     {
-        var allFolders = await _database.GetFoldersAsync();
-
-        Folders.Clear();
-        FolderRecipes.Clear();
-
-        if (string.IsNullOrWhiteSpace(SearchQuery))
+        IsLoading = true;
+        try
         {
-            // Normal mode: navigate through the folder hierarchy
-            int? targetParentId = CurrentFolder?.Id;
-
-            foreach (var folder in allFolders.Where(f => f.ParentFolderId == targetParentId))
-            {
-                Folders.Add(folder);
-            }
-
-            List<Recipe> recipesToShow;
-            if (targetParentId == null || targetParentId == 0)
-                recipesToShow = await _database.GetRecipesWithoutFolderAsync();
-            else
-                recipesToShow = await _database.GetRecipesInFolderAsync(targetParentId.Value);
-
-            foreach (var recipe in recipesToShow)
-            {
-                FolderRecipes.Add(recipe);
-            }
-        }
-        else
-        {
-            // Search mode: flatten the view and search across all folders and recipes
-            var filteredFolders = allFolders.Where(f => f.Name != null && f.Name.Contains(SearchQuery)).ToList();
-            foreach (var folder in filteredFolders)
-            {
-                Folders.Add(folder);
-            }
+            Folders.Clear();
+            FolderRecipes.Clear();
 
             var allRecipes = await _database.GetRecipesAsync();
-            var filteredRecipes = allRecipes.Where(r => r.Title != null && r.Title.Contains(SearchQuery)).ToList();
-            foreach (var recipe in filteredRecipes)
+
+            if (CurrentTab == "Folders")
             {
-                FolderRecipes.Add(recipe);
+                var allFolders = await _database.GetFoldersAsync();
+
+                if (string.IsNullOrWhiteSpace(SearchQuery))
+                {
+                    int? targetParentId = CurrentFolder?.Id;
+
+                    foreach (var folder in allFolders.Where(f => f.ParentFolderId == targetParentId))
+                    {
+                        Folders.Add(folder);
+                    }
+
+                    List<Recipe> recipesToShow;
+                    if (targetParentId == null || targetParentId == 0)
+                        recipesToShow = await _database.GetRecipesWithoutFolderAsync();
+                    else
+                        recipesToShow = await _database.GetRecipesInFolderAsync(targetParentId.Value);
+
+                    foreach (var recipe in recipesToShow) FolderRecipes.Add(recipe);
+                }
+                else
+                {
+                    var filteredFolders = allFolders.Where(f => f.Name != null && f.Name.Contains(SearchQuery)).ToList();
+                    foreach (var folder in filteredFolders) Folders.Add(folder);
+
+                    var filteredRecipes = allRecipes.Where(r => r.Title != null && r.Title.Contains(SearchQuery)).ToList();
+                    foreach (var recipe in filteredRecipes) FolderRecipes.Add(recipe);
+                }
             }
+            else if (CurrentTab == "AllRecipes")
+            {
+                var recipesToShow = string.IsNullOrWhiteSpace(SearchQuery)
+                    ? allRecipes
+                    : allRecipes.Where(r => r.Title != null && r.Title.Contains(SearchQuery)).ToList();
+
+                foreach (var recipe in recipesToShow) FolderRecipes.Add(recipe);
+            }
+            else if (CurrentTab == "Favorites")
+            {
+                var recipesToShow = allRecipes.Where(r => r.isFavorite).ToList();
+
+                if (!string.IsNullOrWhiteSpace(SearchQuery))
+                    recipesToShow = recipesToShow.Where(r => r.Title != null && r.Title.Contains(SearchQuery)).ToList();
+
+                foreach (var recipe in recipesToShow) FolderRecipes.Add(recipe);
+            }
+            else if (CurrentTab == "Uncategorized")
+            {
+                var uncategorized = await _database.GetRecipesWithoutFolderAsync();
+
+                var recipesToShow = string.IsNullOrWhiteSpace(SearchQuery)
+                    ? uncategorized
+                    : uncategorized.Where(r => r.Title != null && r.Title.Contains(SearchQuery)).ToList();
+
+                foreach (var recipe in recipesToShow) FolderRecipes.Add(recipe);
+            }
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
@@ -209,7 +252,7 @@ public partial class LibraryViewModel : ObservableObject
             };
 
             await _database.SaveFolderAsync(newFolder);
-            Folders.Add(newFolder);
+            WeakReferenceMessenger.Default.Send("FoldersChanged");
         }
     }
 
@@ -263,7 +306,7 @@ public partial class LibraryViewModel : ObservableObject
         {
             folder.Name = newName;
             await _database.SaveFolderAsync(folder);
-            await LoadFoldersAsync();
+            WeakReferenceMessenger.Default.Send("FoldersChanged");
         }
     }
 
@@ -284,8 +327,7 @@ public partial class LibraryViewModel : ObservableObject
         {
             await ShareFolderAsync(folder);
         }
-
-        if (action == "שנה שם")
+        else if (action == "שנה שם")
         {
             await RenameFolderAsync(folder);
         }
@@ -322,9 +364,7 @@ public partial class LibraryViewModel : ObservableObject
         {
             await ShareRecipeAsync(recipe);
         }
-
-
-        if (action == "ערוך מתכון")
+        else if (action == "ערוך מתכון")
         {
             var navParam = new Dictionary<string, object> { { "RecipeToEdit", recipe } };
             await Shell.Current.GoToAsync(nameof(Views.SubPages.RecipeEditorPage), navParam);
@@ -345,15 +385,15 @@ public partial class LibraryViewModel : ObservableObject
             if (answer)
             {
                 await _database.DeleteRecipeAsync(recipe);
-                FolderRecipes.Remove(recipe);
+                WeakReferenceMessenger.Default.Send("RecipesChanged");
             }
         }
     }
 
     [RelayCommand]
-    public async Task OpenAllRecipesAsync()
+    public async Task AddRecipeAsync()
     {
-        await Shell.Current.GoToAsync(nameof(Views.SubPages.AllRecipesPage));
+        await Shell.Current.GoToAsync(nameof(Views.SubPages.RecipeEditorPage));
     }
 
     #endregion
@@ -412,10 +452,7 @@ public partial class LibraryViewModel : ObservableObject
 
         try
         {
-            // Build the tree (this will upload any unsynced recipes automatically)
             var sharedFolderTree = await _database.BuildSharedFolderTreeAsync(folder);
-
-            // Upload the finished tree to Firestore
             var firestoreService = new FirestoreService();
             string newCloudId = await firestoreService.UploadSharedFolderAsync(sharedFolderTree);
 
@@ -427,8 +464,6 @@ public partial class LibraryViewModel : ObservableObject
 
             await _database.RegisterSharedFolderForDeletionAsync(newCloudId, sharedFolderTree.ExpiresAt);
 
-
-            // Generate the link and open the Android share sheet
             string shareLink = $"https://recipe-book-d9389.web.app/folder?id={newCloudId}";
 
             await Share.Default.RequestAsync(new ShareTextRequest

@@ -1,13 +1,14 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.Controls;
 using Recipe_book.Models.Recipes;
 using Recipe_book.Services;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Maui.Controls;
 
 namespace Recipe_book.ViewModels;
 
@@ -190,6 +191,7 @@ public partial class RecipeViewerViewModel : ObservableObject, IQueryAttributabl
         await _database.SaveScheduledMealAsync(newMeal);
         IsScheduleOverlayVisible = false;
         await Application.Current.MainPage.DisplayAlert("מעולה!", "המתכון נוסף ללו\"ז בהצלחה.", "אישור");
+        WeakReferenceMessenger.Default.Send("ScheduleChanged");
     }
 
     #endregion
@@ -270,6 +272,7 @@ public partial class RecipeViewerViewModel : ObservableObject, IQueryAttributabl
                 await _database.DeleteRecipeAsync(recipeToDelete);
             }
 
+            WeakReferenceMessenger.Default.Send("RecipesChanged");
             await Shell.Current.GoToAsync("..");
         }
     }

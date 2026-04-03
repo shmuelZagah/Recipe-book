@@ -91,6 +91,21 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <AndroidResource Remove="Resources\Images\controls\**" />
+	  <Compile Remove="Resources\Images\controls\**" />
+	  <EmbeddedResource Remove="Resources\Images\controls\**" />
+	  <MauiCss Remove="Resources\Images\controls\**" />
+	  <MauiImage Remove="Resources\Images\controls\**" />
+	  <MauiXaml Remove="Resources\Images\controls\**" />
+	  <None Remove="Resources\Images\controls\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Views\Layouts\Swipeinterceptviewhandler.android.cs" />
+	  <Compile Remove="Views\Layouts\Swipeinterceptviewhandler.ios.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <None Remove="Resources\Images\botoom_bar_navigation\calendar_clicked_icon.svg" />
 	  <None Remove="Resources\Images\botoom_bar_navigation\calendar_icon.svg" />
 	  <None Remove="Resources\Images\botoom_bar_navigation\home_clicked_icon.svg" />
@@ -99,6 +114,17 @@
 	  <None Remove="Resources\Images\botoom_bar_navigation\recipe_icon.svg" />
 	  <None Remove="Resources\Images\botoom_bar_navigation\shopping_clicked_icon.svg" />
 	  <None Remove="Resources\Images\botoom_bar_navigation\shopping_icon.svg" />
+	  <None Remove="Resources\Images\homePageUpMenu\close_icon.svg" />
+	  <None Remove="Resources\Images\homePageUpMenu\search_icon.svg" />
+	  <None Remove="Resources\Images\homePageUpMenu\search_icon3.svg" />
+	  <None Remove="Resources\Images\homePageUpMenu\settings_icon.svg" />
+	  <None Remove="Resources\Images\plus\file_plus_icon.svg" />
+	  <None Remove="Resources\Images\plus\folder_plus_icon.svg" />
+	  <None Remove="Resources\Images\plus\merg_list_plus_icon.svg" />
+	  <None Remove="Resources\Images\plus\recipe_plus_icon.svg" />
+	  <None Remove="Resources\Images\plus\schedule_plus_icon.svg" />
+	  <None Remove="Resources\Images\plus\shopping_plus_icon.svg" />
+	  <None Remove="Resources\Images\plus\shopping_puse_icon.svg" />
 	</ItemGroup>
 
 
@@ -116,7 +142,23 @@
 	  <MauiImage Include="Resources\Images\botoom_bar_navigation\recipe_icon.svg" />
 	  <MauiImage Include="Resources\Images\botoom_bar_navigation\shopping_clicked_icon.svg" />
 	  <MauiImage Include="Resources\Images\botoom_bar_navigation\shopping_icon.svg" />
+	  <MauiImage Include="Resources\Images\homePageUpMenu\close_icon.svg" />
+	  <MauiImage Include="Resources\Images\homePageUpMenu\search_icon.svg" />
+	  <MauiImage Include="Resources\Images\homePageUpMenu\search_icon3.svg" />
+	  <MauiImage Include="Resources\Images\homePageUpMenu\settings_icon.svg" />
+	  <MauiImage Include="Resources\Images\plus\file_plus_icon.svg" />
+	  <MauiImage Include="Resources\Images\plus\folder_plus_icon.svg" />
+	  <MauiImage Include="Resources\Images\plus\merg_list_plus_icon.svg" />
+	  <MauiImage Include="Resources\Images\plus\recipe_plus_icon.svg" />
+	  <MauiImage Include="Resources\Images\plus\schedule_plus_icon.svg" />
+	  <MauiImage Include="Resources\Images\plus\shopping_plus_icon.svg" />
 	  <MauiImage Include="Resources\Raw\book_texture.png" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+	  <None Include="Platforms\Android\Swipeinterceptviewhandler.cs" />
+	  <None Include="Platforms\iOS\Swipeinterceptviewhandler.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -130,6 +172,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <MauiXaml Update="Views\Items\FloatingActionControl.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="Views\Items\LoadingOverlayControl.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
@@ -163,7 +208,7 @@
 	  <MauiXaml Update="Views\Pages\SchedulePage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="Views\Pages\SettingsPage.xaml">
+	  <MauiXaml Update="Views\SubPages\SettingsPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="Views\Pages\ShoppingListPage.xaml">

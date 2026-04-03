@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Recipe_book.Models.Recipes;
 using Recipe_book.Services;
 using System;
@@ -71,7 +72,7 @@ public partial class SelectRecipeViewModel : ObservableObject
 
         await _database.SaveScheduledMealAsync(meal);
 
-        // Navigate back to the previous schedule page
+        WeakReferenceMessenger.Default.Send("ScheduleChanged");
         await Shell.Current.GoToAsync("..");
     }
 

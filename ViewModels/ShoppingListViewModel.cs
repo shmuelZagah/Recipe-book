@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Maui.ApplicationModel.DataTransfer;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Storage;
@@ -98,6 +99,15 @@ public partial class ShoppingListViewModel : ObservableObject
         {
             MainThread.BeginInvokeOnMainThread(async () => await InitializeAutoLoadAsync());
         };
+
+
+        WeakReferenceMessenger.Default.Register<string>(this, async (r, m) =>
+        {
+            if (m == "ScheduleChanged" || m == "RecipesChanged")
+            {
+                await InitializeAutoLoadAsync();
+            }
+        });
     }
 
     private async Task HandleImportedListAsync(int id)
@@ -139,6 +149,7 @@ public partial class ShoppingListViewModel : ObservableObject
 
         CurrentShoppingList = selectedList;
         IsListsMenuOpen = false;
+        HasValidList = true;
 
         // Load configuration tied to the specific list ID to maintain independent schedules
         LoadPreferences();
@@ -293,6 +304,7 @@ public partial class ShoppingListViewModel : ObservableObject
         // 4. Update the UI state
         await LoadAllListsAsync();
         await SwitchListAsync(newList);
+        WeakReferenceMessenger.Default.Send("ShoppingChanged");
         await Application.Current.MainPage.DisplayAlert("הצלחה! 🎉", "הרשימות מוזגו בהצלחה לרשימה אחת מאוחדת.", "מעולה");
     }
 

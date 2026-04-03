@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <mask id="merge-mask">
+      <rect width="256" height="256" fill="white"/>
+      
+      <circle cx="190" cy="195" r="45" fill="black" />
+      
+      <g fill="none" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="32">
+        <path d="M190,135 v35" />
+        <polyline points="170,155 190,135 210,155" />
+        <path d="M160,225 c0,-30 30,-25 30,-55" />
+        <path d="M220,225 c0,-30 -30,-25 -30,-55" />
+      </g>
+    </mask>
+  </defs>
+
+  <g mask="url(#merge-mask)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="12">
+    <path d="M168,40v16a8,8,0,0,1-8,8H96a8,8,0,0,1-8-8V40a16,16,0,0,1,16-16h48A16,16,0,0,1,168,40Z"/>
+    <path d="M168,48h32a8,8,0,0,1,8,8V208a8,8,0,0,1-8,8H56a8,8,0,0,1-8-8V56a8,8,0,0,1,8-8H88"/>
+  </g>
+
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="12">
+    <path d="M190,135 v35" />
+    <polyline points="170,155 190,135 210,155" />
+    <path d="M160,225 c0,-30 30,-25 30,-55" />
+    <path d="M220,225 c0,-30 -30,-25 -30,-55" />
+  </g>
+
+</svg>

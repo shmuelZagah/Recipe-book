@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Recipe_book.Models.Recipes;
 using Recipe_book.Services;
 using System.Collections.Generic;
@@ -99,7 +100,7 @@ public partial class ManageMealsViewModel : ObservableObject
             await _database.SaveMealCategoriesAsync(TargetDay.Date.Date, categoriesToSave);
         }
 
-        // Navigate back to the schedule view
+        WeakReferenceMessenger.Default.Send("ScheduleChanged");
         await Shell.Current.GoToAsync("..");
     }
 

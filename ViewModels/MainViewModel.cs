@@ -1,13 +1,15 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.Controls;
 using Recipe_book.Models.Recipes;
 using Recipe_book.Services;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Maui.Controls;
+
 
 namespace Recipe_book.ViewModels;
 
@@ -39,6 +41,18 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(RecipesDatabase database)
     {
         _database = database;
+
+        WeakReferenceMessenger.Default.Register<string>(this, async (r, m) =>
+        {
+            if (m == "RecipesChanged")
+            {
+                await LoadRecipesCommand.ExecuteAsync(null);
+            }
+            else if (m == "ScheduleChanged")
+            {
+                await LoadTodayScheduleAsync();
+            }
+        });
     }
 
     //--------------
@@ -185,22 +199,16 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public async Task GoToScheduleAsync(MealGroup selectedMeal)
+    public void GoToSchedule(MealGroup selectedMeal)
     {
-        string route = "SchedulePage";
-
-        if (selectedMeal == null)
+        if (selectedMeal != null)
         {
-            await Shell.Current.GoToAsync(route);
-            return;
+            WeeklyScheduleViewModel.PendingTargetMeal = selectedMeal.GroupName;
         }
 
-        var navigationParameter = new Dictionary<string, object>
-        {
-            { "TargetMealName", selectedMeal.GroupName }
-        };
+        Recipe_book.MainPage.SwitchTabAction?.Invoke(2);
 
-        await Shell.Current.GoToAsync(route, navigationParameter);
+        WeeklyScheduleViewModel.OpenPendingMealAction?.Invoke();
     }
 
     [RelayCommand]

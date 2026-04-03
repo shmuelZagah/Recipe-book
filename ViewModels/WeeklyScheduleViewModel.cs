@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using Recipe_book.Models.Recipes;
 using Recipe_book.Services;
 using System;
@@ -87,6 +88,9 @@ public partial class WeeklyScheduleViewModel : ObservableObject
     [ObservableProperty]
     private DateTime selectedDatePickerDate = DateTime.Today;
 
+    public static string PendingTargetMeal { get; set; }
+    public static Action OpenPendingMealAction { get; set; }
+
     #endregion
     //--------------
 
@@ -94,6 +98,16 @@ public partial class WeeklyScheduleViewModel : ObservableObject
     {
         _database = database;
         SetCurrentWeekStart(DateTime.Today);
+        OpenPendingMealAction = ExpandPendingMeal;
+
+        WeakReferenceMessenger.Default.Register<string>(this, async (r, m) =>
+        {
+            if (m == "ScheduleChanged" || m == "RecipesChanged")
+            {
+                await LoadScheduleAsync();
+            }
+
+        });
     }
 
     //--------------
@@ -231,6 +245,34 @@ public partial class WeeklyScheduleViewModel : ObservableObject
         }
 
         HandleTargetMeal();
+    }
+
+
+    private void ExpandPendingMeal()
+    {
+        if (string.IsNullOrEmpty(PendingTargetMeal)) return;
+
+        var todayItem = WeekDays.FirstOrDefault(d => d.Date.Date == DateTime.Today);
+        if (todayItem != null && SelectedDay != todayItem)
+        {
+            SelectedDay = todayItem;
+        }
+
+        if (SelectedDay != null)
+        {
+            foreach (var group in SelectedDay.MealGroups)
+            {
+                group.IsExpanded = false;
+            }
+
+            var groupToOpen = SelectedDay.MealGroups.FirstOrDefault(m => m.GroupName == PendingTargetMeal);
+            if (groupToOpen != null)
+            {
+                groupToOpen.IsExpanded = true;
+            }
+        }
+
+        PendingTargetMeal = null;
     }
 
     #endregion

@@ -4,20 +4,15 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
-
-    <Color x:Key="Primary">#e12632</Color>
-    <Color x:Key="PrimaryDark">#ff6754</Color>
+    <Color x:Key="Primary">Gray</Color>
+    <Color x:Key="PrimaryDark">DarkGray</Color>
     <Color x:Key="PrimaryDarkText">White</Color>
 
-    <Color x:Key="Secondary">#F78959</Color>
+    <Color x:Key="Secondary">LightGray</Color>
     <Color x:Key="SecondaryDarkText">#212121</Color>
 
-    <Color x:Key="SecondaryBack">#e2dbc9</Color>
-
-    <Color x:Key="Tertiary">#2B0B98</Color>
-   
-
+    <Color x:Key="SecondaryBack">White</Color>
+    <Color x:Key="Tertiary">#4a5a29</Color>
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
     <Color x:Key="Magenta">#D600AA</Color>
@@ -48,12 +43,8 @@
     <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
-    
-    
-    <!--objects-->
-    <!--navagtion bar-->
-    <Color x:Key="PrimaryBarBall">#FF6B6B</Color>
-    <Color x:Key="PrimaryBarDarkBall">#C92A2A</Color>
-    <Color x:Key="BarNavigation">#e8e5ba</Color>
 
+    <Color x:Key="PrimaryBarBall">#ec7c7c</Color>
+    <Color x:Key="PrimaryBarDarkBall">#d65759</Color>
+    <Color x:Key="BarNavigation">#fed4c3</Color>
 </ResourceDictionary>

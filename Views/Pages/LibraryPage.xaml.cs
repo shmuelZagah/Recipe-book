@@ -1,4 +1,4 @@
-using Recipe_book.ViewModels;
+ï»¿using Recipe_book.ViewModels;
 
 namespace Recipe_book.Views.Pages;
 
@@ -12,7 +12,7 @@ public partial class LibraryPage : ContentView
         _vm = vm;
         BindingContext = _vm;
 
-        // èòéðú äðúåðéí ãøê äàéøåò Loaded áî÷åí OnAppearing
+        // ×˜×¢×™× ×ª ×”× ×ª×•× ×™× ×“×¨×š ×”××™×¨×•×¢ Loaded ×‘×ž×§×•× OnAppearing
         this.Loaded += OnPageLoaded;
     }
 
@@ -33,10 +33,10 @@ public partial class LibraryPage : ContentView
         if (!hasAskedForLinks)
         {
             bool answer = await Shell.Current.DisplayAlert(
-                "çéáåø ÷éùåøéí ìîúëåðéí",
-                "ëãé ùäîúëåðéí ééôúçå éùéøåú áàôìé÷öéä åìà áãôãôï, éù ìàùø ôúéçú ÷éùåøéí áäâãøåú äîëùéø.\n\näàí ìòáåø ìäâãøåú òëùéå?",
-                "ëï, äòáø àåúé",
-                "ìà ëøâò");
+                "×—×™×‘×•×¨ ×§×™×©×•×¨×™× ×œ×ž×ª×›×•× ×™×",
+                "×›×“×™ ×©×”×ž×ª×›×•× ×™× ×™×™×¤×ª×—×• ×™×©×™×¨×•×ª ×‘××¤×œ×™×§×¦×™×” ×•×œ× ×‘×“×¤×“×¤×Ÿ, ×™×© ×œ××©×¨ ×¤×ª×™×—×ª ×§×™×©×•×¨×™× ×‘×”×’×“×¨×•×ª ×”×ž×›×©×™×¨.\n\n×”×× ×œ×¢×‘×•×¨ ×œ×”×’×“×¨×•×ª ×¢×›×©×™×•?",
+                "×›×Ÿ, ×”×¢×‘×¨ ××•×ª×™",
+                "×œ× ×›×¨×’×¢");
 
             if (answer)
             {
@@ -47,5 +47,83 @@ public partial class LibraryPage : ContentView
             // Mark as true so the prompt won't appear again on next launch
             Preferences.Default.Set("HasAskedForAppLinks", true);
         }
+    }
+
+    private bool _isAnimatingTab = false;
+
+    private async void OnTabSelected(object sender, string tabId)
+    {
+        if (BindingContext is not LibraryViewModel vm || _isAnimatingTab) return;
+        if (vm.CurrentTab == tabId) return;
+
+        _isAnimatingTab = true;
+
+        int currentIndex = GetTabIndex(vm.CurrentTab);
+        int newIndex = GetTabIndex(tabId);
+
+        // RTL Logic: Index 0 is Right, Index 1 is Left.
+        // Moving to a higher index means we want to show the Left page,
+        // so the current page needs to slide out to the Right (+Width).
+        bool movingToLeftPage = newIndex > currentIndex;
+        double screenWidth = this.Width;
+        double moveOutOffset = movingToLeftPage ? screenWidth : -screenWidth;
+
+        // 1. Slide current content out
+        await ContentContainer.TranslateTo(moveOutOffset, 0, 250, Easing.CubicIn);
+
+        // 2. Change ViewModel data
+        if (vm.SelectTabCommand.CanExecute(tabId))
+        {
+            vm.SelectTabCommand.Execute(tabId);
+        }
+
+        // Wait a split second to ensure bindings update the UI before it slides back
+        await Task.Delay(50);
+
+        // 3. Teleport content to the opposite side while invisible
+        ContentContainer.TranslationX = -moveOutOffset;
+
+        // 4. Slide new content in
+        await ContentContainer.TranslateTo(0, 0, 250, Easing.CubicOut);
+
+        _isAnimatingTab = false;
+    }
+
+    private void OnSwipedLeft(object sender, SwipedEventArgs e)
+    {
+        // Swipe left -> Move deeper into the tabs (Higher index)
+        ChangeTabByOffset(1);
+    }
+
+    private void OnSwipedRight(object sender, SwipedEventArgs e)
+    {
+        // Swipe right -> Move back (Lower index)
+        ChangeTabByOffset(-1);
+    }
+
+    private void ChangeTabByOffset(int offset)
+    {
+        if (BindingContext is not LibraryViewModel vm || _isAnimatingTab) return;
+
+        int currentIndex = GetTabIndex(vm.CurrentTab);
+        int newIndex = currentIndex + offset;
+
+        if (newIndex >= 0 && newIndex < vm.LibraryTabs.Count)
+        {
+            // Trigger the visual bar. It will automatically call OnTabSelected when done.
+            MainTabBar?.SelectTab(newIndex);
+        }
+    }
+
+    private int GetTabIndex(string tabId)
+    {
+        if (BindingContext is LibraryViewModel vm)
+        {
+            for (int i = 0; i < vm.LibraryTabs.Count; i++)
+            {
+                if (vm.LibraryTabs[i].Id == tabId) return i;
+            }
+        }
+        return 0;
     }
 }

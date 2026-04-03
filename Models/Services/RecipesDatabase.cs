@@ -1,4 +1,5 @@
-﻿using Recipe_book.Models.Cloud;
+﻿using CommunityToolkit.Mvvm.Messaging;
+using Recipe_book.Models.Cloud;
 using Recipe_book.Models.Organization;
 using Recipe_book.Models.Recipes;
 using Recipe_book.Models.Shopping;
@@ -276,6 +277,7 @@ public class RecipesDatabase
             // 5. Wake up the background cleaner. If there's internet, it cleans now. If not, the listener will catch it later.
             _ = Task.Run(async () => await ProcessPendingDeletionsAsync());
         }
+
     }
     #endregion
     //--------------

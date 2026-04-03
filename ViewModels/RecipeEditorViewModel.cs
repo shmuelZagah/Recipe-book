@@ -1,16 +1,17 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Media;
+using Microsoft.Maui.Storage;
 using Recipe_book.Models.Recipes;
 using Recipe_book.Services;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Maui.Media;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Storage;
 
 namespace Recipe_book.ViewModels;
 
@@ -220,22 +221,21 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
             }
         }
 
-        // Sync the fully constructed recipe to Cloud Firestore
-        //await _database.SyncRecipeToCloudAsync(recipeToSave.Id);
-
 
         if (isNewRecipe)
         {
             var navigationParameter = new Dictionary<string, object>
-        {
-            { "Recipe", recipeToSave },
-            { "IsFromNewRecipe", true }
-        };
+            {
+                { "Recipe", recipeToSave },
+                { "IsFromNewRecipe", true }
+            };
 
+            WeakReferenceMessenger.Default.Send("RefreshRecipes");
             await Shell.Current.GoToAsync(nameof(Views.SubPages.FolderSelectionPage), navigationParameter);
         }
         else
         {
+            WeakReferenceMessenger.Default.Send("RefreshRecipes");
             await Shell.Current.GoToAsync("..");
         }
     }

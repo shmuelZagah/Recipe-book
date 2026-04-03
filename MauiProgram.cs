@@ -6,6 +6,9 @@ using Recipe_book.Views.SubPages;
 // --- 1. Correct Firebase usings for v3 ---
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Firebase.Bundled.Shared;
+using Recipe_book.Views.Layouts;
+
+
 #if ANDROID
 using Plugin.Firebase.Bundled.Platforms.Android;
 #endif
@@ -20,23 +23,26 @@ namespace Recipe_book
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
-                .RegisterFirebaseServices() // <--- 2. Calling the Firebase init extension method
-                .ConfigureFonts(fonts =>
+                .ConfigureMauiHandlers(handlers =>
                 {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-                });
-
-#if DEBUG
-            builder.Logging.AddDebug();
-#endif
-
-            Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
-            {
+                    // Your existing entry handler (stays exactly as is)
+                    Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, view) =>
+                    {
 #if ANDROID
-                handler.PlatformView.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
+                        handler.PlatformView.BackgroundTintList =
+                            Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent);
 #endif
-            });
+                    });
+
+                    // SwipeInterceptView handler — registered separately here, NOT inside the mapper above
+                    handlers.AddHandler(typeof(SwipeInterceptView),
+#if ANDROID
+                        typeof(Recipe_book.Platforms.Android.SwipeInterceptViewHandler)
+#elif IOS
+            typeof(Recipe_book.Platforms.iOS.SwipeInterceptViewHandler)
+#endif
+                    );
+                });
 
             //Content pages
             builder.Services.AddSingleton<MainPage>();

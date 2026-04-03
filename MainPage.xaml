@@ -4,13 +4,14 @@
              xmlns:controls="clr-namespace:Recipe_book.Views.Items"
              x:Class="Recipe_book.MainPage"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="#F5F5DC">
+             xmlns:barControls="clr-namespace:Recipe_book.Views.Items.bars"
+             >
 
     <Grid RowDefinitions="*, 90">
 
         <Grid x:Name="ContentHost" Grid.Row="0" IsClippedToBounds="True" />
 
-        <controls:LiquidBottomBar x:Name="BottomBar" Grid.Row="1" TabSelected="OnTabSelected" />
+        <barControls:LiquidBottomBar x:Name="BottomBar" Grid.Row="1" TabSelected="OnTabSelected" />
 
     </Grid>
 

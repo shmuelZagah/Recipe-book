@@ -2,10 +2,16 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Recipe_book.Views.SubPages.SelectRecipePage"
+             xmlns:controls="clr-namespace:Recipe_book.Views.Items"
              Title="בחר מתכון">
 
     <Grid RowDefinitions="Auto, *">
-        <SearchBar Grid.Row="0" Placeholder="חפש מתכון..." Margin="10" />
+        <SearchBar Grid.Row="0" 
+               Placeholder="חפש מתכון..." 
+               Text="{Binding SearchQuery}" 
+               Margin="10" />
+        
+        
 
         <CollectionView Grid.Row="1" ItemsSource="{Binding Recipes}" Margin="10">
             <CollectionView.ItemsLayout>
@@ -21,7 +27,7 @@
                                     CommandParameter="{Binding .}"/>
                             </Grid.GestureRecognizers>
 
-                            <Image Source="{Binding ImagePath}" Aspect="AspectFill" />
+                            <Image Source="{Binding DisplayImage}" Aspect="AspectFill" />
                             <BoxView Color="Black" Opacity="0.5" VerticalOptions="End" HeightRequest="40" />
                             <Label Text="{Binding Title}" TextColor="White" FontAttributes="Bold" Margin="5" VerticalOptions="End" HorizontalOptions="Center" />
                         </Grid>
