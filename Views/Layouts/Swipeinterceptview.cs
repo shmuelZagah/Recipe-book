@@ -30,7 +30,7 @@ public class SwipeInterceptView : ContentView
     /// should capture the horizontal swipe or let a child (e.g. LibraryPage tabs) handle it.
     /// Return true  → this view captures the swipe (outer page scroll).
     /// Return false → child handles it (inner tab scroll).
-    /// Parameter: totalX in dp (positive = finger moved right).
+    /// Parameters: totalX in dp, startX in dp, startY in dp.
     /// </summary>
-    public Func<double, bool> ShouldInterceptHorizontal { get; set; }
+    public Func<double, double, double, bool> ShouldInterceptHorizontal { get; set; }
 }

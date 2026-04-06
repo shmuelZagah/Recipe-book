@@ -58,7 +58,7 @@ public class ElasticGlideTabBar : ContentView
             Spacing = 5,
             Padding = new Thickness(10, 5),
             VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.End
+            HorizontalOptions = LayoutOptions.Start
         };
 
         _scrollView = new ScrollView
@@ -147,8 +147,8 @@ public class ElasticGlideTabBar : ContentView
 
         Device.BeginInvokeOnMainThread(async () =>
         {
-            await System.Threading.Tasks.Task.Delay(100);
-            await _scrollView.ScrollToAsync(_tabsLayout.Width, 0, false);
+            await Task.Delay(150);
+            await _scrollView.ScrollToAsync(_tabsLayout, ScrollToPosition.End, false);
         });
     }
 

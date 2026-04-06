@@ -8,7 +8,7 @@
              x:DataType="vm:MainViewModel"
              FlowDirection="RightToLeft">
 
-    <Grid>
+    <Grid BackgroundColor="Transparent">
         <Grid RowDefinitions="Auto, *">
 
             <Grid Grid.Row="0" ColumnDefinitions=" * , Auto" Margin="15,15,20,10" ColumnSpacing="5">

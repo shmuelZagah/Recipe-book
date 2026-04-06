@@ -5,11 +5,17 @@
              x:Class="Recipe_book.MainPage"
              Shell.NavBarIsVisible="False"
              xmlns:barControls="clr-namespace:Recipe_book.Views.Items.bars"
-             >
+             xmlns:Layouts="clr-namespace:Recipe_book.Views.Layouts">
 
-    <Grid RowDefinitions="*, 90">
+    <Grid RowDefinitions="*, 90" >
 
-        <Grid x:Name="ContentHost" Grid.Row="0" IsClippedToBounds="True" />
+        <Grid Grid.Row="0" IsClippedToBounds="True" BackgroundColor="#F5F5F5">
+            <Layouts:SwipeInterceptView x:Name="SwipeLayer" HorizontalOptions="Fill" VerticalOptions="Fill" FlowDirection="LeftToRight">
+
+                <Grid x:Name="PagesContainer" HorizontalOptions="Fill" VerticalOptions="Fill" />
+
+            </Layouts:SwipeInterceptView>
+        </Grid>
 
         <barControls:LiquidBottomBar x:Name="BottomBar" Grid.Row="1" TabSelected="OnTabSelected" />
 

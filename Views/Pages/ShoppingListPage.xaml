@@ -6,7 +6,7 @@
              x:Class="Recipe_book.Views.Pages.ShoppingListPage"
              FlowDirection="RightToLeft">
 
-    <Grid>
+    <Grid BackgroundColor="Transparent">
 
         <Grid RowDefinitions="Auto, *">
 
@@ -220,8 +220,7 @@
                 </Frame>
             </VerticalStackLayout>
 
-            <CollectionView Grid.Row="1" ItemsSource="{Binding GroupedShoppingItems}" IsGrouped="True" Margin="20,0,20,0"
-                            IsVisible="{Binding HasValidList}">
+            <CollectionView Grid.Row="1" ItemsSource="{Binding GroupedShoppingItems}" IsGrouped="True" Margin="20,0,20,0">
                 <CollectionView.Triggers>
                     <DataTrigger TargetType="CollectionView" Binding="{Binding IsHeaderClosed}" Value="False">
                         <Setter Property="Opacity" Value="0.2" />
@@ -287,8 +286,8 @@
                     <Button Text="ביטול" Command="{Binding CancelMergeCommand}" BackgroundColor="Transparent" TextColor="Gray" HeightRequest="45" FontAttributes="Bold"/>
                 </VerticalStackLayout>
             </Frame>
-            
-            
+
+
         </Grid>
 
 

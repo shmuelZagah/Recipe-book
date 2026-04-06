@@ -20,9 +20,6 @@ public class LiquidBottomBar : ContentView
         set => SetValue(ItemsProperty, value);
     }
 
-    // ──────────────────────────────────────────
-    // Animation Speed
-    // ──────────────────────────────────────────
     private const uint AnimDuration = 540;
 
     private Grid _mainGrid;
@@ -30,10 +27,11 @@ public class LiquidBottomBar : ContentView
     private LiquidBackground _liquidBackground;
     private Grid _iconsGrid;
     private List<Image> _icons = new();
-    private List<Label> _labels = new(); // Added list for the text labels
+    private List<Label> _labels = new();
 
     private int _selectedIndex = 0;
-    private bool _isAnimating = false;
+    private bool _isAnimating = false; // חזרנו למנעול לחיצות!
+    private int _animationOperationId = 0;
     public event EventHandler<int> TabSelected;
 
     public LiquidBottomBar()
@@ -42,15 +40,10 @@ public class LiquidBottomBar : ContentView
         VerticalOptions = LayoutOptions.End;
         HorizontalOptions = LayoutOptions.Fill;
 
-        // Fetch bar color from Colors.xaml
         Color secondary = GetResourceColor("Primary", Color.FromArgb("#FFF3E3"));
 
-        _liquidBackground = new LiquidBackground
-        {
-            BarColor = secondary,
-        };
+        _liquidBackground = new LiquidBackground { BarColor = secondary };
 
-        // Load book texture from Resources/Raw
         LoadTextureImage("book_texture.png");
 
         _graphicsView = new GraphicsView
@@ -61,16 +54,12 @@ public class LiquidBottomBar : ContentView
 
         _iconsGrid = new Grid();
 
-        _mainGrid = new Grid
-        {
-            Children = { _graphicsView, _iconsGrid }
-        };
+        _mainGrid = new Grid { Children = { _graphicsView, _iconsGrid } };
 
         Content = _mainGrid;
         SizeChanged += OnSizeChanged;
     }
 
-    // Async helper method to load the image (supports Android and Windows)
     private async void LoadTextureImage(string fileName)
     {
         try
@@ -78,15 +67,9 @@ public class LiquidBottomBar : ContentView
             using var stream = await FileSystem.OpenAppPackageFileAsync(fileName);
             _liquidBackground.BallTexture = PlatformImage.FromStream(stream);
 
-            if (_graphicsView != null)
-            {
-                _graphicsView.Invalidate(); // Refresh canvas once image is loaded
-            }
+            if (_graphicsView != null) _graphicsView.Invalidate();
         }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error loading texture: {ex.Message}");
-        }
+        catch { }
     }
 
     private Color GetResourceColor(string key, Color defaultColor)
@@ -100,7 +83,7 @@ public class LiquidBottomBar : ContentView
     {
         if (Width > 0 && Items?.Count > 0)
         {
-            UpdatePhysicsFrame(_selectedIndex, _selectedIndex, 1.0);
+            ForceUpdateStaticFrame(_selectedIndex);
         }
     }
 
@@ -138,11 +121,11 @@ public class LiquidBottomBar : ContentView
             {
                 Text = Items[i].Title,
                 FontSize = 12,
-                TextColor = GetResourceColor("Secondary", Color.FromArgb("#FFF3E3")), // Dark gray for inactive tabs
+                TextColor = GetResourceColor("Secondary", Color.FromArgb("#FFF3E3")),
                 FontAttributes = FontAttributes.Bold,
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Start,
-                TranslationY = 66 // Positioned beautifully right below the icon
+                TranslationY = 66
             };
 
             var tap = new TapGestureRecognizer();
@@ -160,67 +143,120 @@ public class LiquidBottomBar : ContentView
             _labels.Add(label);
         }
 
-        if (Width > 0)
-        {
-            UpdatePhysicsFrame(_selectedIndex, _selectedIndex, 1.0);
-        }
+        if (Width > 0) ForceUpdateStaticFrame(_selectedIndex);
     }
 
+    private void ForceUpdateStaticFrame(int index)
+    {
+        if (Width <= 0 || Items == null || Items.Count == 0) return;
+        double tabWidth = Width / Items.Count;
+        int visualNew = (Items.Count - 1) - index;
+        _liquidBackground.BallX = (visualNew * tabWidth) + (tabWidth / 2);
+        _liquidBackground.DentX = _liquidBackground.BallX;
+        _liquidBackground.BallY = 10;
+        ApplyPhysicsToItems(tabWidth);
+        _graphicsView.Invalidate();
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // 1. התנהגות בלחיצה ידנית (ננעלת כדי למנוע באגים)
+    // ──────────────────────────────────────────────────────────
     private async void OnTabTapped(int newIndex)
     {
+        // המנעול: אם אנחנו כבר באנימציה מלחיצה קודמת, מתעלמים (בדיוק כמו שרצית)
         if (_selectedIndex == newIndex || _isAnimating) return;
 
-        int oldIndex = _selectedIndex;
-        _selectedIndex = newIndex;
         _isAnimating = true;
-        TabSelected?.Invoke(this, newIndex);
+        _selectedIndex = newIndex;
+        TabSelected?.Invoke(this, newIndex); // קורא לעמוד הראשי להזיז את המסכים
 
-        // 1. Old icon returns to its normal color immediately (doesn't wait for the ball!)
-        if (oldIndex >= 0 && oldIndex < _icons.Count)
+        // הפונקציה הזו מריצה את האנימציה, אבל מחזירה שליטה אחרי *חצי* מהזמן (270ms)
+        await PerformLiquidAnimation(newIndex);
+
+        // התיקון: אנחנו ממתינים את החצי השני של הזמן, כדי שהמנעול יישאר נעול לכל ה-540ms!
+        // ככה העמוד הראשי (שמסיים אחרי 350ms) תמיד יהיה מוכן לפני שהבר ישתחרר שוב.
+        await Task.Delay((int)(AnimDuration / 2));
+
+        _isAnimating = false; // רק עכשיו אפשר ללחוץ שוב
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // 2. התנהגות מגלילה (VIP - חותכת הכל ומתיישרת למסך)
+    // ──────────────────────────────────────────────────────────
+    public async void UpdateFromSwipe(int newIndex)
+    {
+        if (_selectedIndex == newIndex) return;
+
+        _selectedIndex = newIndex;
+        // שימו לב: לא מפעילים כאן TabSelected כדי לא לעשות לולאה כפולה עם העמוד הראשי!
+
+        _isAnimating = true; // נועלים כדי שהמשתמש לא יוכל ללחוץ בזמן שההחלקה מתיישרת
+        await PerformLiquidAnimation(newIndex);
+        _isAnimating = false;
+    }
+
+    // מנוע האנימציה הראשי (פנימי)
+    private async Task PerformLiquidAnimation(int newIndex)
+    {
+        _animationOperationId++;
+        int myOperation = _animationOperationId;
+
+        this.AbortAnimation("LiquidPhysics");
+
+        // איפוס צבעים מהיר
+        for (int i = 0; i < _icons.Count; i++)
         {
-            _icons[oldIndex].Source = Items[oldIndex].IconSource;
+            _icons[i].Source = Items[i].IconSource;
         }
+
+        double tabWidth = Width / Items.Count;
+        int visualNew = (Items.Count - 1) - newIndex;
+        double targetX = (visualNew * tabWidth) + (tabWidth / 2);
+
+        // תופסים את המיקום הפיזי *הנוכחי* של הכדור, גם ב-X וגם ב-Y!
+        double startX = _liquidBackground.BallX;
+        if (startX <= 0) startX = targetX;
+
+        double startY = _liquidBackground.BallY;
+        if (startY < 10) startY = 10;
+
+        // חישוב גובה הקפיצה: קפיצה קצרה = גובה נמוך, קפיצה ארוכה = גובה מקסימלי (60)
+        double distanceX = Math.Abs(targetX - startX);
+        double peakHeight = Math.Min(60, distanceX * 0.6);
 
         var animation = new Animation(progress =>
         {
-            UpdatePhysicsFrame(oldIndex, newIndex, progress);
+            _liquidBackground.BallX = startX + (targetX - startX) * progress;
+            _liquidBackground.DentX = _liquidBackground.BallX;
+
+            // התיקון: שילוב חלק של הנפילה מהקפיצה הקודמת, אל תוך הקפיצה החדשה באוויר!
+            double arc = peakHeight * Math.Sin(progress * Math.PI);
+            double decay = (startY - 10) * (1 - progress);
+            _liquidBackground.BallY = 10 + arc + decay;
+
+            ApplyPhysicsToItems(tabWidth);
+            _graphicsView.Invalidate();
+
         }, 0, 1, Easing.CubicInOut);
 
         animation.Commit(this, "LiquidPhysics", length: AnimDuration, finished: (v, c) =>
         {
-            _isAnimating = false;
-            UpdatePhysicsFrame(oldIndex, newIndex, 1.0);
+            if (myOperation == _animationOperationId)
+            {
+                ForceUpdateStaticFrame(newIndex);
+            }
         });
 
-        // 2. Wait for the ball to arrive (half the animation duration)
         await Task.Delay((int)(AnimDuration / 2));
 
-        // 3. Now change the new icon to the pressed white version
-        if (newIndex >= 0 && newIndex < _icons.Count && !string.IsNullOrEmpty(Items[newIndex].SelectedIconSource))
+        if (myOperation == _animationOperationId && newIndex >= 0 && newIndex < _icons.Count)
         {
-            _icons[newIndex].Source = Items[newIndex].SelectedIconSource;
+            if (!string.IsNullOrEmpty(Items[newIndex].SelectedIconSource))
+                _icons[newIndex].Source = Items[newIndex].SelectedIconSource;
         }
     }
-
-    private void UpdatePhysicsFrame(int oldIndex, int newIndex, double p)
+    private void ApplyPhysicsToItems(double tabWidth)
     {
-        if (Width <= 0 || Items == null || Items.Count == 0 || _icons.Count != Items.Count) return;
-
-        double tabWidth = Width / Items.Count;
-
-        int visualOld = (Items.Count - 1) - oldIndex;
-        int visualNew = (Items.Count - 1) - newIndex;
-
-        double startX = (visualOld * tabWidth) + (tabWidth / 2);
-        double endX = (visualNew * tabWidth) + (tabWidth / 2);
-
-        _liquidBackground.BallX = startX + (endX - startX) * p;
-        _liquidBackground.DentX = _liquidBackground.BallX;
-
-        _liquidBackground.BallY = 10 + 60 * Math.Sin(p * Math.PI);
-
-        _graphicsView.Invalidate();
-
         for (int i = 0; i < _icons.Count; i++)
         {
             int visualI = (Items.Count - 1) - i;
@@ -229,14 +265,7 @@ public class LiquidBottomBar : ContentView
             double distDent = Math.Abs(_liquidBackground.DentX - baseX);
             double distBall = Math.Abs(_liquidBackground.BallX - baseX);
 
-            double targetY = 38;
-            double targetX = 0;
-            double targetScale = 1.0;
-            double targetOpacity = 0.4;
-
-            // Text label starts fully visible
-            double labelOpacity = 1.0;
-
+            double targetY = 38, targetX = 0, targetScale = 1.0, targetOpacity = 0.4, labelOpacity = 1.0;
             double dentRadius = Math.Min(65, tabWidth * 0.85);
 
             if (distDent < dentRadius)
@@ -247,59 +276,39 @@ public class LiquidBottomBar : ContentView
                 targetY = 38 + (dentEase * 65);
                 targetX = (_liquidBackground.DentX - baseX) * 0.25 * dentEase;
                 targetOpacity = 0.4 - (dentEase * 0.4);
-
-                // Fade out label quickly when the liquid pushes down on it
                 labelOpacity = Math.Max(0, 1.0 - (dentEase * 2.0));
             }
 
-            if (i == oldIndex || i == newIndex)
+            double ballRadius = 45;
+            if (distBall < ballRadius)
             {
-                double ballRadius = 45;
-                if (distBall < ballRadius)
-                {
-                    double ballFactor = 1 - (distBall / ballRadius);
-                    double ballEase = Math.Pow(ballFactor, 1.5);
+                double ballFactor = 1 - (distBall / ballRadius);
+                double ballEase = Math.Pow(ballFactor, 1.5);
 
-                    double riderY = _liquidBackground.BallY + 12;
-                    double riderX = (_liquidBackground.BallX - baseX) * 0.15;
-                    double riderScale = 1.0 + (ballFactor * 0.05);
-                    double riderOpacity = 0.4 + (ballFactor * 0.6);
+                double riderY = _liquidBackground.BallY + 12;
+                double riderX = (_liquidBackground.BallX - baseX) * 0.15;
+                double riderScale = 1.0 + (ballFactor * 0.05);
+                double riderOpacity = 0.4 + (ballFactor * 0.6);
 
-                    targetY = targetY + (riderY - targetY) * ballEase;
-                    targetX = targetX + (riderX - targetX) * ballEase;
-                    targetScale = targetScale + (riderScale - targetScale) * ballEase;
-                    targetOpacity = targetOpacity + (riderOpacity - targetOpacity) * ballEase;
-
-                    // Fade out the label smoothly as the ball picks up the icon
-                    labelOpacity = Math.Max(0, labelOpacity - ballFactor);
-                }
+                targetY = targetY + (riderY - targetY) * ballEase;
+                targetX = targetX + (riderX - targetX) * ballEase;
+                targetScale = targetScale + (riderScale - targetScale) * ballEase;
+                targetOpacity = targetOpacity + (riderOpacity - targetOpacity) * ballEase;
+                labelOpacity = Math.Max(0, labelOpacity - ballFactor);
             }
 
             _icons[i].TranslationX = targetX;
             _icons[i].TranslationY = targetY;
             _icons[i].Scale = targetScale;
             _icons[i].Opacity = targetOpacity;
-
-            // Apply opacity physics to the label
             _labels[i].Opacity = labelOpacity;
         }
     }
 
-    public void SelectTab(int index)
-    {
-        OnTabTapped(index);
-    }
-
-
-
-    // ──────────────────────────────────────────────────────────────────
-    // Drawing Engine - Drawing variables belong here only!
-    // ──────────────────────────────────────────────────────────────────
     class LiquidBackground : IDrawable
     {
         public Color BarColor { get; set; }
         public IImage BallTexture { get; set; }
-
         public double DentX { get; set; } = -1;
         public double BallX { get; set; } = -1;
         public double BallY { get; set; } = 10;
@@ -314,11 +323,7 @@ public class LiquidBottomBar : ContentView
             float bx = (float)BallX;
             float by = (float)BallY;
 
-            // Ball position and size (50x50 pixels square)
             RectF ballRect = new RectF(bx - 25, by, 50, 50);
-
-            // --- Major Change 1: Completely removed step 1 (drawing the back shadow). ---
-            // This removes the white "frame" you saw around it.
 
             canvas.SaveState();
             canvas.SetShadow(new SizeF(0, 6), 15, Colors.Black.WithAlpha(0.6f));
@@ -326,40 +331,23 @@ public class LiquidBottomBar : ContentView
             canvas.FillEllipse(ballRect);
             canvas.RestoreState();
 
-            // 1. Draw the ball with texture only (clean and flat look)
             if (BallTexture != null)
             {
-                canvas.SaveState(); // Save clean state for clipping
-
-                // Clip the drawing area to a perfect circle so the image doesn't overflow to corners
+                canvas.SaveState();
                 PathF clipPath = new PathF();
                 clipPath.AppendEllipse(ballRect);
                 canvas.ClipPath(clipPath);
 
-                // --- Major Change 2: Draw the image on the full square area (without +2 and -4). ---
-                // This ensures the image fills the circle to the edge and looks "clean".
                 float zoom = 3;
-
-                // Draw the image larger, and move the starting point back and up to keep it centered
-                canvas.DrawImage(BallTexture,
-                                 ballRect.X - zoom,
-                                 ballRect.Y - zoom,
-                                 ballRect.Width + (zoom * 2),
-                                 ballRect.Height + (zoom * 2));
-
-                // --- Major Change 3: Completely removed Spherical Shading and BlendMode.Overlay. ---
-                // Now there is no color or halo above your original wallpaper.
-
-                canvas.RestoreState(); // Clear clipping
+                canvas.DrawImage(BallTexture, ballRect.X - zoom, ballRect.Y - zoom, ballRect.Width + (zoom * 2), ballRect.Height + (zoom * 2));
+                canvas.RestoreState();
             }
             else
             {
-                // Fallback in case the image hasn't loaded yet (leave gray)
                 canvas.FillColor = Colors.LightGray;
                 canvas.FillEllipse(ballRect);
             }
 
-            // 2. Calculate bar path (remains unchanged)
             PathF path = new PathF();
             path.MoveTo(0, 25);
             path.LineTo(dx - 50, 25);
@@ -370,7 +358,6 @@ public class LiquidBottomBar : ContentView
             path.LineTo(0, h);
             path.Close();
 
-            // 3. Draw the bar with an upward shadow so it pops out (remains unchanged)
             canvas.SaveState();
             canvas.SetShadow(new SizeF(0, -6), 15, Colors.Black.WithAlpha(0.2f));
             canvas.FillColor = BarColor;

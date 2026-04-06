@@ -10,10 +10,10 @@
              FlowDirection="RightToLeft"
              BackgroundColor="#F5F5F5">
 
-    <Grid>
+    <Grid BackgroundColor="Transparent">
         <Grid RowDefinitions="Auto, *">
 
-            <Border Grid.Row="0" BackgroundColor="White" StrokeThickness="0" Margin="0,0,0,5">
+            <Border x:Name="TopHeader" Grid.Row="0" BackgroundColor="White" StrokeThickness="0" Margin="0,0,0,5">
                 <Border.Shadow>
                     <Shadow Brush="Black" Offset="0,4" Opacity="0.05" Radius="6" />
                 </Border.Shadow>
@@ -27,10 +27,6 @@
             </Border>
 
             <Grid Grid.Row="1" x:Name="ContentContainer">
-                <Grid.GestureRecognizers>
-                    <SwipeGestureRecognizer Direction="Left" Swiped="OnSwipedLeft" />
-                    <SwipeGestureRecognizer Direction="Right" Swiped="OnSwipedRight" />
-                </Grid.GestureRecognizers>
 
                 <ScrollView Margin="15,0,15,0">
                     <VerticalStackLayout Spacing="25" Padding="0,15,0,100">

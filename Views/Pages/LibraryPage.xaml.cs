@@ -1,33 +1,37 @@
 ﻿using Recipe_book.ViewModels;
+using Recipe_book.Views.Layouts;
 
 namespace Recipe_book.Views.Pages;
 
-public partial class LibraryPage : ContentView
+/// <summary>
+/// The library page displaying folders and recipes. 
+/// Implements ISwipeAwarePage to handle horizontal swipe gestures for internal tab navigation.
+/// </summary>
+public partial class LibraryPage : ContentView, ISwipeAwarePage
 {
+    #region Fields
     private readonly LibraryViewModel _vm;
+    private bool _isAnimatingTab = false;
+    #endregion
 
+    #region Constructor & Initialization
     public LibraryPage(LibraryViewModel vm)
     {
         InitializeComponent();
         _vm = vm;
         BindingContext = _vm;
 
-        // טעינת הנתונים דרך האירוע Loaded במקום OnAppearing
         this.Loaded += OnPageLoaded;
     }
 
     private async void OnPageLoaded(object sender, EventArgs e)
     {
-        // Load the folders first
         await _vm.LoadFoldersCommand.ExecuteAsync(null);
-
-        // Run the app links check quietly in the background
         await CheckAndEnableLinksAsync();
     }
 
     private async Task CheckAndEnableLinksAsync()
     {
-        // Check if the user was already prompted before
         bool hasAskedForLinks = Preferences.Default.Get("HasAskedForAppLinks", false);
 
         if (!hasAskedForLinks)
@@ -40,17 +44,15 @@ public partial class LibraryPage : ContentView
 
             if (answer)
             {
-                // Navigate the user to the app's OS settings page
                 AppInfo.Current.ShowSettingsUI();
             }
 
-            // Mark as true so the prompt won't appear again on next launch
             Preferences.Default.Set("HasAskedForAppLinks", true);
         }
     }
+    #endregion
 
-    private bool _isAnimatingTab = false;
-
+    #region Tab Navigation
     private async void OnTabSelected(object sender, string tabId)
     {
         if (BindingContext is not LibraryViewModel vm || _isAnimatingTab) return;
@@ -61,44 +63,23 @@ public partial class LibraryPage : ContentView
         int currentIndex = GetTabIndex(vm.CurrentTab);
         int newIndex = GetTabIndex(tabId);
 
-        // RTL Logic: Index 0 is Right, Index 1 is Left.
-        // Moving to a higher index means we want to show the Left page,
-        // so the current page needs to slide out to the Right (+Width).
         bool movingToLeftPage = newIndex > currentIndex;
         double screenWidth = this.Width;
         double moveOutOffset = movingToLeftPage ? screenWidth : -screenWidth;
 
-        // 1. Slide current content out
         await ContentContainer.TranslateTo(moveOutOffset, 0, 250, Easing.CubicIn);
 
-        // 2. Change ViewModel data
         if (vm.SelectTabCommand.CanExecute(tabId))
         {
             vm.SelectTabCommand.Execute(tabId);
         }
 
-        // Wait a split second to ensure bindings update the UI before it slides back
         await Task.Delay(50);
 
-        // 3. Teleport content to the opposite side while invisible
         ContentContainer.TranslationX = -moveOutOffset;
-
-        // 4. Slide new content in
         await ContentContainer.TranslateTo(0, 0, 250, Easing.CubicOut);
 
         _isAnimatingTab = false;
-    }
-
-    private void OnSwipedLeft(object sender, SwipedEventArgs e)
-    {
-        // Swipe left -> Move deeper into the tabs (Higher index)
-        ChangeTabByOffset(1);
-    }
-
-    private void OnSwipedRight(object sender, SwipedEventArgs e)
-    {
-        // Swipe right -> Move back (Lower index)
-        ChangeTabByOffset(-1);
     }
 
     private void ChangeTabByOffset(int offset)
@@ -110,7 +91,6 @@ public partial class LibraryPage : ContentView
 
         if (newIndex >= 0 && newIndex < vm.LibraryTabs.Count)
         {
-            // Trigger the visual bar. It will automatically call OnTabSelected when done.
             MainTabBar?.SelectTab(newIndex);
         }
     }
@@ -126,4 +106,67 @@ public partial class LibraryPage : ContentView
         }
         return 0;
     }
+    #endregion
+
+    #region ISwipeAwarePage Implementation
+    public SwipeAction GetSwipeAction(double totalX, double startX, double startY)
+    {
+        if (BindingContext is not LibraryViewModel vm)
+            return SwipeAction.MainPageSwipe;
+
+        // Check if the touch is within the top header bounds (Search + Tabs)
+        if (TopHeader != null && startY <= TopHeader.Height)
+        {
+            // Check if the touch is specifically on the LiquidTabBar
+            if (MainTabBar != null && startY >= MainTabBar.Y)
+            {
+                // Let the native LiquidTabBar scroll horizontally
+                return SwipeAction.NativeChildScroll;
+            }
+
+            // Touch is on the SearchBar or empty space above the tabs -> Swipe main pages
+            return SwipeAction.MainPageSwipe;
+        }
+
+        // Touch is in the content area -> Handle inner tab swiping
+        int currentIndex = GetTabIndex(vm.CurrentTab);
+
+        if (totalX > 0 && currentIndex < vm.LibraryTabs.Count - 1) return SwipeAction.ManualInnerSwipe;
+        if (totalX < 0 && currentIndex > 0) return SwipeAction.ManualInnerSwipe;
+
+        // Reached the edge of the tabs -> Swipe main pages
+        return SwipeAction.MainPageSwipe;
+    }
+
+    public void StartInnerSwipe()
+    {
+        // Break animation lock for fast sequential swipes (Fling)
+        _isAnimatingTab = false;
+        ContentContainer.CancelAnimations();
+    }
+
+    public void RunningInnerSwipe(double deltaX)
+    {
+        ContentContainer.TranslationX = deltaX;
+    }
+
+    public void CompletedInnerSwipe(double deltaX, double screenWidth)
+    {
+        double swipeThreshold = screenWidth * 0.25;
+
+        if (deltaX > swipeThreshold)
+        {
+            ChangeTabByOffset(1);
+        }
+        else if (deltaX < -swipeThreshold)
+        {
+            ChangeTabByOffset(-1);
+        }
+        else
+        {
+            // Revert gesture
+            ContentContainer.TranslateTo(0, 0, 250, Easing.CubicOut);
+        }
+    }
+    #endregion
 }

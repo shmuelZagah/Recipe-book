@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Recipe_book.Views.Pages.SchedulePage">
 
-    <Grid RowDefinitions="Auto, Auto, Auto, *">
+    <Grid RowDefinitions="Auto, Auto, Auto, *" BackgroundColor="Transparent">
 
         <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="15,15,15,10">
             <Label Grid.Column="0" Text="הלוז שלי" FontSize="22" FontAttributes="Bold" VerticalOptions="Center" />

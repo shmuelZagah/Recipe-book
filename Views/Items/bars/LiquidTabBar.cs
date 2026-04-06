@@ -58,7 +58,7 @@ public class LiquidTabBar : ContentView
             Spacing = 5,
             Padding = new Thickness(10, 5),
             VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.End
+            HorizontalOptions = LayoutOptions.Start
         };
 
         _scrollView = new ScrollView
@@ -118,9 +118,11 @@ public class LiquidTabBar : ContentView
 
         Color unselectedColor = GetResourceColor("Gray500", Color.FromArgb("#888"));
 
+        // נשאר הפוך (כי RTL)
         for (int i = Items.Count - 1; i >= 0; i--)
         {
             int idx = i;
+
             var lbl = new Label
             {
                 Text = Items[idx].Title,
@@ -139,14 +141,18 @@ public class LiquidTabBar : ContentView
             lbl.GestureRecognizers.Add(tap);
 
             lbl.SizeChanged += (_, _) => UpdateTabBounds();
+
             _tabsLayout.Children.Add(lbl);
             _labels[idx] = lbl;
         }
 
         Device.BeginInvokeOnMainThread(async () =>
         {
-            await System.Threading.Tasks.Task.Delay(100);
-            await _scrollView.ScrollToAsync(_tabsLayout.Width, 0, false);
+            await Task.Delay(150);
+
+            // 🔥 זה הפתרון האמיתי:
+            // ב-RTL צריך לגלול ל-END כדי להגיע לימין
+            await _scrollView.ScrollToAsync(_tabsLayout, ScrollToPosition.End, false);
         });
     }
 

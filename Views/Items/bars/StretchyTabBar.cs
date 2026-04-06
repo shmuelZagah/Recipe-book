@@ -58,7 +58,7 @@ public class StretchyTabBar : ContentView
             Spacing = 5, // Tighter spacing for a premium look
             Padding = new Thickness(10, 5),
             VerticalOptions = LayoutOptions.Center,
-            HorizontalOptions = LayoutOptions.End
+            HorizontalOptions = LayoutOptions.Start
         };
 
         _scrollView = new ScrollView
@@ -118,6 +118,7 @@ public class StretchyTabBar : ContentView
 
         Color unselectedColor = GetResourceColor("Gray500", Color.FromArgb("#888"));
 
+        // RTL → הפוך
         for (int i = Items.Count - 1; i >= 0; i--)
         {
             int originalIndex = i;
@@ -128,7 +129,6 @@ public class StretchyTabBar : ContentView
                 FontSize = 14,
                 FontAttributes = FontAttributes.Bold,
                 TextColor = originalIndex == _selectedIndex ? Colors.White : unselectedColor,
-                // Perfect text centering
                 VerticalOptions = LayoutOptions.Center,
                 HorizontalOptions = LayoutOptions.Center,
                 HorizontalTextAlignment = TextAlignment.Center,
@@ -148,8 +148,9 @@ public class StretchyTabBar : ContentView
 
         Device.BeginInvokeOnMainThread(async () =>
         {
-            await Task.Delay(100);
-            await _scrollView.ScrollToAsync(_tabsLayout.Width, 0, false);
+            await Task.Delay(150);
+
+            await _scrollView.ScrollToAsync(_tabsLayout, ScrollToPosition.End, false);
         });
     }
 
