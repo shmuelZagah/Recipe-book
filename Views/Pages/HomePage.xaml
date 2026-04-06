@@ -10,9 +10,8 @@
 
     <Grid BackgroundColor="Transparent">
         <Grid RowDefinitions="Auto, *">
-
-            <Grid Grid.Row="0" ColumnDefinitions=" * , Auto" Margin="15,15,20,10" ColumnSpacing="5">
-
+            
+            <Grid x:Name="SearchArea" Grid.Row="0" ColumnDefinitions=" * , Auto" Margin="15,15,20,10" ColumnSpacing="5">
 
 
                 <controls:SearchBarControl x:Name="MainSearchBar"
@@ -29,7 +28,7 @@
                              VerticalOptions="Center" />
             </Grid>
 
-            <ScrollView Grid.Row="1">
+            <ScrollView x:Name="MainScroll" Grid.Row="1">
                 <VerticalStackLayout Padding="20,0,20,20" Spacing="20">
 
                     <VerticalStackLayout IsVisible="{Binding IsSearching}" Spacing="10">
@@ -52,7 +51,7 @@
 
                     <VerticalStackLayout IsVisible="{Binding IsSearching, Converter={StaticResource BoolToVis}, ConverterParameter='Invert'}" Spacing="25">
 
-                        <VerticalStackLayout Spacing="10">
+                        <VerticalStackLayout x:Name="MealsContainer" Spacing="10">
                             <Label Text="הלו''ז להיום" FontAttributes="Bold" FontSize="18"/>
                             <ScrollView x:Name="MealsScrollView" Orientation="Horizontal" HorizontalScrollBarVisibility="Never" FlowDirection="RightToLeft">
                                 <HorizontalStackLayout BindableLayout.ItemsSource="{Binding TodayMeals}" Spacing="15" FlowDirection="RightToLeft">
