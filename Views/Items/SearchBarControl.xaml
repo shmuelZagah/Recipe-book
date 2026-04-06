@@ -13,9 +13,7 @@
             HeightRequest="50"
             Padding="0">
 
-        <!-- באג 1: הוספת BackgroundColor="Transparent" לגריד -->
-        <Grid ColumnDefinitions="Auto, *"
-              BackgroundColor="Transparent">
+        <Grid ColumnDefinitions="Auto, *" BackgroundColor="Transparent">
 
             <Image x:Name="ActionIcon"
                    Grid.Column="0"
@@ -36,6 +34,7 @@
                    Placeholder="{Binding PlaceholderText, Source={x:Reference ThisControl}}"
                    Text="{Binding SearchText, Source={x:Reference ThisControl}}"
                    IsVisible="False"
+                   IsEnabled="False"
                    Opacity="0"
                    BackgroundColor="Transparent"
                    VerticalOptions="Center"

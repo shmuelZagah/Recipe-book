@@ -27,7 +27,6 @@ public partial class SearchBarControl : ContentView
     private bool _isOpen = false;
     private bool _isFocused = false;
     private const double ClosedWidth = 50;
-    // מחקנו מכאן את המספר המקובע 260!
 
     public event EventHandler? SearchOpened;
     public event EventHandler? SearchClosed;
@@ -47,6 +46,7 @@ public partial class SearchBarControl : ContentView
         if (_isOpen)
         {
             SearchText = string.Empty;
+            SearchInput.Text = string.Empty;
             MainThread.BeginInvokeOnMainThread(async () => await CloseSearchAsync());
         }
     }
@@ -56,6 +56,7 @@ public partial class SearchBarControl : ContentView
         if (_isOpen)
         {
             SearchText = string.Empty;
+            SearchInput.Text = string.Empty;
             await CloseSearchAsync();
             return;
         }
@@ -66,11 +67,11 @@ public partial class SearchBarControl : ContentView
         SearchOpened?.Invoke(this, EventArgs.Empty);
 
         SearchInput.IsVisible = true;
+        SearchInput.IsEnabled = true; // Wake up the input
 
         SearchBorder.StrokeThickness = 1;
         SearchBorder.Stroke = Color.FromArgb("#E0E0E0");
 
-        // --- הקסם הדינמי: לוקחים את הרוחב המדויק שהעמוד נתן לנו! ---
         double targetWidth = this.Width;
 
         var animation = new Animation();
@@ -117,12 +118,13 @@ public partial class SearchBarControl : ContentView
 
         SearchClosed?.Invoke(this, EventArgs.Empty);
 
+        // Force keyboard dismiss on Android/iOS
         SearchInput.Unfocus();
+        SearchInput.IsEnabled = false;
 
         _ = SearchInput.FadeTo(0, 150);
 
         var animation = new Animation();
-        // בסגירה אנחנו מתכווצים מהרוחב הנוכחי (SearchBorder.Width) חזרה ל-50
         animation.Add(0, 1, new Animation(v => SearchBorder.WidthRequest = v, SearchBorder.Width, ClosedWidth, Easing.CubicInOut));
         animation.Add(0, 1, new Animation(v => SearchBorder.BackgroundColor = Colors.White.WithAlpha((float)v), 1.0, 0.0));
 
