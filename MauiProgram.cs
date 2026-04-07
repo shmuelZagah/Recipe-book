@@ -23,6 +23,13 @@ namespace Recipe_book
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+
+                .ConfigureFonts(fonts =>
+                {
+                    fonts.AddFont("Rubik-Regular.ttf", "RubikRegular");
+                    fonts.AddFont("Rubik-Bold.ttf", "RubikBold");
+                })
+
                 .ConfigureMauiHandlers(handlers =>
                 {
                     // Your existing entry handler (stays exactly as is)

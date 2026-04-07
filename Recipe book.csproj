@@ -125,6 +125,8 @@
 	  <None Remove="Resources\Images\plus\schedule_plus_icon.svg" />
 	  <None Remove="Resources\Images\plus\shopping_plus_icon.svg" />
 	  <None Remove="Resources\Images\plus\shopping_puse_icon.svg" />
+	  <None Remove="Resources\Images\SchedualBoard\board_wall_bg.png" />
+	  <None Remove="Resources\Images\SchedualBoard\floating_card_bg.png" />
 	</ItemGroup>
 
 
@@ -152,6 +154,8 @@
 	  <MauiImage Include="Resources\Images\plus\recipe_plus_icon.svg" />
 	  <MauiImage Include="Resources\Images\plus\schedule_plus_icon.svg" />
 	  <MauiImage Include="Resources\Images\plus\shopping_plus_icon.svg" />
+	  <MauiImage Include="Resources\Images\SchedualBoard\board_wall_bg.png" />
+	  <MauiImage Include="Resources\Images\SchedualBoard\floating_card_bg.png" />
 	  <MauiImage Include="Resources\Raw\book_texture.png" />
 	</ItemGroup>
 
@@ -172,6 +176,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <MauiXaml Update="Views\Items\DailyMealsControl.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="Views\Items\FloatingActionControl.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>

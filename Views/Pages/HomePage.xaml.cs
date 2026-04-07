@@ -26,12 +26,7 @@ public partial class HomePage : ContentView, ISwipeAwarePage
     private async void OnHomePageLoaded(object sender, EventArgs e)
     {
         await _vm.LoadRecipesCommand.ExecuteAsync(null);
-
-        await Task.Delay(150);
-
-        // Scroll to the end of the horizontal meals list initially (RTL adjustment)
-        double fullWidth = MealsScrollView.ContentSize.Width;
-        await MealsScrollView.ScrollToAsync(fullWidth, 0, animated: false);
+        await MealsControl.ScrollToStartAsync(); 
     }
     #endregion
 
@@ -54,32 +49,25 @@ public partial class HomePage : ContentView, ISwipeAwarePage
     #region ISwipeAwarePage Implementation
     public SwipeAction GetSwipeAction(double totalX, double startX, double startY)
     {
-        // If searching or UI elements are not fully loaded, allow main page swipe
-        if (_vm.IsSearching || SearchArea == null || MainScroll == null || MealsScrollView == null)
+        if (_vm.IsSearching || SearchArea == null || MainScroll == null || MealsControl == null)
             return SwipeAction.MainPageSwipe;
 
-        // Calculate the absolute position of the meals section on the screen:
-        // Top search area height + its vertical margins (Top 15 + Bottom 10 = 25)
+        // Top search area + its vertical margins (15 + 10)
         double topOffset = SearchArea.Height + 25;
 
-        // The Y position of the horizontal list relative to the vertical ScrollView
-        double relativeY = (MealsContainer?.Y ?? 0) + MealsScrollView.Y;
-
-        // Exact physical Y position on the screen (accounting for current vertical scroll)
+        // Calculate the absolute Y position of the horizontal control
+        double relativeY = MealsControl.Y;
         double absoluteTop = topOffset + relativeY - MainScroll.ScrollY;
-        double absoluteBottom = absoluteTop + MealsScrollView.Height;
+        double absoluteBottom = absoluteTop + MealsControl.Height;
 
-        // Added a 15px safe zone padding to make the horizontal scroll easier to catch
+        // Allow native horizontal scroll within bounds (+15px safe zone padding)
         if (startY >= absoluteTop - 15 && startY <= absoluteBottom + 15)
         {
-            // Touch is on the daily meals horizontal list -> let native scroll handle it
             return SwipeAction.NativeChildScroll;
         }
 
-        // Touch is outside the meals list -> trigger main page navigation
         return SwipeAction.MainPageSwipe;
     }
-
     public void StartInnerSwipe() { }
     public void RunningInnerSwipe(double deltaX) { }
     public void CompletedInnerSwipe(double deltaX, double screenWidth) { }

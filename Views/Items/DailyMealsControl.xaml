@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Recipe_book.ViewModels"
+             x:Class="Recipe_book.Views.Items.DailyMealsControl"
+             FlowDirection="RightToLeft">
+
+    <VerticalStackLayout Spacing="5" Margin="0,15,0,0">
+
+        <Label Text="הלו''ז להיום" 
+               FontFamily="RubikBold" 
+               FontSize="26" 
+               Margin="25,0,25,10" 
+               TextColor="#111111"/>
+
+        <ScrollView x:Name="CarouselScroll"
+                    Orientation="Horizontal"
+                    HorizontalScrollBarVisibility="Never"
+                    Scrolled="OnScroll"
+                    FlowDirection="RightToLeft">
+
+            <HorizontalStackLayout x:Name="CardsContainer"
+                                   BindableLayout.ItemsSource="{Binding TodayMeals}"
+                                   Spacing="15">
+
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MealGroup">
+
+                        <ContentView WidthRequest="280" Padding="10,0">
+
+                            <Border StrokeShape="RoundRectangle 35"
+                                    BackgroundColor="White"
+                                    StrokeThickness="0"
+                                    HeightRequest="360"
+                                    VerticalOptions="Center"
+                                    Padding="20,25">
+
+                                <Border.Shadow>
+                                    <Shadow Brush="#000000" Offset="0,12" Radius="25" Opacity="0.10" />
+                                </Border.Shadow>
+
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=GoToScheduleCommand}" CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+
+                                <Grid RowDefinitions="Auto, Auto, *, Auto">
+
+                                    <Label Grid.Row="0" 
+                                           Text="{Binding GroupName}" 
+                                           FontFamily="RubikBold" 
+                                           FontSize="24" 
+                                           TextColor="Black" 
+                                           HorizontalOptions="Center"/>
+
+                                    <BoxView Grid.Row="1" 
+                                             HeightRequest="1" 
+                                             Color="#E5E5E5" 
+                                             Margin="10,15,10,20"/>
+
+                                    <ScrollView Grid.Row="2">
+                                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Meals}" Spacing="12">
+
+                                            <BindableLayout.EmptyView>
+                                                <Label Text="אין מתכונים בארוחה זו" 
+                                                       TextColor="#A0A0A0" 
+                                                       FontSize="14" 
+                                                       HorizontalOptions="Center" 
+                                                       Margin="0,10,0,0"/>
+                                            </BindableLayout.EmptyView>
+
+                                            <BindableLayout.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ScheduledMealDisplay">
+                                                    <Grid ColumnDefinitions="Auto, *">
+
+                                                        <Ellipse Grid.Column="0" 
+                                                                 WidthRequest="6" 
+                                                                 HeightRequest="6" 
+                                                                 Fill="Black" 
+                                                                 VerticalOptions="Center" 
+                                                                 Margin="0,0,10,0"/>
+
+                                                        <Label Grid.Column="1" 
+                                                               Text="{Binding RecipeDetails.Title}" 
+                                                               FontFamily="RubikRegular" 
+                                                               FontSize="16" 
+                                                               TextColor="#333" 
+                                                               VerticalOptions="Center" 
+                                                               LineBreakMode="TailTruncation" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </BindableLayout.ItemTemplate>
+
+                                        </VerticalStackLayout>
+                                    </ScrollView>
+
+                                    <Label Grid.Row="3" 
+                                           Text="12:00" 
+                                           FontFamily="RubikBold" 
+                                           FontSize="26" 
+                                           TextColor="Black" 
+                                           HorizontalOptions="Center" 
+                                           Margin="0,15,0,0"/>
+
+                                </Grid>
+                            </Border>
+                        </ContentView>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </HorizontalStackLayout>
+        </ScrollView>
+    </VerticalStackLayout>
+</ContentView>

@@ -51,37 +51,7 @@
 
                     <VerticalStackLayout IsVisible="{Binding IsSearching, Converter={StaticResource BoolToVis}, ConverterParameter='Invert'}" Spacing="25">
 
-                        <VerticalStackLayout x:Name="MealsContainer" Spacing="10">
-                            <Label Text="הלו''ז להיום" FontAttributes="Bold" FontSize="18"/>
-                            <ScrollView x:Name="MealsScrollView" Orientation="Horizontal" HorizontalScrollBarVisibility="Never" FlowDirection="RightToLeft">
-                                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding TodayMeals}" Spacing="15" FlowDirection="RightToLeft">
-                                    <BindableLayout.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:MealGroup">
-                                            <Border StrokeShape="RoundRectangle 10" Stroke="#E0E0E0" StrokeThickness="1" BackgroundColor="White" Padding="12" WidthRequest="150" MinimumHeightRequest="130" VerticalOptions="Fill">
-                                                <Border.GestureRecognizers>
-                                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=GoToScheduleCommand}" CommandParameter="{Binding .}" />
-                                                </Border.GestureRecognizers>
-                                                <Grid RowDefinitions="Auto, *">
-                                                    <Border Grid.Row="0" StrokeShape="RoundRectangle 10" BackgroundColor="#045A6B">
-                                                        <Label Text="{Binding GroupName}" FontSize="20" FontAttributes="Bold" TextColor="#FFFFFF" Margin="3" HorizontalOptions="Center"/>
-                                                    </Border>
-                                                    <VerticalStackLayout Grid.Row="1" BindableLayout.ItemsSource="{Binding Meals}" Spacing="8" VerticalOptions="Start" Margin="0,10,0,0">
-                                                        <BindableLayout.EmptyView>
-                                                            <Label Text="אין מתכונים להיום" TextColor="#B0B0B0" FontSize="13"/>
-                                                        </BindableLayout.EmptyView>
-                                                        <BindableLayout.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:ScheduledMealDisplay">
-                                                                <Label Text="{Binding RecipeDetails.Title}" FontSize="16" TextColor="#444444" FontAttributes="Bold" LineBreakMode="WordWrap"/>
-                                                            </DataTemplate>
-                                                        </BindableLayout.ItemTemplate>
-                                                    </VerticalStackLayout>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </BindableLayout.ItemTemplate>
-                                </HorizontalStackLayout>
-                            </ScrollView>
-                        </VerticalStackLayout>
+                        <controls:DailyMealsControl x:Name="MealsControl" Margin="-20,0,-20,0" />
 
                         <VerticalStackLayout Spacing="10">
                             <Label Text="אולי הגיע הזמן להכין?" FontAttributes="Bold" FontSize="18"/>
