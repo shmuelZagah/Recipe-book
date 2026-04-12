@@ -65,9 +65,9 @@ public partial class App : Application
                         {
                             importedRecipe.CloudId = null;
                             importedRecipe.Id = 0;
-                            importedRecipe.IsFavorite = false;
                             importedRecipe.LastCookedDate = null;
                             importedRecipe.Title = importedRecipe.Title;
+                            importedRecipe.Rating = 0;
 
                             await db.SaveRecipeAsync(importedRecipe);
 

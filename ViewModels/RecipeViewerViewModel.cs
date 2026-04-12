@@ -208,15 +208,6 @@ public partial class RecipeViewerViewModel : ObservableObject, IQueryAttributabl
     public void ShowSteps() => IsIngredientsMode = false;
 
     [RelayCommand]
-    public async Task ToggleFavoriteAsync()
-    {
-        if (CurrentRecipe == null) return;
-
-        CurrentRecipe.IsFavorite = !CurrentRecipe.IsFavorite;
-        await _database.SaveRecipeAsync(CurrentRecipe);
-    }
-
-    [RelayCommand]
     public async Task ToggleStepCompleteAsync(RecipeStep step)
     {
         if (step != null)
@@ -309,6 +300,19 @@ public partial class RecipeViewerViewModel : ObservableObject, IQueryAttributabl
             IsLoading = false;
             LoadingText = "טוען...";
         }
+
+    }
+
+    [RelayCommand]
+    public async Task SetRatingAsync(string ratingStr)
+    {
+        if (CurrentRecipe == null || !double.TryParse(ratingStr, out double newRating)) return;
+
+        CurrentRecipe.Rating = newRating;
+        await _database.SaveRecipeAsync(CurrentRecipe);
+
+        OnPropertyChanged(nameof(CurrentRecipe));
+        WeakReferenceMessenger.Default.Send("RecipesChanged");
     }
 
     #endregion

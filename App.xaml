@@ -16,7 +16,10 @@
             <converters:BoolToColorConverter x:Key="BoolToColor" />
             <converters:BoolToVis x:Key="BoolToVis"/>
             <converters:BlackOrWhiteConverter x:Key="BlackOrWhiteConverter" />
-            
+            <converters:RatingToStarImageConverter x:Key="RatingToStarImageConverter"/>
+            <converters:ScreenRatioConverter x:Key="ScreenRatioConverter"/>
+
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

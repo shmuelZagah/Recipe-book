@@ -277,7 +277,31 @@ public class RecipesDatabase
             // 5. Wake up the background cleaner. If there's internet, it cleans now. If not, the listener will catch it later.
             _ = Task.Run(async () => await ProcessPendingDeletionsAsync());
         }
+    }
 
+    public async Task<List<Recipe>> GetFavoriteRecipesAsync()
+    {
+        await Init();
+
+        // 1. Get all recipes ordered by rating
+        var allItems = await Database.Table<Recipe>()
+                                     .OrderByDescending(r => r.Rating)
+                                     .ToListAsync();
+
+        if (!allItems.Any()) return new List<Recipe>();
+
+        double maxRating = allItems.First().Rating;
+
+        // 2. Logic: If more than 30 have the MAX rating, return all of them.
+        // Otherwise, return the top 30.
+        var topRatedCount = allItems.Count(r => r.Rating == maxRating && maxRating > 0);
+
+        if (topRatedCount >= 30)
+        {
+            return allItems.Where(r => r.Rating == maxRating).ToList();
+        }
+
+        return allItems.Take(30).Where(r => r.Rating > 0).ToList();
     }
     #endregion
     //--------------
@@ -610,6 +634,12 @@ public class RecipesDatabase
 
                     if (downloadedRecipe != null)
                     {
+
+                        downloadedRecipe.Id = 0;
+                        downloadedRecipe.CloudId = null;
+                        downloadedRecipe.Rating = 0; 
+                        downloadedRecipe.LastCookedDate = null;
+
                         // Save the base recipe to SQLite to generate a local ID
                         await SaveRecipeAsync(downloadedRecipe);
                         localRecipeId = downloadedRecipe.Id;

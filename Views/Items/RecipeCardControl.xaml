@@ -3,32 +3,106 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Recipe_book.Views.Items.RecipeCardControl"
              x:Name="this">
-    
-    <Border StrokeShape="RoundRectangle 12"
-            StrokeThickness="0"
-            BackgroundColor="White"
-            WidthRequest="140"
-            HeightRequest="150"
+
+    <Border StrokeShape="RoundRectangle 16"
+            StrokeThickness="1"
+            Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+            BackgroundColor="Transparent"
             Margin="5"
-            Shadow="{Shadow Brush=Black, Offset='0,2', Opacity=0.1}">
+            HeightRequest="130">
 
-        <Grid RowDefinitions="*, Auto">
-            <Image Grid.Row="0"
-                   Source="{Binding RecipeImage, Source={x:Reference this}}"
-                   Aspect="AspectFill"
-                   HorizontalOptions="Fill"
-                   VerticalOptions="Fill">
-            </Image>
+        <Grid ColumnDefinitions="105, *" ColumnSpacing="12" Padding="0,10,8,10">
 
-            <Label Grid.Row="1"
-                   Text="{Binding RecipeName, Source={x:Reference this}}"
-                   FontSize="13"
-                   FontAttributes="Bold"
-                   TextColor="#333"
-                   Padding="8,5"
-                   HorizontalOptions="Start"
-                   MaxLines="1"
-                   LineBreakMode="TailTruncation"/>
+            <Border Grid.Column="0" 
+                    StrokeShape="RoundRectangle 12" 
+                    StrokeThickness="0" 
+                    WidthRequest="95" 
+                    HeightRequest="110" 
+                    VerticalOptions="Center">
+                <Image Source="{Binding RecipeImage, Source={x:Reference this}}" 
+                       Aspect="AspectFill" />
+            </Border>
+
+            <Grid Grid.Column="1" RowDefinitions="Auto, Auto, *" Margin="0,8,0,0">
+
+                <Grid Grid.Row="0" ColumnDefinitions="*, Auto" ColumnSpacing="5">
+                    <Label Grid.Column="0"
+                           Text="{Binding RecipeName, Source={x:Reference this}}"
+                           FontFamily="RubikBold"
+                           FontSize="16" 
+                           TextColor="Black"
+                           VerticalOptions="Center"
+                           LineBreakMode="TailTruncation"
+                           MaxLines="1"/>
+
+                    <Border Grid.Column="1"
+                            StrokeShape="RoundRectangle 12"
+                            StrokeThickness="1"
+                            Stroke="#B5B092" 
+                            BackgroundColor="#F7F6F0"
+                            Padding="8,3"
+                            VerticalOptions="Start">
+                        <HorizontalStackLayout Spacing="4">
+                            <Label Text="{Binding RecipeRating, Source={x:Reference this}}" 
+                                   FontFamily="RubikBold" 
+                                   FontSize="11"
+                                   TextColor="Black"
+                                   VerticalOptions="Center"/>
+                            <Label Text="★" TextColor="#FFC107" FontSize="11" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </Border>
+                </Grid>
+
+                <HorizontalStackLayout Grid.Row="1" Spacing="10" Margin="0,2,0,0">
+                    <HorizontalStackLayout Spacing="4">
+                        <Image Source="clock_icon_gray.png" HeightRequest="12" WidthRequest="12" VerticalOptions="Center"/>
+                        <Label Text="{Binding RecipePrepTime, Source={x:Reference this}}" FontSize="12" TextColor="{StaticResource Gray600}"/>
+                    </HorizontalStackLayout>
+
+                    <BoxView WidthRequest="1" HeightRequest="10" Color="{StaticResource Gray300}" VerticalOptions="Center"/>
+
+                    <Label Text="{Binding RecipeServings, Source={x:Reference this}}" 
+                           FontSize="12" 
+                           TextColor="{StaticResource Gray600}"
+                           VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+
+                <Grid Grid.Row="2" ColumnDefinitions="*, Auto" Margin="0,4,0,0" ColumnSpacing="5">
+                    <Label Grid.Column="0"
+                           Text="{Binding RecipeDescription, Source={x:Reference this}, StringFormat='• {0}'}"
+                           FontSize="13" 
+                           TextColor="Black"
+                           Opacity="0.8"
+                           VerticalOptions="Start"
+                           LineBreakMode="TailTruncation"
+                           MaxLines="2"/>
+
+                    <Border Grid.Column="1"
+                            StrokeShape="RoundRectangle 16"
+                            StrokeThickness="0"
+                            BackgroundColor="Black"
+                            WidthRequest="32"
+                            HeightRequest="32"
+                            HorizontalOptions="End" 
+                            VerticalOptions="End"
+                            IsVisible="{Binding ShowOptions, Source={x:Reference this}}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OptionsCommand, Source={x:Reference this}}" 
+                                                  CommandParameter="{Binding .}"/>
+                        </Border.GestureRecognizers>
+
+                        <Label Text="⋮"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               TextColor="White"
+                               HorizontalTextAlignment="Center"
+                               VerticalTextAlignment="Center"
+                               VerticalOptions="Center"
+                               HorizontalOptions="Center"/>
+                    </Border>
+                </Grid>
+
+            </Grid>
         </Grid>
     </Border>
 </ContentView>

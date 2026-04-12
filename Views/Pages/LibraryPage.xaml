@@ -71,24 +71,25 @@
 
                         <CollectionView ItemsSource="{Binding FolderRecipes}">
                             <CollectionView.ItemsLayout>
-                                <GridItemsLayout Orientation="Vertical" Span="{Binding GridSpan}" HorizontalItemSpacing="15" VerticalItemSpacing="15" />
+                                <GridItemsLayout Orientation="Vertical" 
+                           Span="1" 
+                           HorizontalItemSpacing="15" 
+                           VerticalItemSpacing="15" />
                             </CollectionView.ItemsLayout>
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="recipes:Recipe">
-                                    <Grid>
-                                        <controls:RecipeCardControl RecipeName="{Binding Title}" RecipeImage="{Binding DisplayImage}">
-                                            <controls:RecipeCardControl.GestureRecognizers>
-                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=OpenRecipeCommand}" CommandParameter="{Binding .}"/>
-                                            </controls:RecipeCardControl.GestureRecognizers>
-                                        </controls:RecipeCardControl>
-
-                                        <Border StrokeThickness="0" BackgroundColor="#80000000" HorizontalOptions="Start" VerticalOptions="Start" Margin="15" WidthRequest="35" HeightRequest="35" StrokeShape="RoundRectangle 20">
-                                            <Border.GestureRecognizers>
-                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=RecipeOptionsCommand}" CommandParameter="{Binding .}"/>
-                                            </Border.GestureRecognizers>
-                                            <Label Text="⋮" FontSize="24" FontAttributes="Bold" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" Margin="0,-5,0,0"/>
-                                        </Border>
-                                    </Grid>
+                                    <controls:RecipeCardControl RecipeName="{Binding Title}" 
+                                                                RecipeImage="{Binding DisplayImage}"
+                                                                RecipeDescription="{Binding Description}"
+                                                                RecipeRating="{Binding Rating}"
+                                                                RecipePrepTime="{Binding PrepTime}"
+                                                                RecipeServings="{Binding Servings}"
+                                                                ShowOptions="True"
+                                                                OptionsCommand="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=RecipeOptionsCommand}">
+                                        <controls:RecipeCardControl.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:LibraryViewModel}}, Path=OpenRecipeCommand}" CommandParameter="{Binding .}"/>
+                                        </controls:RecipeCardControl.GestureRecognizers>
+                                    </controls:RecipeCardControl>
                                 </DataTemplate>
                             </CollectionView.ItemTemplate>
                         </CollectionView>

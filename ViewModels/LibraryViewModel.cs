@@ -210,10 +210,11 @@ public partial class LibraryViewModel : ObservableObject
             }
             else if (CurrentTab == "Favorites")
             {
-                var recipesToShow = allRecipes.Where(r => r.isFavorite).ToList();
+                var favoriteRecipes = await _database.GetFavoriteRecipesAsync();
 
-                if (!string.IsNullOrWhiteSpace(SearchQuery))
-                    recipesToShow = recipesToShow.Where(r => r.Title != null && r.Title.Contains(SearchQuery)).ToList();
+                var recipesToShow = string.IsNullOrWhiteSpace(SearchQuery)
+                    ? favoriteRecipes
+                    : favoriteRecipes.Where(r => r.Title != null && r.Title.Contains(SearchQuery)).ToList();
 
                 foreach (var recipe in recipesToShow) FolderRecipes.Add(recipe);
             }

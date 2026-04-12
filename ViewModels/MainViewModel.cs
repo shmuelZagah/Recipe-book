@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace Recipe_book.ViewModels;
 
 /// <summary>
-/// ViewModel for the main dashboard, displaying favorites, unused recipes, and today's schedule.
+/// ViewModel for the main dashboard, displaying unused recipes, and today's schedule.
 /// </summary>
 public partial class MainViewModel : ObservableObject
 {
@@ -31,7 +31,7 @@ public partial class MainViewModel : ObservableObject
     public bool IsSearching => !string.IsNullOrWhiteSpace(SearchQuery);
 
     public ObservableCollection<Recipe> Recipes { get; } = new();
-    public ObservableCollection<Recipe> FavoriteRecipes { get; } = new();
+
     public ObservableCollection<Recipe> DidntUsedForLongTime { get; } = new();
     public ObservableCollection<MealGroup> TodayMeals { get; } = new();
 
@@ -141,7 +141,6 @@ public partial class MainViewModel : ObservableObject
     {
         _allRecipesCache = await _database.GetRecipesAsync();
 
-        FavoriteRecipes.Clear();
         DidntUsedForLongTime.Clear();
 
         var allRecipesByUsed = from r in _allRecipesCache
@@ -151,9 +150,6 @@ public partial class MainViewModel : ObservableObject
         int i = 0, n = 5;
         foreach (var recipe in allRecipesByUsed)
         {
-            if (recipe.IsFavorite)
-                FavoriteRecipes.Add(recipe);
-
             if (i < n)
             {
                 DidntUsedForLongTime.Add(recipe);
@@ -173,7 +169,6 @@ public partial class MainViewModel : ObservableObject
         await _database.DeleteRecipeAsync(recipe);
         _allRecipesCache.Remove(recipe);
 
-        FavoriteRecipes.Remove(recipe);
         DidntUsedForLongTime.Remove(recipe);
 
         FilterRecipes();

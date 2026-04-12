@@ -59,24 +59,6 @@
                                    VerticalOptions="Center"
                                    LineBreakMode="TailTruncation" />
 
-                            <Grid Grid.Column="1" VerticalOptions="Center" Padding="10,0">
-                                <Grid.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding ToggleFavoriteCommand}" />
-                                </Grid.GestureRecognizers>
-
-                                <Label Text="♡" 
-                                       FontSize="32" 
-                                       TextColor="White" 
-                                       HorizontalOptions="Center" 
-                                       VerticalOptions="Center" 
-                                       IsVisible="{Binding CurrentRecipe.IsFavorite, Converter={StaticResource BoolToVis}, ConverterParameter='Invert'}" />
-
-                                <Label Text="❤️" 
-                                       FontSize="24" 
-                                       HorizontalOptions="Center" 
-                                       VerticalOptions="Center" 
-                                       IsVisible="{Binding CurrentRecipe.IsFavorite}" />
-                            </Grid>
                         </Grid>
                     </Grid>
 
@@ -86,6 +68,43 @@
                                FontSize="16"
                                HorizontalTextAlignment="Center"
                                LineBreakMode="WordWrap"/>
+                        
+                        <HorizontalStackLayout Spacing="20" HorizontalOptions="Center">
+                            <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+                                <Label Text="⏱️" FontSize="16" VerticalOptions="Center"/>
+                                <Label Text="{Binding CurrentRecipe.PrepTime}" TextColor="Black" FontSize="14" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+
+                            <HorizontalStackLayout Spacing="5" VerticalOptions="Center">
+                                <Label Text="🍽️" FontSize="16" VerticalOptions="Center"/>
+                                <Label Text="{Binding CurrentRecipe.Servings}" TextColor="Black" FontSize="14" FontAttributes="Bold" VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                        </HorizontalStackLayout>
+
+                        <HorizontalStackLayout Spacing="10" HorizontalOptions="Center" Margin="0,10,0,0">
+
+                            <ImageButton Source="{Binding CurrentRecipe.Rating, Converter={StaticResource RatingToStarImageConverter}, ConverterParameter=1}" 
+                                 HeightRequest="30" WidthRequest="30" BackgroundColor="Transparent"
+                                 Command="{Binding SetRatingCommand}" CommandParameter="1" />
+
+                            <ImageButton Source="{Binding CurrentRecipe.Rating, Converter={StaticResource RatingToStarImageConverter}, ConverterParameter=2}" 
+                                 HeightRequest="30" WidthRequest="30" BackgroundColor="Transparent"
+                                 Command="{Binding SetRatingCommand}" CommandParameter="2" />
+
+                            <ImageButton Source="{Binding CurrentRecipe.Rating, Converter={StaticResource RatingToStarImageConverter}, ConverterParameter=3}" 
+                                 HeightRequest="30" WidthRequest="30" BackgroundColor="Transparent"
+                                 Command="{Binding SetRatingCommand}" CommandParameter="3" />
+
+                            <ImageButton Source="{Binding CurrentRecipe.Rating, Converter={StaticResource RatingToStarImageConverter}, ConverterParameter=4}" 
+                                 HeightRequest="30" WidthRequest="30" BackgroundColor="Transparent"
+                                 Command="{Binding SetRatingCommand}" CommandParameter="4" />
+
+                            <ImageButton Source="{Binding CurrentRecipe.Rating, Converter={StaticResource RatingToStarImageConverter}, ConverterParameter=5}" 
+                                 HeightRequest="30" WidthRequest="30" BackgroundColor="Transparent"
+                                 Command="{Binding SetRatingCommand}" CommandParameter="5" />
+
+                        </HorizontalStackLayout>
+
                     </VerticalStackLayout>
                 </VerticalStackLayout>
 

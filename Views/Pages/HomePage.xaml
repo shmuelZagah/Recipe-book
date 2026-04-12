@@ -6,6 +6,7 @@
              xmlns:controls="clr-namespace:Recipe_book.Views.Items"
              x:Class="Recipe_book.Views.Pages.HomePage"
              x:DataType="vm:MainViewModel"
+             x:Name="HomePageRoot"
              FlowDirection="RightToLeft">
 
     <Grid BackgroundColor="Transparent">
@@ -35,11 +36,16 @@
                         <Label Text="תוצאות חיפוש" FontAttributes="Bold" FontSize="18"/>
                         <CollectionView ItemsSource="{Binding Recipes}">
                             <CollectionView.ItemsLayout>
-                                <GridItemsLayout Orientation="Vertical" Span="2" VerticalItemSpacing="10" HorizontalItemSpacing="10"/>
+                                <GridItemsLayout Orientation="Vertical" Span="1" VerticalItemSpacing="10" HorizontalItemSpacing="10"/>
                             </CollectionView.ItemsLayout>
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="models:Recipe">
-                                    <controls:RecipeCardControl RecipeName="{Binding Title}" RecipeImage="{Binding DisplayImage}">
+                                    <controls:RecipeCardControl RecipeName="{Binding Title}" 
+                                        RecipeImage="{Binding DisplayImage}"
+                                        RecipeDescription="{Binding Description}"
+                                        RecipeRating="{Binding Rating}"
+                                        RecipePrepTime="{Binding PrepTime}" 
+                                        RecipeServings="{Binding Servings}">
                                         <controls:RecipeCardControl.GestureRecognizers>
                                             <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=OpenRecipeCommand}" CommandParameter="{Binding .}"/>
                                         </controls:RecipeCardControl.GestureRecognizers>
@@ -61,11 +67,20 @@
                                 </CollectionView.ItemsLayout>
                                 <CollectionView.ItemTemplate>
                                     <DataTemplate x:DataType="models:Recipe">
-                                        <controls:RecipeCardControl RecipeName="{Binding Title}" RecipeImage="{Binding DisplayImage}">
+
+                                        <controls:RecipeCardControl WidthRequest="{Binding Width, Source={x:Reference HomePageRoot}, Converter={StaticResource ScreenRatioConverter}, ConverterParameter='0.85'}"
+                                                                    RecipeName="{Binding Title}" 
+                                                                    RecipeImage="{Binding DisplayImage}"
+                                                                    RecipeDescription="{Binding Description}"
+                                                                    RecipeRating="{Binding Rating}"
+                                                                    RecipePrepTime="{Binding PrepTime}" 
+                                                                    RecipeServings="{Binding Servings}">
+
                                             <controls:RecipeCardControl.GestureRecognizers>
                                                 <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:MainViewModel}}, Path=OpenRecipeCommand}" CommandParameter="{Binding .}"/>
                                             </controls:RecipeCardControl.GestureRecognizers>
                                         </controls:RecipeCardControl>
+
                                     </DataTemplate>
                                 </CollectionView.ItemTemplate>
                             </CollectionView>

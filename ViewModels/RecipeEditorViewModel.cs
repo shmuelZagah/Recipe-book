@@ -42,6 +42,12 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
     [ObservableProperty]
     private string recipeDescription;
 
+    [ObservableProperty]
+    private string prepTime;
+
+    [ObservableProperty]
+    private string servings;
+
     public ObservableCollection<string> AvailableUnits { get; } = new()
     {
         "יחידות", "כפית", "כף", "כוס", "גרם", "ק״ג", "מ״ל", "ליטר"
@@ -49,6 +55,7 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
 
     public ObservableCollection<Ingredient> IngredientsList { get; } = new();
     public ObservableCollection<RecipeStep> StepsList { get; } = new();
+
 
     #endregion
     //--------------
@@ -85,6 +92,8 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
         RecipeTitle = recipe.Title;
         RecipeDescription = recipe.Description;
         RecipeImage = recipe.DisplayImage;
+        PrepTime = recipe.PrepTime; 
+        Servings = recipe.Servings;
 
         var ingredients = await _database.GetIngredientsAsync(recipe.Id);
         IngredientsList.Clear();
@@ -172,8 +181,20 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
 
         recipeToSave.Id = _existingRecipeId;
         recipeToSave.Title = RecipeTitle;
-        recipeToSave.LocalImagePath = RecipeImage;
+
+        if (!string.IsNullOrEmpty(RecipeImage) && RecipeImage.StartsWith("http"))
+        {
+            recipeToSave.CloudImagePath = RecipeImage;
+            recipeToSave.LocalImagePath = null;
+        }
+        else
+        {
+            recipeToSave.LocalImagePath = RecipeImage;
+        }
+
         recipeToSave.Description = RecipeDescription;
+        recipeToSave.PrepTime = PrepTime; 
+        recipeToSave.Servings = Servings;
 
         await _database.SaveRecipeAsync(recipeToSave);
 

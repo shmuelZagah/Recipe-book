@@ -29,18 +29,16 @@
                         </Grid>
                     </Border>
 
-                    <HorizontalStackLayout Grid.Row="1" Spacing="5" HorizontalOptions="Center" Margin="0,0,0,15">
-                        <Label Text="★" FontSize="30" TextColor="#FFD700"/>
-                        <Label Text="★" FontSize="30" TextColor="#FFD700"/>
-                        <Label Text="★" FontSize="30" TextColor="#FFD700"/>
-                        <Label Text="★" FontSize="30" TextColor="#FFD700"/>
-                        <Label Text="★" FontSize="30" TextColor="Gray"/>
-                    </HorizontalStackLayout>
-
                     <VerticalStackLayout Grid.Row="2" Spacing="5">
                         <BoxView Color="Gray" WidthRequest="250" HeightRequest="1" HorizontalOptions="Center" Opacity="0.3" />
                         <Entry Placeholder="הוסף שם" Text="{Binding RecipeTitle}" FontSize="26" HorizontalTextAlignment="Center" FontAttributes="Bold" TextColor="Black" PlaceholderColor="#555" BackgroundColor="Transparent"/>
                         <Entry Placeholder="הוסף תיאור" Text="{Binding RecipeDescription}" FontSize="15" HorizontalTextAlignment="Center" TextColor="Black" PlaceholderColor="#555" BackgroundColor="Transparent" />
+
+                        <HorizontalStackLayout Spacing="15" HorizontalOptions="Center" Margin="0,10,0,0">
+                            <Entry Placeholder="זמן הכנה (למשל: 45 דק')" Text="{Binding PrepTime}" FontSize="14" HorizontalTextAlignment="Center" TextColor="Black" BackgroundColor="Transparent" WidthRequest="150"/>
+                            <BoxView Color="Gray" WidthRequest="1" HeightRequest="20" VerticalOptions="Center" Opacity="0.3"/>
+                            <Entry Placeholder="כמות (למשל: 4 מנות)" Text="{Binding Servings}" FontSize="14" HorizontalTextAlignment="Center" TextColor="Black" BackgroundColor="Transparent" WidthRequest="150"/>
+                        </HorizontalStackLayout>
                     </VerticalStackLayout>
                 </Grid>
 

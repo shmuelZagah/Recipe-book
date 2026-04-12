@@ -20,6 +20,13 @@ public partial class Recipe : ObservableObject
     [FirestoreProperty("Description")]
     public string Description { get; set; }
 
+    [FirestoreProperty("PrepTime")]
+    public string PrepTime { get; set; }
+
+    [FirestoreProperty("Servings")]
+    public string Servings { get; set; }
+    public double Rating { get; set; }
+
     //-----------------------
     #region Image Handling 
     //-----------------------
@@ -47,10 +54,6 @@ public partial class Recipe : ObservableObject
 
     [FirestoreProperty("CloudId")]
     public string CloudId { get; set; }
-
-    [ObservableProperty]
-    [property: FirestoreProperty("IsFavorite")]
-    public bool isFavorite = false;
 
     [FirestoreProperty("LastCookedDate")]
     public DateTime? LastCookedDate { get; set; }
