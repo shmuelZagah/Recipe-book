@@ -16,6 +16,6 @@ public partial class SelectRecipePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadRecipesAsync();
+        await _viewModel.LoadDataAsync();
     }
 }

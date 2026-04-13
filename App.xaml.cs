@@ -1,11 +1,12 @@
-﻿using System.Text.Json;
-using System.Text;
-using System.Web;
-using Recipe_book.Models.Shopping;
+﻿using CommunityToolkit.Mvvm.Messaging;
 using Recipe_book.Models.Cloud;
 using Recipe_book.Models.Recipes;
+using Recipe_book.Models.Shopping;
 using Recipe_book.Services;
 using Recipe_book.ViewModels;
+using System.Text;
+using System.Text.Json;
+using System.Web;
 
 namespace Recipe_book;
 
@@ -91,6 +92,8 @@ public partial class App : Application
                                     await db.SaveStepAsync(step);
                                 }
                             }
+
+                            CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default.Send("RecipesChanged");
 
                             var navParam = new Dictionary<string, object>
                             {

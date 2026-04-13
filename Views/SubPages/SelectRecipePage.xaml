@@ -3,37 +3,97 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Recipe_book.Views.SubPages.SelectRecipePage"
              xmlns:controls="clr-namespace:Recipe_book.Views.Items"
-             Title="בחר מתכון">
+             xmlns:vm="clr-namespace:Recipe_book.ViewModels"
+             xmlns:models="clr-namespace:Recipe_book.Models.Organization"
+             xmlns:recipes="clr-namespace:Recipe_book.Models.Recipes"
+             Title="בחר מתכון"
+             FlowDirection="RightToLeft"
+             BackgroundColor="#F5F5F5">
 
     <Grid RowDefinitions="Auto, *">
-        <SearchBar Grid.Row="0" 
-               Placeholder="חפש מתכון..." 
-               Text="{Binding SearchQuery}" 
-               Margin="10" />
-        
-        
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Recipes}" Margin="10">
-            <CollectionView.ItemsLayout>
-                <GridItemsLayout Orientation="Vertical" Span="2" HorizontalItemSpacing="10" VerticalItemSpacing="10"/>
-            </CollectionView.ItemsLayout>
-            <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Border StrokeShape="RoundRectangle 10" StrokeThickness="0" HeightRequest="150">
-                        <Grid>
-                            <Grid.GestureRecognizers>
-                                <TapGestureRecognizer 
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SelectRecipeCommand}" 
-                                    CommandParameter="{Binding .}"/>
-                            </Grid.GestureRecognizers>
+        <Border Grid.Row="0"
+                StrokeShape="RoundRectangle 25" 
+                StrokeThickness="1" 
+                Stroke="#E0E0E0"
+                BackgroundColor="White" 
+                Margin="15,15,15,5" 
+                HeightRequest="50">
+            <Border.Shadow>
+                <Shadow Brush="Black" Offset="0,4" Opacity="0.1" Radius="6" />
+            </Border.Shadow>
+            <Grid ColumnDefinitions="Auto, *">
+                <Image Grid.Column="0" 
+                       Source="search_icon.svg" 
+                       WidthRequest="22" 
+                       HeightRequest="22" 
+                       Margin="15,0,10,0" 
+                       VerticalOptions="Center"/>
+                <Entry Grid.Column="1" 
+                       Placeholder="חפש לפי שם מתכון או תיקייה..." 
+                       Text="{Binding SearchQuery}" 
+                       BackgroundColor="Transparent" 
+                       VerticalOptions="Center"
+                       ClearButtonVisibility="WhileEditing"
+                       FontSize="15"/>
+            </Grid>
+        </Border>
 
-                            <Image Source="{Binding DisplayImage}" Aspect="AspectFill" />
-                            <BoxView Color="Black" Opacity="0.5" VerticalOptions="End" HeightRequest="40" />
-                            <Label Text="{Binding Title}" TextColor="White" FontAttributes="Bold" Margin="5" VerticalOptions="End" HorizontalOptions="Center" />
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="20" Padding="15,15,15,15">
+
+                <HorizontalStackLayout IsVisible="{Binding IsInnerFolder}" Spacing="8" Margin="0,0,0,5">
+                    <HorizontalStackLayout.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding GoUpCommand}" />
+                    </HorizontalStackLayout.GestureRecognizers>
+                    <Label Text="➔" FontSize="18" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
+                    <Label Text="חזור" FontSize="16" TextColor="#0570A0" FontAttributes="Bold" VerticalOptions="Center"/>
+                </HorizontalStackLayout>
+
+                <CollectionView ItemsSource="{Binding Folders}">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="2" HorizontalItemSpacing="12" VerticalItemSpacing="12" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:RecipeFolder">
+                            <Border StrokeThickness="0" BackgroundColor="White" HeightRequest="100" StrokeShape="RoundRectangle 12">
+                                <Border.Shadow>
+                                    <Shadow Brush="Black" Offset="0,2" Opacity="0.05" Radius="3" />
+                                </Border.Shadow>
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SelectRecipeViewModel}}, Path=OpenFolderCommand}" CommandParameter="{Binding .}"/>
+                                </Border.GestureRecognizers>
+                                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="5">
+                                    <Label Text="📁" FontSize="32" HorizontalOptions="Center" />
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="14" TextColor="#333" HorizontalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <CollectionView ItemsSource="{Binding Recipes}">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="1" VerticalItemSpacing="12"/>
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="recipes:Recipe">
+                            <controls:RecipeCardControl RecipeName="{Binding Title}" 
+                                                        RecipeImage="{Binding DisplayImage}"
+                                                        RecipeDescription="{Binding Description}"
+                                                        RecipeRating="{Binding Rating}"
+                                                        RecipePrepTime="{Binding PrepTime}" 
+                                                        RecipeServings="{Binding Servings}">
+                                <controls:RecipeCardControl.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SelectRecipeViewModel}}, Path=SelectRecipeCommand}" CommandParameter="{Binding .}"/>
+                                </controls:RecipeCardControl.GestureRecognizers>
+                            </controls:RecipeCardControl>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
     </Grid>
 </ContentPage>

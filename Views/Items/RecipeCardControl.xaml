@@ -9,9 +9,9 @@
             Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
             BackgroundColor="Transparent"
             Margin="5"
-            HeightRequest="130">
+            HeightRequest="145">
 
-        <Grid ColumnDefinitions="105, *" ColumnSpacing="12" Padding="0,10,8,10">
+        <Grid ColumnDefinitions="105, *" ColumnSpacing="12" Padding="4,10,8,10">
 
             <Border Grid.Column="0" 
                     StrokeShape="RoundRectangle 12" 
@@ -33,7 +33,7 @@
                            TextColor="Black"
                            VerticalOptions="Center"
                            LineBreakMode="TailTruncation"
-                           MaxLines="1"/>
+                           MaxLines="2"/>
 
                     <Border Grid.Column="1"
                             StrokeShape="RoundRectangle 12"
@@ -79,8 +79,8 @@
 
                     <Border Grid.Column="1"
                             StrokeShape="RoundRectangle 16"
-                            StrokeThickness="0"
-                            BackgroundColor="Black"
+                            StrokeThickness="1"
+                            BackgroundColor="Transparent"
                             WidthRequest="32"
                             HeightRequest="32"
                             HorizontalOptions="End" 
@@ -94,7 +94,7 @@
                         <Label Text="⋮"
                                FontSize="20"
                                FontAttributes="Bold"
-                               TextColor="White"
+                               TextColor="{StaticResource Gray500}"
                                HorizontalTextAlignment="Center"
                                VerticalTextAlignment="Center"
                                VerticalOptions="Center"

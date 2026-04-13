@@ -1,10 +1,11 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.Messaging;
 using Recipe_book.Models.Organization;
 using Recipe_book.Models.Recipes;
 using Recipe_book.Services;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -229,6 +230,8 @@ public partial class FolderSelectionViewModel : ObservableObject
             {
                 int? targetParentId = CurrentFolder?.Id;
                 await _database.ImportSharedFolderAsync(ImportedFolderJson, targetParentId);
+                WeakReferenceMessenger.Default.Send("FoldersChanged");
+                WeakReferenceMessenger.Default.Send("RecipesChanged");
             }
             finally
             {
@@ -240,6 +243,8 @@ public partial class FolderSelectionViewModel : ObservableObject
         {
             // Existing recipe mapping logic
             await _database.UpdateRecipeFoldersAsync(TargetRecipe.Id, SelectedFolders.Select(f => f.Id).ToList());
+            WeakReferenceMessenger.Default.Send("FoldersChanged");
+            WeakReferenceMessenger.Default.Send("RecipesChanged");
             CloseScreen();
         }
     }

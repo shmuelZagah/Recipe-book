@@ -38,6 +38,7 @@ public partial class LibraryViewModel : ObservableObject
     public bool IsRootFolder => CurrentFolder == null;
     public bool IsInnerFolder => CurrentFolder != null;
 
+
     public string PageTitle => CurrentFolder == null ? "המתכונים שלי" : CurrentFolder.Name;
 
     [ObservableProperty]
@@ -50,6 +51,8 @@ public partial class LibraryViewModel : ObservableObject
 
     [ObservableProperty]
     private string loadingText = string.Empty;
+
+    private int _loadExecutionToken = 0;
 
     #endregion
     //--------------
@@ -92,10 +95,17 @@ public partial class LibraryViewModel : ObservableObject
         if (CurrentTab == tabName) return;
 
         CurrentTab = tabName;
-        CurrentFolder = null; // איפוס ניווט פנימי כשמחליפים טאב
-        SearchQuery = string.Empty; // איפוס חיפוש
+        CurrentFolder = null; // Reset internal navigation
 
-        await LoadFoldersAsync();
+        // Avoid double-triggering LoadFoldersAsync
+        if (!string.IsNullOrEmpty(SearchQuery))
+        {
+            SearchQuery = string.Empty; // This will trigger OnSearchQueryChanged -> LoadFoldersAsync
+        }
+        else
+        {
+            await LoadFoldersAsync(); // Search is already empty, load manually
+        }
     }
 
     private List<RecipeFolder> GetFolderAndDescendants(RecipeFolder targetFolder, List<RecipeFolder> allFolders)
@@ -162,13 +172,20 @@ public partial class LibraryViewModel : ObservableObject
     [RelayCommand]
     public async Task LoadFoldersAsync()
     {
+        int currentToken = ++_loadExecutionToken;
         IsLoading = true;
+
         try
         {
+            // 1. Fetch data from DB FIRST, before touching the UI lists
+            var allRecipes = await _database.GetRecipesAsync();
+
+            // 2. Check if another request started while we were fetching. If so, abort this stale request.
+            if (currentToken != _loadExecutionToken) return;
+
+            // 3. NOW it is safe to clear and populate the UI
             Folders.Clear();
             FolderRecipes.Clear();
-
-            var allRecipes = await _database.GetRecipesAsync();
 
             if (CurrentTab == "Folders")
             {
@@ -178,16 +195,16 @@ public partial class LibraryViewModel : ObservableObject
                 {
                     int? targetParentId = CurrentFolder?.Id;
 
-                    foreach (var folder in allFolders.Where(f => f.ParentFolderId == targetParentId))
-                    {
-                        Folders.Add(folder);
-                    }
-
                     List<Recipe> recipesToShow;
                     if (targetParentId == null || targetParentId == 0)
                         recipesToShow = await _database.GetRecipesWithoutFolderAsync();
                     else
                         recipesToShow = await _database.GetRecipesInFolderAsync(targetParentId.Value);
+
+                    foreach (var folder in allFolders.Where(f => f.ParentFolderId == targetParentId))
+                    {
+                        Folders.Add(folder);
+                    }
 
                     foreach (var recipe in recipesToShow) FolderRecipes.Add(recipe);
                 }
@@ -231,7 +248,11 @@ public partial class LibraryViewModel : ObservableObject
         }
         finally
         {
-            IsLoading = false;
+            // Only stop loading spinner if this is still the active request
+            if (currentToken == _loadExecutionToken)
+            {
+                IsLoading = false;
+            }
         }
     }
 

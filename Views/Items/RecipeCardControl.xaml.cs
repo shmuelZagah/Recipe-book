@@ -60,7 +60,7 @@ public partial class RecipeCardControl : ContentView
         set => SetValue(ShowOptionsProperty, value);
     }
     public static readonly BindableProperty ShowOptionsProperty =
-        BindableProperty.Create(nameof(ShowOptions), typeof(bool), typeof(RecipeCardControl), false); // ברירת מחדל: מוסתר
+        BindableProperty.Create(nameof(ShowOptions), typeof(bool), typeof(RecipeCardControl), false);
 
     public ICommand OptionsCommand
     {

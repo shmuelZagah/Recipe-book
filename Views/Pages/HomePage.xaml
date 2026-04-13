@@ -61,7 +61,7 @@
 
                         <VerticalStackLayout Spacing="10">
                             <Label Text="אולי הגיע הזמן להכין?" FontAttributes="Bold" FontSize="18"/>
-                            <CollectionView ItemsSource="{Binding DidntUsedForLongTime}" HeightRequest="150">
+                            <CollectionView x:Name="SuggestionsList" ItemsSource="{Binding DidntUsedForLongTime}" HeightRequest="150">
                                 <CollectionView.ItemsLayout>
                                     <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10"/>
                                 </CollectionView.ItemsLayout>

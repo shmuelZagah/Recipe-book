@@ -8,7 +8,7 @@ namespace com.shmuel.recipebook;
     Theme = "@style/Maui.SplashTheme",
     MainLauncher = true,
     Exported = true,
-    //WindowSoftInputMode = SoftInput.AdjustPan,
+    WindowSoftInputMode = SoftInput.AdjustResize,
     LaunchMode = LaunchMode.SingleTop,
 
     ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode |
@@ -78,5 +78,4 @@ public class MainActivity : MauiAppCompatActivity
             Microsoft.Maui.Controls.Application.Current?.SendOnAppLinkRequestReceived(new Uri(intent.DataString));
         }
     }
-
 }

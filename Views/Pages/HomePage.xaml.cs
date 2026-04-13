@@ -47,29 +47,60 @@ public partial class HomePage : ContentView, ISwipeAwarePage
     #endregion
 
     #region ISwipeAwarePage Implementation
+
     public SwipeAction GetSwipeAction(double totalX, double startX, double startY)
     {
-        if (_vm.IsSearching || SearchArea == null || MainScroll == null || MealsControl == null)
+        if (_vm.IsSearching || SearchArea == null || MainScroll == null)
             return SwipeAction.MainPageSwipe;
 
-        // Top search area + its vertical margins (15 + 10)
+        // Calculate static top area (Search bar + margins)
         double topOffset = SearchArea.Height + 25;
 
-        // Calculate the absolute Y position of the horizontal control
-        double relativeY = MealsControl.Y;
-        double absoluteTop = topOffset + relativeY - MainScroll.ScrollY;
-        double absoluteBottom = absoluteTop + MealsControl.Height;
-
-        // Allow native horizontal scroll within bounds (+15px safe zone padding)
-        if (startY >= absoluteTop - 15 && startY <= absoluteBottom + 15)
+        // 1. Check if swipe is within the Daily Meals carousel bounds
+        if (MealsControl != null)
         {
-            return SwipeAction.NativeChildScroll;
+            double mealsRelativeY = GetRelativeY(MealsControl, MainScroll);
+            double mealsAbsoluteTop = topOffset + mealsRelativeY - MainScroll.ScrollY;
+            double mealsAbsoluteBottom = mealsAbsoluteTop + MealsControl.Height;
+
+            if (startY >= mealsAbsoluteTop - 15 && startY <= mealsAbsoluteBottom + 15)
+            {
+                return SwipeAction.NativeChildScroll;
+            }
         }
 
+        // 2. Check if swipe is within the Suggestions carousel bounds
+        if (SuggestionsList != null)
+        {
+            double suggestionsRelativeY = GetRelativeY(SuggestionsList, MainScroll);
+            double suggestionsAbsoluteTop = topOffset + suggestionsRelativeY - MainScroll.ScrollY;
+            double suggestionsAbsoluteBottom = suggestionsAbsoluteTop + SuggestionsList.Height;
+
+            if (startY >= suggestionsAbsoluteTop - 15 && startY <= suggestionsAbsoluteBottom + 15)
+            {
+                return SwipeAction.NativeChildScroll;
+            }
+        }
+
+        // Default: allow main tab swiping
         return SwipeAction.MainPageSwipe;
     }
+
+    // Helper: Gets absolute Y position relative to the main ScrollView
+    private double GetRelativeY(VisualElement element, VisualElement parent)
+    {
+        double y = 0;
+        while (element != null && element != parent)
+        {
+            y += element.Y;
+            element = element.Parent as VisualElement;
+        }
+        return y;
+    }
+
     public void StartInnerSwipe() { }
     public void RunningInnerSwipe(double deltaX) { }
     public void CompletedInnerSwipe(double deltaX, double screenWidth) { }
+
     #endregion
 }
