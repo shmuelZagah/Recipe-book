@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Recipe_book.Views.Items.ShoppingListsBottomSheet"
+             FlowDirection="RightToLeft">
+
+    <Grid x:Name="BottomSheetOverlay" IsVisible="False" BackgroundColor="Transparent">
+
+        <BoxView x:Name="BottomSheetDim" BackgroundColor="#80000000" Opacity="0">
+            <BoxView.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnCloseTapped" />
+            </BoxView.GestureRecognizers>
+        </BoxView>
+
+        <Border x:Name="BottomSheetContainer" 
+                VerticalOptions="End" 
+                BackgroundColor="White" 
+                StrokeThickness="0" 
+                Padding="20,15,20,40" 
+                TranslationY="800">
+
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="25,25,0,0" />
+            </Border.StrokeShape>
+
+            <Border.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnBottomSheetPanUpdated" />
+            </Border.GestureRecognizers>
+
+            <VerticalStackLayout Spacing="10">
+                <BoxView HeightRequest="5" WidthRequest="40" CornerRadius="2.5" BackgroundColor="#E0E0E0" HorizontalOptions="Center" Margin="0,0,0,10" />
+
+                <Label Text="הרשימות שלי" FontAttributes="Bold" FontSize="18" TextColor="{StaticResource Primary}" HorizontalOptions="Center" Margin="0,0,0,10"/>
+
+                <VerticalStackLayout Spacing="5">
+                    <CollectionView ItemsSource="{Binding SavedLists}" MaximumHeightRequest="250">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame Padding="15,10" Margin="0,5" CornerRadius="8" BackgroundColor="#F8F9FA" BorderColor="Transparent" HasShadow="False">
+                                    <Frame.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding BindingContext.SwitchListCommand, Source={x:Reference BottomSheetOverlay}}" CommandParameter="{Binding .}" />
+                                    </Frame.GestureRecognizers>
+
+                                    <Grid ColumnDefinitions="*, Auto, Auto" VerticalOptions="Center">
+                                        <Label Grid.Column="0" Text="{Binding Title}" FontSize="16" FontAttributes="Bold" TextColor="#2B3A42" VerticalOptions="Center" />
+
+                                        <ImageButton Grid.Column="1" 
+                                                     Source="pencil_light_withline_icon.svg" 
+                                                     WidthRequest="22" HeightRequest="22" 
+                                                     BackgroundColor="Transparent" 
+                                                     Margin="0,0,15,0"
+                                                     Command="{Binding BindingContext.RenameListCommand, Source={x:Reference BottomSheetOverlay}}" 
+                                                     CommandParameter="{Binding .}" />
+
+                                        <ImageButton Grid.Column="2" 
+                                                     Source="minus_icon.svg" 
+                                                     WidthRequest="22" HeightRequest="22" 
+                                                     BackgroundColor="Transparent"
+                                                     Command="{Binding BindingContext.DeleteListCommand, Source={x:Reference BottomSheetOverlay}}" 
+                                                     CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Frame Padding="15,12" Margin="0,5" CornerRadius="8" BackgroundColor="Transparent" BorderColor="#EEEEEE" HasShadow="False">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding CreateNewListCommand}" />
+                        </Frame.GestureRecognizers>
+                        <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                            <Label Text="+" FontSize="20" TextColor="Gray" VerticalOptions="Center" TranslationY="-1" />
+                            <Label Text="הוסף רשימה חדשה" FontSize="15" TextColor="Gray" FontAttributes="Bold" VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+
+                <BoxView HeightRequest="1" Color="#EEEEEE" Margin="0,10"/>
+
+                <Button Text="מיזוג רשימות" 
+                        Command="{Binding BindingContext.OpenMergeModeCommand, Source={x:Reference BottomSheetOverlay}}" 
+                        BackgroundColor="Transparent" 
+                        TextColor="Black" 
+                        BorderColor="Black" 
+                        BorderWidth="1"
+                        FontAttributes="Bold" 
+                        CornerRadius="8" 
+                        HeightRequest="45" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+</ContentView>

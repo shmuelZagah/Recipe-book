@@ -35,7 +35,7 @@ public class LiquidTabBar : ContentView
 
     public LiquidTabBar()
     {
-        HeightRequest = 70;
+        HeightRequest = 50;
         HorizontalOptions = LayoutOptions.Fill;
         FlowDirection = FlowDirection.LeftToRight;
 
@@ -50,13 +50,13 @@ public class LiquidTabBar : ContentView
         {
             Drawable = _pill,
             BackgroundColor = Colors.Transparent,
-            Margin = new Thickness(5, 0)
+            Margin = new Thickness(0) // Fixed the 5px offset bug so text is perfectly centered
         };
 
         _tabsLayout = new HorizontalStackLayout
         {
             Spacing = 5,
-            Padding = new Thickness(10, 5),
+            Padding = new Thickness(10, 0),
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.Start
         };
@@ -70,20 +70,20 @@ public class LiquidTabBar : ContentView
 
         _mainGrid = new Grid { Children = { _scrollView } };
 
-        // עיצוב חיצוני יוקרתי (מסגרת, צל ופינות)
+        // Outer container: Changed to a rounded rectangle instead of a pill
         var borderContainer = new Border
         {
-            StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(30) },
+            StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(12) },
             Stroke = Color.FromArgb("#E8E8E8"),
             StrokeThickness = 1,
             BackgroundColor = Colors.White,
-            Margin = new Thickness(15, 5, 15, 10),
+            Margin = new Thickness(15, 5, 15, 5),
             Shadow = new Shadow
             {
                 Brush = Brush.Black,
-                Offset = new Point(0, 4),
-                Opacity = 0.08f,
-                Radius = 8
+                Offset = new Point(0, 10),
+                Opacity = 0.15f,
+                Radius = 15
             },
             Content = _mainGrid
         };
@@ -118,7 +118,6 @@ public class LiquidTabBar : ContentView
 
         Color unselectedColor = GetResourceColor("Gray500", Color.FromArgb("#888"));
 
-        // נשאר הפוך (כי RTL)
         for (int i = Items.Count - 1; i >= 0; i--)
         {
             int idx = i;
@@ -126,14 +125,14 @@ public class LiquidTabBar : ContentView
             var lbl = new Label
             {
                 Text = Items[idx].Title,
-                FontSize = 14,
+                FontSize = 13.5,
                 FontAttributes = FontAttributes.Bold,
                 TextColor = idx == _selectedIndex ? Colors.White : unselectedColor,
                 VerticalOptions = LayoutOptions.Center,
                 HorizontalOptions = LayoutOptions.Center,
                 HorizontalTextAlignment = TextAlignment.Center,
                 VerticalTextAlignment = TextAlignment.Center,
-                Padding = new Thickness(20, 10)
+                Padding = new Thickness(15, 6)
             };
 
             var tap = new TapGestureRecognizer();
@@ -149,9 +148,6 @@ public class LiquidTabBar : ContentView
         Device.BeginInvokeOnMainThread(async () =>
         {
             await Task.Delay(150);
-
-            // 🔥 זה הפתרון האמיתי:
-            // ב-RTL צריך לגלול ל-END כדי להגיע לימין
             await _scrollView.ScrollToAsync(_tabsLayout, ScrollToPosition.End, false);
         });
     }
@@ -205,11 +201,9 @@ public class LiquidTabBar : ContentView
 
         var anim = new Animation(raw =>
         {
-            // תנועה חלקה ואחידה של כל המלבן יחד - הרוחב נשאר זהה
             double pos = Easing.CubicInOut.Ease(raw);
             _pill.PillLeft = startL + (endL - startL) * pos;
             _pill.PillRight = startR + (endR - startR) * pos;
-
             _graphicsView.Invalidate();
         }, 0, 1);
 
@@ -234,9 +228,6 @@ public class LiquidTabBar : ContentView
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────
-    // מנוע הציור מבוסס מפת הגבהים - גרסה חסינת באגים ואורגנית
-    // ──────────────────────────────────────────────────────────────────
     class PillDrawable : IDrawable
     {
         public Color PillColor { get; set; }
@@ -247,11 +238,9 @@ public class LiquidTabBar : ContentView
         public double DstLeft { get; set; }
         public double DstRight { get; set; }
 
-        private const float FullH = 36f; // גובה על המילה
-        private const float MinH = 10f;  // גובה ה"צינור" ברווח
-
-        // הגדלנו את רדיוס ההשפעה כדי לתת מראה שואב, מגנטי וחי יותר (לא רובוטי)
-        private const float EdgeSm = 35f;
+        private const float FullH = 28f;
+        private const float MinH = 6f;
+        private const float EdgeSm = 25f;
 
         public void Draw(ICanvas canvas, RectF dirtyRect)
         {
@@ -261,47 +250,77 @@ public class LiquidTabBar : ContentView
 
             float cy = dirtyRect.Height / 2f;
 
-            // מרכזי העיגולים של הקצוות. מגן מפני קריסה אם המילה קצרה מדי.
-            float cxL = left + (FullH / 2f);
-            float cxR = right - (FullH / 2f);
-            if (cxR < cxL) cxR = cxL;
+            const float BaseCornerRadius = 10f;
+            const float k = 0.55228f;
 
-            // בדיקת מפת הגבהים בקצוות (קובע את הרדיוס של חצאי העיגול)
-            float rL = HeightAt(cxL) / 2f;
-            float rR = HeightAt(cxR) / 2f;
+            float hL = HeightAt(left);
+            float hR = HeightAt(right);
+            float rL = hL / 2f;
+            float rR = hR / 2f;
+
+            float crL = Math.Min(BaseCornerRadius, rL);
+            float crR = Math.Min(BaseCornerRadius, rR);
 
             using var path = new PathF();
-            const float k = 0.55228f; // קבוע לחצאי עיגול מושלמים
-            float krL = k * rL;
-            float krR = k * rR;
 
-            // 1. קו עליון: עובר דרך נקודות במפת הגבהים
-            path.MoveTo(cxL, cy - rL);
-            const int N = 25; // רזולוציית הדגימה של הצינור
-            for (int i = 1; i <= N; i++)
+            path.MoveTo(left + crL, cy - rL);
+
+            const int N = 25;
+            float spanX = (right - crR) - (left + crL);
+
+            if (spanX > 0)
             {
-                float t = (float)i / N;
-                float x = cxL + t * (cxR - cxL);
-                float h = HeightAt(x);
-                path.LineTo(x, cy - h / 2f);
+                for (int i = 1; i <= N; i++)
+                {
+                    float t = (float)i / N;
+                    float x = (left + crL) + t * spanX;
+                    float h = HeightAt(x);
+                    path.LineTo(x, cy - h / 2f);
+                }
+            }
+            else
+            {
+                path.LineTo(right - crR, cy - rR);
             }
 
-            // 2. קצה ימני מעוגל בצורה מושלמת תמיד
-            path.CurveTo(cxR + krR, cy - rR, cxR + rR, cy - krR, cxR + rR, cy);
-            path.CurveTo(cxR + rR, cy + krR, cxR + krR, cy + rR, cxR, cy + rR);
+            path.CurveTo(
+                right - crR + crR * k, cy - rR,
+                right, cy - rR + crR - crR * k,
+                right, cy - rR + crR);
 
-            // 3. קו תחתון: חזרה שמאלה
-            for (int i = N - 1; i >= 0; i--)
+            path.LineTo(right, cy + rR - crR);
+
+            path.CurveTo(
+                right, cy + rR - crR + crR * k,
+                right - crR + crR * k, cy + rR,
+                right - crR, cy + rR);
+
+            if (spanX > 0)
             {
-                float t = (float)i / N;
-                float x = cxL + t * (cxR - cxL);
-                float h = HeightAt(x);
-                path.LineTo(x, cy + h / 2f);
+                for (int i = N - 1; i >= 0; i--)
+                {
+                    float t = (float)i / N;
+                    float x = (left + crL) + t * spanX;
+                    float h = HeightAt(x);
+                    path.LineTo(x, cy + h / 2f);
+                }
+            }
+            else
+            {
+                path.LineTo(left + crL, cy + rL);
             }
 
-            // 4. קצה שמאלי מעוגל בצורה מושלמת תמיד
-            path.CurveTo(cxL - krL, cy + rL, cxL - rL, cy + krL, cxL - rL, cy);
-            path.CurveTo(cxL - rL, cy - krL, cxL - krL, cy - rL, cxL, cy - rL);
+            path.CurveTo(
+                left + crL - crL * k, cy + rL,
+                left, cy + rL - crL + crL * k,
+                left, cy + rL - crL);
+
+            path.LineTo(left, cy - rL + crL);
+
+            path.CurveTo(
+                left, cy - rL + crL - crL * k,
+                left + crL - crL * k, cy - rL,
+                left + crL, cy - rL);
 
             path.Close();
 
@@ -311,7 +330,6 @@ public class LiquidTabBar : ContentView
             canvas.RestoreState();
         }
 
-        // פונקציה לבדיקת הגובה לפי מפת הגבהים של המילה הנוכחית והמילה ביעד
         private float HeightAt(float x)
         {
             float src = ZoneScale(x, (float)SrcLeft, (float)SrcRight);
@@ -319,12 +337,10 @@ public class LiquidTabBar : ContentView
             return MinH + (FullH - MinH) * Math.Max(src, dst);
         }
 
-        // חישוב מתמטי רך שיוצר את הצינור בין המילים
         private static float ZoneScale(float x, float zL, float zR)
         {
-            if (x >= zL && x <= zR) return 1f; // אנחנו על מילה - גובה מקסימלי
+            if (x >= zL && x <= zR) return 1f;
 
-            // ריכוך (Smoothstep) כשאנחנו מתקרבים/מתרחקים מהמילה
             if (x < zL)
             {
                 float t = Math.Max(0, 1f - (zL - x) / EdgeSm);

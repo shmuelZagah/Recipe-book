@@ -12,6 +12,10 @@ public partial class LibraryPage : ContentView, ISwipeAwarePage
     #region Fields
     private readonly LibraryViewModel _vm;
     private bool _isAnimatingTab = false;
+
+    // משתנים חדשים עבור אנימציית הגלילה
+    private double _lastScrollY = 0;
+    private bool _isTabBarVisible = true;
     #endregion
 
     #region Constructor & Initialization
@@ -108,39 +112,62 @@ public partial class LibraryPage : ContentView, ISwipeAwarePage
     }
     #endregion
 
+    #region Scroll Animation Logic
+    // הלוגיקה שמטפלת בהסתרת הטאבים בזמן גלילה
+    private async void OnScrollViewScrolled(object sender, ScrolledEventArgs e)
+    {
+        double currentY = e.ScrollY;
+        double deltaY = currentY - _lastScrollY;
+
+        // מונע רעידות ומגיב רק לתנועות גלילה משמעותיות
+        if (Math.Abs(deltaY) < 5) return;
+
+        if (deltaY > 0 && _isTabBarVisible && currentY > 30)
+        {
+            // גלילה למטה -> הסתרה
+            _isTabBarVisible = false;
+            // מעיף את הטאבים למעלה מחוץ למסך
+            await TabBarContainer.TranslateTo(0, -TabBarContainer.Height - 30, 300, Easing.CubicIn);
+        }
+        else if (deltaY < 0 && !_isTabBarVisible)
+        {
+            // גלילה למעלה -> הצגה
+            _isTabBarVisible = true;
+            await TabBarContainer.TranslateTo(0, 0, 300, Easing.CubicOut);
+        }
+
+        _lastScrollY = currentY;
+    }
+    #endregion
+
     #region ISwipeAwarePage Implementation
     public SwipeAction GetSwipeAction(double totalX, double startX, double startY)
     {
         if (BindingContext is not LibraryViewModel vm)
             return SwipeAction.MainPageSwipe;
 
-        // Check if the touch is within the top header bounds (Search + Tabs)
         if (TopHeader != null && startY <= TopHeader.Height)
         {
-            // Check if the touch is specifically on the LiquidTabBar
-            if (MainTabBar != null && startY >= MainTabBar.Y)
-            {
-                // Let the native LiquidTabBar scroll horizontally
-                return SwipeAction.NativeChildScroll;
-            }
-
-            // Touch is on the SearchBar or empty space above the tabs -> Swipe main pages
             return SwipeAction.MainPageSwipe;
         }
 
-        // Touch is in the content area -> Handle inner tab swiping
+        // התאמנו את הלוגיקה למיקום החדש של הטאבים
+        if (TabBarContainer != null && startY > TopHeader.Height && startY <= TopHeader.Height + TabBarContainer.Height + 10)
+        {
+            if (_isTabBarVisible)
+                return SwipeAction.NativeChildScroll;
+        }
+
         int currentIndex = GetTabIndex(vm.CurrentTab);
 
         if (totalX > 0 && currentIndex < vm.LibraryTabs.Count - 1) return SwipeAction.ManualInnerSwipe;
         if (totalX < 0 && currentIndex > 0) return SwipeAction.ManualInnerSwipe;
 
-        // Reached the edge of the tabs -> Swipe main pages
         return SwipeAction.MainPageSwipe;
     }
 
     public void StartInnerSwipe()
     {
-        // Break animation lock for fast sequential swipes (Fling)
         _isAnimatingTab = false;
         ContentContainer.CancelAnimations();
     }
@@ -164,7 +191,6 @@ public partial class LibraryPage : ContentView, ISwipeAwarePage
         }
         else
         {
-            // Revert gesture
             ContentContainer.TranslateTo(0, 0, 250, Easing.CubicOut);
         }
     }

@@ -1,4 +1,5 @@
-﻿using Recipe_book.ViewModels;
+﻿using System.ComponentModel;
+using Recipe_book.ViewModels;
 using Recipe_book.Views.Layouts;
 
 namespace Recipe_book.Views.Pages;
@@ -22,7 +23,29 @@ public partial class ShoppingListPage : ContentView, ISwipeAwarePage
     {
         if (BindingContext is ShoppingListViewModel vm)
         {
+            vm.PropertyChanged -= OnViewModelPropertyChanged;
+            vm.PropertyChanged += OnViewModelPropertyChanged;
+
             await vm.InitializeAutoLoadAsync();
+        }
+    }
+
+    // Handles the caret icon rotation only
+    private void OnViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ShoppingListViewModel.IsListsMenuOpen))
+        {
+            if (BindingContext is ShoppingListViewModel vm)
+            {
+                var caretIcon = this.FindByName<Image>("CaretIcon");
+                if (caretIcon != null)
+                {
+                    if (vm.IsListsMenuOpen)
+                        caretIcon.RotateTo(180, 250, Easing.CubicOut);
+                    else
+                        caretIcon.RotateTo(0, 250, Easing.CubicIn);
+                }
+            }
         }
     }
     #endregion
@@ -30,8 +53,6 @@ public partial class ShoppingListPage : ContentView, ISwipeAwarePage
     #region ISwipeAwarePage Implementation
     public SwipeAction GetSwipeAction(double totalX, double startX, double startY)
     {
-        // Shopping list only requires vertical scrolling. 
-        // Horizontal swipes are captured by the main gesture router.
         return SwipeAction.MainPageSwipe;
     }
 

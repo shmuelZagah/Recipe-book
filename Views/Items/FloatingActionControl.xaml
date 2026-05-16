@@ -4,11 +4,11 @@
              x:Class="Recipe_book.Views.Items.FloatingActionControl"
              x:Name="Root">
 
-    <Border BackgroundColor="{Binding ButtonColor, Source={x:Reference Root}}"
+    <Border x:Name="MainContainer"
+            BackgroundColor="{Binding ButtonColor, Source={x:Reference Root}}"
             WidthRequest="{Binding ButtonSize, Source={x:Reference Root}}"
-            MinimumHeightRequest="{Binding ButtonSize, Source={x:Reference Root}}"
+            HeightRequest="{Binding ButtonSize, Source={x:Reference Root}}"
             StrokeThickness="0"
-            StrokeShape="RoundRectangle 18"
             HorizontalOptions="Center"
             VerticalOptions="Center">
 

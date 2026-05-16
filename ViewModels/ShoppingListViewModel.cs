@@ -24,15 +24,13 @@ public partial class ShoppingListViewModel : ObservableObject
 {
     private readonly RecipesDatabase _database;
 
-    //--------------
     #region Properties
-    //--------------
 
     public static int? PendingImportId { get; set; }
     public static Action RefreshActivePage;
 
     [ObservableProperty]
-    private string emptyViewText = "אין מצרכים מתוכננים בטווח הנבחר 🛒";
+    private string emptyViewText = "אין מצרכים מתוכננים בטווח הנבחר";
 
     [ObservableProperty]
     private SavedShoppingList currentShoppingList;
@@ -64,7 +62,6 @@ public partial class ShoppingListViewModel : ObservableObject
 
     public ObservableCollection<ShoppingItemGroup> GroupedShoppingItems { get; } = new();
 
-    // Properties for the Multi-Select Merge Overlay
     [ObservableProperty]
     private bool isMergeModeActive = false;
 
@@ -88,7 +85,6 @@ public partial class ShoppingListViewModel : ObservableObject
     }
 
     #endregion
-    //--------------
 
 
     public ShoppingListViewModel(RecipesDatabase database)
@@ -100,10 +96,10 @@ public partial class ShoppingListViewModel : ObservableObject
             MainThread.BeginInvokeOnMainThread(async () => await InitializeAutoLoadAsync());
         };
 
-
+        // Added "RefreshRecipes" to catch edits from the RecipeEditor
         WeakReferenceMessenger.Default.Register<string>(this, async (r, m) =>
         {
-            if (m == "ScheduleChanged" || m == "RecipesChanged")
+            if (m == "ScheduleChanged" || m == "RecipesChanged" || m == "RefreshRecipes")
             {
                 await InitializeAutoLoadAsync();
             }
@@ -118,12 +114,10 @@ public partial class ShoppingListViewModel : ObservableObject
         {
             await SwitchListAsync(list);
         }
-        importedListId = null; 
+        importedListId = null;
     }
 
-    //--------------
     #region List Management Logic
-    //--------------
 
     public async Task LoadAllListsAsync()
     {
@@ -151,7 +145,6 @@ public partial class ShoppingListViewModel : ObservableObject
         IsListsMenuOpen = false;
         HasValidList = true;
 
-        // Load configuration tied to the specific list ID to maintain independent schedules
         LoadPreferences();
         UpdateVisibility();
         CalculateActualDates();
@@ -180,7 +173,6 @@ public partial class ShoppingListViewModel : ObservableObject
 
             await _database.SaveShoppingListAsync(listToRename);
 
-            // Refresh main UI if the active list was renamed
             if (CurrentShoppingList?.Id == listToRename.Id)
             {
                 OnPropertyChanged(nameof(CurrentShoppingList));
@@ -201,7 +193,7 @@ public partial class ShoppingListViewModel : ObservableObject
         var newList = new SavedShoppingList
         {
             Title = listName,
-            IsStatic = false, // Indicates the list is dynamic and depends on the user's date range
+            IsStatic = false,
             StartDate = DateTime.Today,
             EndDate = DateTime.Today.AddDays(7),
             CreatedAt = DateTime.Now
@@ -210,7 +202,6 @@ public partial class ShoppingListViewModel : ObservableObject
         await _database.SaveShoppingListAsync(newList);
         await LoadAllListsAsync();
 
-        // Automatically focus on the newly created list
         await SwitchListAsync(newList);
     }
 
@@ -249,19 +240,17 @@ public partial class ShoppingListViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(newListName)) return;
 
-        IsMergeModeActive = false; // Hide the overlay UI
+        IsMergeModeActive = false;
 
-        // 1. Initialize the new aggregated static list
         var newList = new SavedShoppingList
         {
             Title = newListName,
-            IsStatic = true, // Merged lists become static snapshots
+            IsStatic = true,
             CreatedAt = DateTime.Now
         };
 
         await _database.SaveShoppingListAsync(newList);
 
-        // 2. Fetch and aggregate elements across all selected lists
         var aggregatedItems = new Dictionary<string, SavedShoppingListItem>();
 
         foreach (var list in selectedLists)
@@ -269,14 +258,12 @@ public partial class ShoppingListViewModel : ObservableObject
             var items = await _database.GetItemsForShoppingListAsync(list.Id);
             foreach (var item in items)
             {
-                // Composite key ensures accurate quantity incrementation based on matching parameters
                 string key = $"{item.Name}_{item.Unit}_{item.Category}";
 
                 if (aggregatedItems.ContainsKey(key))
                 {
                     aggregatedItems[key].Quantity += item.Quantity;
 
-                    // Re-calculate display format after aggregation
                     string displayUnit = item.Unit == "יחידות" ? "" : item.Unit;
                     aggregatedItems[key].DisplayText = string.IsNullOrWhiteSpace(displayUnit) ?
                         $"{aggregatedItems[key].Quantity} {item.Name}" :
@@ -298,14 +285,12 @@ public partial class ShoppingListViewModel : ObservableObject
             }
         }
 
-        // 3. Persist the aggregated data models
         await _database.SyncShoppingListItemsAsync(newList.Id, aggregatedItems.Values.ToList());
 
-        // 4. Update the UI state
         await LoadAllListsAsync();
         await SwitchListAsync(newList);
         WeakReferenceMessenger.Default.Send("ShoppingChanged");
-        await Application.Current.MainPage.DisplayAlert("הצלחה! 🎉", "הרשימות מוזגו בהצלחה לרשימה אחת מאוחדת.", "מעולה");
+        await Application.Current.MainPage.DisplayAlert("הצלחה!", "הרשימות מוזגו בהצלחה לרשימה אחת מאוחדת.", "מעולה");
     }
 
     [RelayCommand]
@@ -330,7 +315,6 @@ public partial class ShoppingListViewModel : ObservableObject
                 }
                 else
                 {
-                    // No lists left! Apply the "Empty State"
                     CurrentShoppingList = new SavedShoppingList { Title = "אין רשימות כרגע", Id = -1, IsStatic = true };
                     HasValidList = false;
                     EmptyViewText = "";
@@ -339,15 +323,11 @@ public partial class ShoppingListViewModel : ObservableObject
                 }
             }
         }
-    } 
-
+    }
 
     #endregion
-    //--------------
 
-    //--------------
     #region Navigation & Date Logic
-    //--------------
 
     [ObservableProperty] private string statusText;
     [ObservableProperty] private DateRangeType selectedRangeType = DateRangeType.Week;
@@ -368,24 +348,23 @@ public partial class ShoppingListViewModel : ObservableObject
         {
             CurrentShoppingList = new SavedShoppingList { Title = "אין רשימות כרגע", Id = -1, IsStatic = true };
             HasValidList = false;
-            EmptyViewText = ""; 
+            EmptyViewText = "";
             GroupedShoppingItems.Clear();
             StatusText = "לא קיימות רשימות. לחץ על התפריט ליצירת רשימה חדשה.";
             return;
         }
 
         HasValidList = true;
-        EmptyViewText = "אין מצרכים מתוכננים בטווח הנבחר 🛒"; 
-
+        EmptyViewText = "אין מצרכים מתוכננים בטווח הנבחר";
 
         if (PendingImportId.HasValue)
         {
             var targetList = SavedLists.FirstOrDefault(l => l.Id == PendingImportId.Value);
-            PendingImportId = null; 
+            PendingImportId = null;
             if (targetList != null)
             {
                 await SwitchListAsync(targetList);
-                return; 
+                return;
             }
         }
 
@@ -521,7 +500,7 @@ public partial class ShoppingListViewModel : ObservableObject
     {
         if (CurrentShoppingList != null && CurrentShoppingList.IsStatic)
         {
-            StatusText = $"📌 רשימה סטטית (אינה מתעדכנת מזמנים)";
+            StatusText = $"רשימה סטטית (אינה מתעדכנת מזמנים)";
             return;
         }
 
@@ -531,35 +510,32 @@ public partial class ShoppingListViewModel : ObservableObject
         switch (SelectedRangeType)
         {
             case DateRangeType.Day:
-                StatusText = $"💡 עדכנית להיום ({formattedStart})";
+                StatusText = $"להיום ({formattedStart})";
                 break;
             case DateRangeType.Week:
-                StatusText = $"💡 עדכנית לשבוע הקרוב ({formattedStart} - {formattedEnd})";
+                StatusText = $"לשבוע הקרוב ({formattedStart} - {formattedEnd})";
                 break;
             case DateRangeType.TwoWeeks:
-                StatusText = $"💡 עדכנית לשבועיים הקרובים ({formattedStart} - {formattedEnd})";
+                StatusText = $"לשבועיים הקרובים ({formattedStart} - {formattedEnd})";
                 break;
             case DateRangeType.Month:
-                StatusText = $"💡 עדכנית לחודש הקרוב ({formattedStart} - {formattedEnd})";
+                StatusText = $"לחודש הקרוב ({formattedStart} - {formattedEnd})";
                 break;
             case DateRangeType.NextWeek:
-                StatusText = $"💡 עדכנית לשבוע הבא ({formattedStart} - {formattedEnd})";
+                StatusText = $"לשבוע הבא ({formattedStart} - {formattedEnd})";
                 break;
             case DateRangeType.CustomRolling:
-                StatusText = $"💡 עדכנית ל-{CustomDurationDays} ימים ({formattedStart} - {formattedEnd})";
+                StatusText = $"ל-{CustomDurationDays} ימים ({formattedStart} - {formattedEnd})";
                 break;
             case DateRangeType.SpecificDates:
-                StatusText = $"💡 רשימה לתאריכים ({formattedStart} - {formattedEnd})";
+                StatusText = $"לתאריכים ({formattedStart} - {formattedEnd})";
                 break;
         }
     }
 
     #endregion
-    //--------------
 
-    //--------------
     #region Core Generation Logic
-    //--------------
 
     [RelayCommand]
     public async Task GenerateListAsync()
@@ -822,11 +798,8 @@ public partial class ShoppingListViewModel : ObservableObject
     }
 
     #endregion
-    //--------------
 
-    //--------------
     #region UI & Sharing
-    //--------------
 
     private async Task BuildAndGroupShoppingList(Dictionary<string, (double Quantity, string Category)> aggregatedIngredients)
     {
@@ -952,7 +925,7 @@ public partial class ShoppingListViewModel : ObservableObject
         if (shareOption == "טקסט רגיל")
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"🛒 *{CurrentShoppingList?.Title ?? "רשימת קניות"}:*");
+            sb.AppendLine($"*{CurrentShoppingList?.Title ?? "רשימת קניות"}:*");
             sb.AppendLine();
 
             foreach (var group in GroupedShoppingItems)
@@ -995,7 +968,6 @@ public partial class ShoppingListViewModel : ObservableObject
                     }
                 }
 
-                // --- THE MAGIC: Extract only relevant conversions for these items! ---
                 var allConversions = await _database.GetIngredientConversionsAsync();
                 var relevantConversions = allConversions.Where(c => allItemNames.Contains(c.Keyword)).ToList();
 
@@ -1010,17 +982,14 @@ public partial class ShoppingListViewModel : ObservableObject
                     });
                 }
 
-                // 1. Serialize the full payload (Items + Conversions)
                 string jsonPayload = JsonSerializer.Serialize(sharedDto);
 
-                // 2. Create the Cloud Model (TTL is set automatically)
                 var cloudModel = new SharedShoppingListCloudModel
                 {
                     ListName = sharedDto.T,
                     PayloadJson = jsonPayload
                 };
 
-                // 3. Upload to Firestore
                 var firestoreService = new FirestoreService();
                 string newCloudId = await firestoreService.UploadSharedListAsync(cloudModel);
 
@@ -1030,14 +999,12 @@ public partial class ShoppingListViewModel : ObservableObject
                     return;
                 }
 
-                // 4. Register for Garbage Collection
                 await _database.RegisterSharedListForDeletionAsync(newCloudId, cloudModel.ExpiresAt);
 
-                // 5. Generate the standardized Deep Link
                 string deepLink = $"https://recipe-book-d9389.web.app/sharelist?id={newCloudId}";
 
                 var sbLink = new StringBuilder();
-                sbLink.AppendLine($"🛒 *{cloudModel.ListName}*");
+                sbLink.AppendLine($"*{cloudModel.ListName}*");
                 sbLink.AppendLine("שלחתי לך רשימת קניות מרוכזת באפליקציה!");
                 sbLink.AppendLine("לחץ על הקישור כדי לייבא אותה (כולל המרות מצרכים):");
                 sbLink.AppendLine();
@@ -1052,22 +1019,15 @@ public partial class ShoppingListViewModel : ObservableObject
             }
         }
 
-        // Invoke native OS share functionality
         await Share.Default.RequestAsync(new ShareTextRequest
         {
             Text = textToShare,
             Title = "שיתוף רשימת קניות"
         });
-        #endregion
-        //--------------
     }
+    #endregion
 }
 
-// -------------------------------------------------------------------------
-// Support classes 
-// -------------------------------------------------------------------------
-
-// Helper class to bind checkboxes to the merge overlay interface
 public partial class SelectableListDto : ObservableObject
 {
     public SavedShoppingList List { get; set; }
@@ -1076,29 +1036,25 @@ public partial class SelectableListDto : ObservableObject
     private bool isSelected;
 }
 
-// Data Transfer Objects (DTOs) for Deep Linking payload structuring
 public class SharedListDto
 {
-    public string T { get; set; } // List Title
-    public List<SharedItemDto> I { get; set; } = new(); // Aggregated Items
-
-    // --- NEW: Relevant Ingredient Conversions ---
+    public string T { get; set; }
+    public List<SharedItemDto> I { get; set; } = new();
     public List<SharedConversionDto> C { get; set; } = new();
 }
 
 public class SharedItemDto
 {
-    public string N { get; set; } // Item Name
-    public double Q { get; set; } // Computed Quantity
-    public string U { get; set; } // Metric Unit
-    public string C { get; set; } // General Category
+    public string N { get; set; }
+    public double Q { get; set; }
+    public string U { get; set; }
+    public string C { get; set; }
 }
 
-// --- NEW: DTO for packaging conversions ---
 public class SharedConversionDto
 {
-    public string K { get; set; } // Keyword
-    public string B { get; set; } // BaseUnit
-    public double A { get; set; } // AmountPerCup
-    public string C { get; set; } // Category
+    public string K { get; set; }
+    public string B { get; set; }
+    public double A { get; set; }
+    public string C { get; set; }
 }

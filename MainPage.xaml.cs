@@ -6,10 +6,6 @@ using Recipe_book.Views.Pages;
 
 namespace Recipe_book;
 
-/// <summary>
-/// The root page of the application that manages navigation between main tabs
-/// and routes horizontal swipe gestures to either itself or its child pages.
-/// </summary>
 public partial class MainPage : ContentPage
 {
     #region Fields
@@ -30,16 +26,10 @@ public partial class MainPage : ContentPage
     private ISwipeAwarePage _activeInnerPage = null;
     private SwipeAction _currentSwipeAction = SwipeAction.MainPageSwipe;
 
-
-    /// <summary>
-    /// Globally accessible action to switch tabs programmatically.
-    /// </summary>
     public static Action<int> SwitchTabAction;
     #endregion
 
-    //----------------------------
     #region Constructor & Initialization
-    //----------------------------
     public MainPage(MainViewModel homeVm, LibraryViewModel libVm, WeeklyScheduleViewModel schedVm, ShoppingListViewModel shopVm)
     {
         InitializeComponent();
@@ -67,6 +57,9 @@ public partial class MainPage : ContentPage
             BottomBar.UpdateFromSwipe(index);
             await SwitchToTab(index);
         };
+
+        // Attach binding context to the isolated bottom sheet control
+        GlobalBottomSheet.BindingContext = shopVm;
     }
 
     protected override void OnHandlerChanged()
@@ -81,25 +74,17 @@ public partial class MainPage : ContentPage
 
         if (width > 0 && height > 0)
         {
-            if (!_isSetup)
+            if (!_isSetup || !_isAnimating)
             {
                 _isSetup = true;
-                _currentGlobalOffset = GetTargetOffsetForIndex(_currentIndex, width);
-                ApplyTranslations(_currentGlobalOffset, width);
-            }
-            else if (!_isAnimating)
-            {
                 _currentGlobalOffset = GetTargetOffsetForIndex(_currentIndex, width);
                 ApplyTranslations(_currentGlobalOffset, width);
             }
         }
     }
     #endregion
-    //----------------------------
 
-    //----------------------------
     #region Navigation & Layout
-    //----------------------------
     private void ApplyTranslations(double globalOffset, double width)
     {
         _shoppingPage.TranslationX = 0 + globalOffset;
@@ -179,21 +164,21 @@ public partial class MainPage : ContentPage
         finally { _isAnimating = false; }
     }
     #endregion
-    //-----------------------------
 
-    //----------------------------
     #region Gesture Routing Core
-    //----------------------------
     private void SetupSwipeLayer()
     {
         SwipeLayer.ShouldInterceptHorizontal = (totalX, startX, startY) =>
         {
             if (!_isSetup) return false;
 
+            // Block page swiping if global bottom sheet menu is active
+            if (GlobalBottomSheet.BindingContext is ShoppingListViewModel shopVm && shopVm.IsListsMenuOpen)
+                return false;
+
             _activeInnerPage = null;
             _currentSwipeAction = SwipeAction.MainPageSwipe;
 
-            // Identify the current active page's routing contract dynamically
             ISwipeAwarePage currentPage = null;
             if (_currentIndex == 1 && _libraryPage is ISwipeAwarePage lib) currentPage = lib;
             else if (_currentIndex == 2 && _schedulePage is ISwipeAwarePage sched) currentPage = sched;
@@ -204,7 +189,6 @@ public partial class MainPage : ContentPage
             {
                 _currentSwipeAction = currentPage.GetSwipeAction(totalX, startX, startY);
 
-                // Release lock for native scrollable elements (e.g., top tabs, schedule days)
                 if (_currentSwipeAction == SwipeAction.NativeChildScroll)
                     return false;
 
@@ -212,7 +196,6 @@ public partial class MainPage : ContentPage
                     _activeInnerPage = currentPage;
             }
 
-            // Main page captures the gesture
             return true;
         };
 
@@ -221,14 +204,12 @@ public partial class MainPage : ContentPage
             _swipeStartXOffset = totalX;
             _swipeStartTime = DateTime.Now;
 
-            // Route to inner page
             if (_currentSwipeAction == SwipeAction.ManualInnerSwipe && _activeInnerPage != null)
             {
                 _activeInnerPage.StartInnerSwipe();
                 return;
             }
 
-            // Route to main page
             try
             {
                 _shoppingPage.CancelAnimations();
@@ -246,19 +227,16 @@ public partial class MainPage : ContentPage
         {
             double deltaX = totalX - _swipeStartXOffset;
 
-            // Route to inner page
             if (_currentSwipeAction == SwipeAction.ManualInnerSwipe && _activeInnerPage != null)
             {
                 _activeInnerPage.RunningInnerSwipe(deltaX);
                 return;
             }
 
-            // Route to main page
             double newOffset = _panStartOffset + deltaX;
             double maxRight = 0;
             double maxLeft = -3 * this.Width;
 
-            // Apply resistance at the edges
             if (newOffset > maxRight) newOffset = maxRight + (newOffset - maxRight) * 0.2;
             if (newOffset < maxLeft) newOffset = maxLeft + (newOffset - maxLeft) * 0.2;
 
@@ -269,7 +247,6 @@ public partial class MainPage : ContentPage
         {
             double deltaX = totalX - _swipeStartXOffset;
 
-            // Finalize inner page routing
             if (_currentSwipeAction == SwipeAction.ManualInnerSwipe && _activeInnerPage != null)
             {
                 _activeInnerPage.CompletedInnerSwipe(deltaX, this.Width);
@@ -278,14 +255,12 @@ public partial class MainPage : ContentPage
                 return;
             }
 
-            // Finalize main page routing
             double screenWidth = this.Width;
             double currentX = _shoppingPage.TranslationX;
 
             double exactIndex = (currentX / screenWidth) + 3;
             int magnetIndex = (int)Math.Round(exactIndex);
 
-            // Fast fling detection
             TimeSpan swipeDuration = DateTime.Now - _swipeStartTime;
             if (swipeDuration.TotalMilliseconds < 250 && Math.Abs(deltaX) > screenWidth * 0.1)
             {
@@ -303,12 +278,8 @@ public partial class MainPage : ContentPage
         };
     }
     #endregion
-    //----------------------------
 
-    //------------------
     #region Overrides
-    //------------------
-
     protected override bool OnBackButtonPressed()
     {
         if (_currentIndex == 0 && _homePage is HomePage home)
@@ -318,5 +289,4 @@ public partial class MainPage : ContentPage
         return base.OnBackButtonPressed();
     }
     #endregion
-    //------------------
 }
