@@ -189,6 +189,13 @@ public partial class WeeklyScheduleViewModel : ObservableObject
     [RelayCommand]
     public async Task LoadScheduleAsync()
     {
+        // 1. Keep track of which groups are currently expanded across the week to prevent accordion closing on refresh
+        var expandedGroupKeys = WeekDays
+            .SelectMany(d => d.MealGroups)
+            .Where(g => g.IsExpanded)
+            .Select(g => $"{g.Date.Date:yyyyMMdd}_{g.GroupName}")
+            .ToHashSet();
+
         // Keep a local reference to avoid race conditions if the user navigates weeks quickly
         var currentDays = WeekDays.ToList();
 
@@ -200,7 +207,7 @@ public partial class WeeklyScheduleViewModel : ObservableObject
             // Create a fresh collection for the day's groups
             var newGroups = new ObservableCollection<MealGroup>();
 
-            // 1. Fetch custom meal categories for the specific day
+            // Fetch custom meal categories for the specific day
             var customCategories = await _database.GetMealCategoriesAsync(day.Date.Date);
 
             if (customCategories.Any())
@@ -216,7 +223,7 @@ public partial class WeeklyScheduleViewModel : ObservableObject
                 newGroups.Add(new MealGroup { GroupName = "ערב", Date = day.Date.Date });
             }
 
-            // 2. Populate the groups with the scheduled recipes
+            // Populate the groups with the scheduled recipes
             var mealsForThisDay = mealsThisWeek.Where(m => m.Date.Date == day.Date.Date).ToList();
             foreach (var scheduledMeal in mealsForThisDay)
             {
@@ -237,6 +244,16 @@ public partial class WeeklyScheduleViewModel : ObservableObject
                         MealRecord = scheduledMeal,
                         RecipeDetails = fullRecipe
                     });
+                }
+            }
+
+            // 2. Restore expansion state based on the calculated composite keys before rendering
+            foreach (var group in newGroups)
+            {
+                string key = $"{group.Date.Date:yyyyMMdd}_{group.GroupName}";
+                if (expandedGroupKeys.Contains(key))
+                {
+                    group.IsExpanded = true;
                 }
             }
 

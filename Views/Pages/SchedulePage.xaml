@@ -1,176 +1,179 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Recipe_book.Views.Pages.SchedulePage">
+             xmlns:vm="clr-namespace:Recipe_book.ViewModels"
+             x:Class="Recipe_book.Views.Pages.SchedulePage"
+             FlowDirection="RightToLeft">
 
-    <Grid RowDefinitions="Auto, Auto, Auto, *" BackgroundColor="Transparent">
+    <Grid RowDefinitions="Auto, Auto, *" BackgroundColor="#F5F5F5">
 
-        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="15,15,15,10">
-            <Label Grid.Column="0" Text="הלוז שלי" FontSize="22" FontAttributes="Bold" VerticalOptions="Center" />
+        <Border Grid.Row="0" BackgroundColor="White" StrokeThickness="0" Margin="0,0,0,5" ZIndex="5">
+            <Border.Shadow>
+                <Shadow Brush="Black" Offset="0,4" Opacity="0.05" Radius="6" />
+            </Border.Shadow>
 
-            <Grid Grid.Column="1" WidthRequest="40" HeightRequest="40" VerticalOptions="Center">
-                <Label Text="📅" FontSize="22" HorizontalOptions="Center" VerticalOptions="Center"/>
-                <DatePicker Date="{Binding SelectedDatePickerDate}" Opacity="0" HorizontalOptions="Fill" VerticalOptions="Fill"/>
-            </Grid>
-        </Grid>
+            <VerticalStackLayout Spacing="15" Padding="20,15,20,15">
+                <Grid ColumnDefinitions="*, Auto, Auto">
+                    <Label Grid.Column="0" Text="הלוז שלי" Style="{StaticResource SubHeadline}" HorizontalOptions="Start" VerticalOptions="Center" />
 
-        <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" Margin="15,5,15,5" VerticalOptions="Center">
+                    <Button Grid.Column="1" 
+                            Text="היום" 
+                            Clicked="OnGoToTodayClicked"
+                            BackgroundColor="#F0F4F8" 
+                            TextColor="{StaticResource Primary}" 
+                            FontAttributes="Bold" 
+                            FontSize="13"
+                            CornerRadius="8"
+                            HeightRequest="35"
+                            Padding="12,0"
+                            Margin="0,0,10,0"
+                            VerticalOptions="Center" 
+                           />
 
-            <ImageButton Grid.Column="0" Command="{Binding PreviousWeekCommand}" 
-                         WidthRequest="40" HeightRequest="40" BackgroundColor="Transparent" VerticalOptions="Center">
-                <ImageButton.Source>
-                    <FontImageSource FontFamily="OpenSansRegular" Glyph="&gt;" Color="#1A73E8" Size="26" />
-                </ImageButton.Source>
-            </ImageButton>
+                    <Grid Grid.Column="2" WidthRequest="35" HeightRequest="35" VerticalOptions="Center">
+                        <Image Source="calendar_main_icon.svg" WidthRequest="26" HeightRequest="26" HorizontalOptions="Center" VerticalOptions="Center"/>
+                        <DatePicker x:Name="HiddenDatePicker" Date="{Binding SelectedDatePickerDate}" Opacity="0.02" HorizontalOptions="Fill" VerticalOptions="Fill"/>
+                    </Grid>
+                </Grid>
 
-            <Label Grid.Column="1" Text="{Binding WeekDateRangeText}" 
-                   FontSize="20" FontAttributes="Bold" TextColor="#333333" 
-                   HorizontalOptions="Center" VerticalOptions="Center"/>
+                <Grid ColumnDefinitions="Auto, *, Auto" VerticalOptions="Center">
+                    <ImageButton Grid.Column="0" Command="{Binding PreviousWeekCommand}" 
+                                 Source="caret_down_icon.svg" Rotation="-90"
+                                 WidthRequest="30" HeightRequest="30" BackgroundColor="Transparent" VerticalOptions="Center" />
 
-            <ImageButton Grid.Column="2" Command="{Binding NextWeekCommand}" 
-                         WidthRequest="40" HeightRequest="40" BackgroundColor="Transparent" VerticalOptions="Center">
-                <ImageButton.Source>
-                    <FontImageSource FontFamily="OpenSansRegular" Glyph="&lt;" Color="#1A73E8" Size="26" />
-                </ImageButton.Source>
-            </ImageButton>
+                    <Label Grid.Column="1" Text="{Binding WeekDateRangeText}" 
+                           FontSize="16" FontAttributes="Bold" TextColor="#555555" 
+                           HorizontalOptions="Center" VerticalOptions="Center"/>
 
-        </Grid>
+                    <ImageButton Grid.Column="2" Command="{Binding NextWeekCommand}" 
+                                 Source="caret_down_icon.svg" Rotation="90"
+                                 WidthRequest="30" HeightRequest="30" BackgroundColor="Transparent" VerticalOptions="Center" />
+                </Grid>
 
-        <CollectionView Grid.Row="2" x:Name="DaysCollectionView" ItemsSource="{Binding WeekDays}" SelectedItem="{Binding SelectedDay}" SelectionMode="Single" HeightRequest="75" Margin="0,10">
-            <CollectionView.ItemsLayout>
-                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
-            </CollectionView.ItemsLayout>
-            <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Border StrokeShape="RoundRectangle 15" WidthRequest="65" HeightRequest="65" Padding="0"
-                            Stroke="#E0E0E0" StrokeThickness="1">
+                <CollectionView x:Name="DaysCollectionView" 
+                                ItemsSource="{Binding WeekDays}" 
+                                SelectedItem="{Binding SelectedDay}" 
+                                SelectionMode="Single" 
+                                HeightRequest="90" 
+                                Margin="-20,5,-20,0">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border StrokeShape="RoundRectangle 16" WidthRequest="64" HeightRequest="80" StrokeThickness="0" Margin="2,2,2,4">
+                                <Border.Shadow>
+                                    <Shadow Brush="Black" Offset="0,3" Opacity="0.06" Radius="4" />
+                                </Border.Shadow>
 
-                        <VisualStateManager.VisualStateGroups>
-                            <VisualStateGroup Name="CommonStates">
-                                <VisualState Name="Normal">
-                                    <VisualState.Setters>
-                                        <Setter Property="BackgroundColor" Value="Transparent" />
-                                    </VisualState.Setters>
-                                </VisualState>
-                                <VisualState Name="Selected">
-                                    <VisualState.Setters>
-                                        <Setter Property="BackgroundColor" Value="#6C8EBF" />
-                                    </VisualState.Setters>
-                                </VisualState>
-                            </VisualStateGroup>
-                        </VisualStateManager.VisualStateGroups>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup Name="CommonStates">
+                                        <VisualState Name="Normal">
+                                            <VisualState.Setters>
+                                                <Setter Property="BackgroundColor" Value="White" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState Name="Selected">
+                                            <VisualState.Setters>
+                                                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
 
-                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
-                            <Label Text="{Binding DayName}" FontSize="14" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{Binding Source={RelativeSource AncestorType={x:Type Border}}, Path=BackgroundColor, Converter={StaticResource BlackOrWhiteConverter}, FallbackValue=Black}"/>
-                            <Label Text="{Binding DateString}" FontSize="12" HorizontalOptions="Center" TextColor="{Binding Source={RelativeSource AncestorType={x:Type Border}}, Path=BackgroundColor, Converter={StaticResource BlackOrWhiteConverter}, FallbackValue=Gray}"/>
-                        </VerticalStackLayout>
-                    </Border>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                                <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="5">
+                                    <Label Text="{Binding DayName}" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center" 
+                                           TextColor="{Binding Source={RelativeSource AncestorType={x:Type Border}}, Path=BackgroundColor, Converter={StaticResource BlackOrWhiteConverter}, FallbackValue=Black}"/>
+                                    <Label Text="{Binding DateString}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" 
+                                           TextColor="{Binding Source={RelativeSource AncestorType={x:Type Border}}, Path=BackgroundColor, Converter={StaticResource BlackOrWhiteConverter}, FallbackValue=Gray}"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </Border>
 
-        <BoxView Grid.Row="2" HeightRequest="1" Color="#E0E0E0" VerticalOptions="End" Margin="0,0,0,0"/>
-
-        <Grid Grid.Row="3" RowDefinitions="Auto, *" Margin="15,15,15,0">
+        <Grid Grid.Row="2" RowDefinitions="Auto, *" Margin="20,15,20,0">
 
             <Grid Grid.Row="0" Margin="0,0,0,15" ColumnDefinitions="*, Auto, Auto">
+                <Label Grid.Column="0" Text="{Binding SelectedDay.DayName, StringFormat='ארוחות יום {0}'}" 
+                       FontSize="18" FontAttributes="Bold" TextColor="{StaticResource Primary}" VerticalOptions="Center"/>
 
-                <Label Grid.Column="0" Text="{Binding SelectedDay.DayName, StringFormat='הארוחות של יום {0}'}" 
-                       FontSize="18" FontAttributes="Bold" TextColor="#555555" VerticalOptions="Center" HorizontalOptions="Start"/>
-
-                <Button Grid.Column="1" Text="פתח/סגור הכל" 
-                        BackgroundColor="Transparent" TextColor="#1A73E8" 
-                        FontSize="13" FontAttributes="Bold" Padding="10,0" Margin="0,0,10,0"
+                <Button Grid.Column="1" Text="סגור/פתח הכל" 
+                        BackgroundColor="Transparent" TextColor="Gray" 
+                        FontSize="12" FontAttributes="Bold" Padding="10,0" Margin="0,0,10,0"
                         VerticalOptions="Center"
                         Command="{Binding ToggleAllMealsCommand}"/>
 
-                <ImageButton Grid.Column="2" HorizontalOptions="End" VerticalOptions="Center" 
-                             WidthRequest="28" HeightRequest="28" BackgroundColor="Transparent"
-                             Command="{Binding EditDayMealsCommand}">
-                    <ImageButton.Source>
-                        <FontImageSource FontFamily="OpenSansRegular" Glyph="✏" Color="#1A73E8" Size="22" />
-                    </ImageButton.Source>
-                </ImageButton>
-
+                <ImageButton Grid.Column="2" Source="pencil_light_withline_icon.svg"
+                             WidthRequest="24" HeightRequest="24" BackgroundColor="Transparent"
+                             Command="{Binding EditDayMealsCommand}" />
             </Grid>
 
             <ScrollView Grid.Row="1">
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding SelectedDay.MealGroups}" Spacing="25">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding SelectedDay.MealGroups}" Spacing="18" Padding="0,0,0,30">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate>
-                            <Grid RowDefinitions="Auto, Auto">
-
-                                <Border Grid.Row="0" StrokeShape="RoundRectangle 10" StrokeThickness="0" BackgroundColor="#E8F0FE" Padding="15,8" Margin="0,0,0,12">
+                            <VerticalStackLayout Spacing="0">
+                                <Border StrokeShape="RoundRectangle 12" StrokeThickness="0" BackgroundColor="White" Padding="15,12" Margin="0,0,0,10">
+                                    <Border.Shadow>
+                                        <Shadow Brush="Black" Offset="0,2" Opacity="0.05" Radius="4" />
+                                    </Border.Shadow>
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentView}}, Path=BindingContext.ToggleMealGroupCommand}" CommandParameter="{Binding .}"/>
                                     </Border.GestureRecognizers>
 
                                     <Grid ColumnDefinitions="Auto, *, Auto">
-
-                                        <Label Grid.Column="0" FontSize="16" TextColor="#1A73E8" VerticalOptions="Center" Margin="0,0,10,0">
-                                            <Label.Triggers>
-                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="True">
-                                                    <Setter Property="Text" Value="▲" />
+                                        <Image Grid.Column="0" Source="caret_down_icon.svg" WidthRequest="16" HeightRequest="16" VerticalOptions="Center" Margin="0,0,10,0">
+                                            <Image.Triggers>
+                                                <DataTrigger TargetType="Image" Binding="{Binding IsExpanded}" Value="True">
+                                                    <Setter Property="Rotation" Value="180" />
                                                 </DataTrigger>
-                                                <DataTrigger TargetType="Label" Binding="{Binding IsExpanded}" Value="False">
-                                                    <Setter Property="Text" Value="▼" />
-                                                </DataTrigger>
-                                            </Label.Triggers>
-                                        </Label>
+                                            </Image.Triggers>
+                                        </Image>
 
-                                        <Label Grid.Column="1" Text="{Binding GroupName}" FontSize="20" FontAttributes="Bold" TextColor="#1A73E8" VerticalOptions="Center" HorizontalOptions="Start"/>
+                                        <Label Grid.Column="1" Text="{Binding GroupName}" FontSize="18" FontAttributes="Bold" TextColor="#2B3A42" VerticalOptions="Center"/>
 
-                                        <Button Grid.Column="2" Text="+ הוסף מתכון" 
-                                                HorizontalOptions="End" VerticalOptions="Center"
+                                        <Button Grid.Column="2" Text="הוסף +" 
                                                 HeightRequest="32" CornerRadius="16" 
-                                                BackgroundColor="White" TextColor="#1A73E8" 
-                                                FontAttributes="Bold" FontSize="13" Padding="15,0"
+                                                BackgroundColor="#F0F4F8" TextColor="{StaticResource Primary}" 
+                                                FontAttributes="Bold" FontSize="12" Padding="12,0"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type ContentView}}, Path=BindingContext.AddRecipeToMealCommand}"
                                                 CommandParameter="{Binding .}"/>
                                     </Grid>
                                 </Border>
 
-                                <VerticalStackLayout Grid.Row="1" BindableLayout.ItemsSource="{Binding Meals}" Spacing="10" Margin="10,0,10,0"
-                                                       IsVisible="{Binding IsExpanded}">
+                                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Meals}" Spacing="8" Margin="15,0,5,15" IsVisible="{Binding IsExpanded}">
                                     <BindableLayout.EmptyView>
-                                        <Border StrokeShape="RoundRectangle 10" Stroke="#E0E0E0" StrokeThickness="1" StrokeDashArray="4,4" BackgroundColor="Transparent" Padding="15">
-                                            <Label Text="אין מתכונים מתוכננים לארוחה זו" TextColor="#A0A0A0" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center"/>
-                                        </Border>
+                                        <Label Text="אין מתכונים מתוכננים" TextColor="DarkGray" FontSize="13" HorizontalOptions="Center" Margin="0,5"/>
                                     </BindableLayout.EmptyView>
+
                                     <BindableLayout.ItemTemplate>
                                         <DataTemplate>
-
-                                            <Border StrokeShape="RoundRectangle 10" Stroke="#E0E0E0" StrokeThickness="1" BackgroundColor="White" Padding="15,10">
+                                            <Border StrokeShape="RoundRectangle 8" Stroke="#EEEEEE" StrokeThickness="1" BackgroundColor="White" Padding="12,10">
                                                 <Grid ColumnDefinitions="*, Auto" VerticalOptions="Center">
-
                                                     <Label Grid.Column="0" Text="{Binding RecipeDetails.Title}" 
-                                                           FontSize="16" TextColor="#444444" FontAttributes="Bold"
+                                                           FontSize="15" TextColor="#444444" FontAttributes="Bold"
                                                            VerticalOptions="Center" LineBreakMode="TailTruncation">
                                                         <Label.GestureRecognizers>
                                                             <TapGestureRecognizer 
-                                                             Command="{Binding Source={RelativeSource AncestorType={x:Type ContentView}}, Path=BindingContext.ViewRecipeCommand}"
-                                                             CommandParameter="{Binding RecipeDetails}"/>
+                                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentView}}, Path=BindingContext.ViewRecipeCommand}"
+                                                                CommandParameter="{Binding RecipeDetails}"/>
                                                         </Label.GestureRecognizers>
                                                     </Label>
 
-                                                    <ImageButton Grid.Column="1" 
-                                                                 WidthRequest="24" HeightRequest="24" 
+                                                    <ImageButton Grid.Column="1" Source="minus_icon.svg"
+                                                                 WidthRequest="20" HeightRequest="20" 
                                                                  BackgroundColor="Transparent"
                                                                  Command="{Binding Source={RelativeSource AncestorType={x:Type ContentView}}, Path=BindingContext.RemoveRecipeCommand}"
-                                                                 CommandParameter="{Binding .}">
-                                                        <ImageButton.Source>
-                                                            <FontImageSource FontFamily="OpenSansRegular" Glyph="-" Color="#FF2E4C" Size="24" />
-                                                        </ImageButton.Source>
-                                                    </ImageButton>
-
+                                                                 CommandParameter="{Binding .}"/>
                                                 </Grid>
                                             </Border>
-
                                         </DataTemplate>
                                     </BindableLayout.ItemTemplate>
                                 </VerticalStackLayout>
-
-                            </Grid>
+                            </VerticalStackLayout>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>

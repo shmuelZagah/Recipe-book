@@ -26,13 +26,32 @@ public partial class SchedulePage : ContentView, ISwipeAwarePage
     private async void OnPageLoaded(object sender, EventArgs e)
     {
         await _viewModel.LoadScheduleAsync();
+        ScrollToToday();
+    }
+    #endregion
 
+    #region Helper Methods
+    // Centered scrolling helper to focus on today's card element
+    private void ScrollToToday()
+    {
         var todayItem = _viewModel.WeekDays.FirstOrDefault(d => d.Date.Date == DateTime.Today);
-
         if (todayItem != null)
         {
-            await Task.Delay(100);
-            DaysCollectionView.ScrollTo(todayItem, position: ScrollToPosition.Start, animate: true);
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                await Task.Delay(150); // Small layout measurement safety boundary
+                DaysCollectionView.ScrollTo(todayItem, position: ScrollToPosition.Center, animate: true);
+            });
+        }
+    }
+
+    // Handles quick "Today" shortcut navigation triggers cleanly
+    private void OnGoToTodayClicked(object sender, EventArgs e)
+    {
+        if (_viewModel != null)
+        {
+            _viewModel.SelectedDatePickerDate = DateTime.Today;
+            ScrollToToday();
         }
     }
     #endregion
@@ -40,18 +59,17 @@ public partial class SchedulePage : ContentView, ISwipeAwarePage
     #region ISwipeAwarePage Implementation
     public SwipeAction GetSwipeAction(double totalX, double startX, double startY)
     {
-        // Hit testing: Check if the swipe originated on the horizontal Days bar
         double daysTop = DaysCollectionView.Y;
-        double daysBottom = DaysCollectionView.Y + DaysCollectionView.Height;
+        double daysBottom = DaysCollectionView.Y + DaysCollectionView.Height + 50;
 
         if (startY >= daysTop && startY <= daysBottom)
         {
             return SwipeAction.NativeChildScroll;
         }
 
-        // Swiping anywhere else triggers main app tabs navigation
         return SwipeAction.MainPageSwipe;
     }
+
 
     public void StartInnerSwipe() { }
     public void RunningInnerSwipe(double deltaX) { }
