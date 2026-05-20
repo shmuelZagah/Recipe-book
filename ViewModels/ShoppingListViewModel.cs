@@ -60,6 +60,9 @@ public partial class ShoppingListViewModel : ObservableObject
 
     public bool IsHeaderClosed => !IsHeaderOpen;
 
+    [ObservableProperty]
+    private bool isStaticTemp;
+
     public ObservableCollection<ShoppingItemGroup> GroupedShoppingItems { get; } = new();
 
     [ObservableProperty]
@@ -193,7 +196,7 @@ public partial class ShoppingListViewModel : ObservableObject
         var newList = new SavedShoppingList
         {
             Title = listName,
-            IsStatic = false,
+            IsStatic = true,
             StartDate = DateTime.Today,
             EndDate = DateTime.Today.AddDays(7),
             CreatedAt = DateTime.Now
@@ -242,6 +245,7 @@ public partial class ShoppingListViewModel : ObservableObject
 
         IsMergeModeActive = false;
 
+        // 1. Create the new list and force it to be STATIC (no scheduled updates)
         var newList = new SavedShoppingList
         {
             Title = newListName,
@@ -251,46 +255,79 @@ public partial class ShoppingListViewModel : ObservableObject
 
         await _database.SaveShoppingListAsync(newList);
 
-        var aggregatedItems = new Dictionary<string, SavedShoppingListItem>();
+        // 2. Smart Aggregation using TextHelpers
+        var aggregatedItems = new List<SavedShoppingListItem>();
+        string NormalizeUnit(string u) => string.IsNullOrWhiteSpace(u) || u.Trim() == "יחידות" ? "יחידות" : u.Trim();
 
         foreach (var list in selectedLists)
         {
             var items = await _database.GetItemsForShoppingListAsync(list.Id);
+
             foreach (var item in items)
             {
-                string key = $"{item.Name}_{item.Unit}_{item.Category}";
+                string cleanName = item.Name?.Trim() ?? "";
+                string cleanUnit = NormalizeUnit(item.Unit);
 
-                if (aggregatedItems.ContainsKey(key))
+                var variations = TextHelpers.GetPossibleSingulars(cleanName);
+                SavedShoppingListItem match = null;
+
+                // Search for an existing match in our newly aggregated list
+                foreach (var aggItem in aggregatedItems)
                 {
-                    aggregatedItems[key].Quantity += item.Quantity;
+                    var aggVariations = TextHelpers.GetPossibleSingulars(aggItem.Name);
 
-                    string displayUnit = item.Unit == "יחידות" ? "" : item.Unit;
-                    aggregatedItems[key].DisplayText = string.IsNullOrWhiteSpace(displayUnit) ?
-                        $"{aggregatedItems[key].Quantity} {item.Name}" :
-                        $"{aggregatedItems[key].Quantity} {displayUnit} {item.Name}";
+                    if (NormalizeUnit(aggItem.Unit) == cleanUnit &&
+                        variations.Intersect(aggVariations).Any())
+                    {
+                        match = aggItem;
+                        break;
+                    }
+                }
+
+                if (match != null)
+                {
+                    // Found a match! Add the TOTAL quantity of the incoming item into the MANUAL quantity
+                    match.ManualQuantity += item.Quantity;
+                    match.Quantity = match.ManualQuantity;
                 }
                 else
                 {
-                    aggregatedItems[key] = new SavedShoppingListItem
+                    // New item for the merged list. Make it 100% manual and locked.
+                    aggregatedItems.Add(new SavedShoppingListItem
                     {
                         ListId = newList.Id,
-                        Name = item.Name,
+                        Name = cleanName,
+                        // Take the total quantity (Manual + Auto) from the old list and make it pure Manual
+                        ManualQuantity = item.Quantity,
+                        AutoQuantity = 0,
                         Quantity = item.Quantity,
-                        Unit = item.Unit,
-                        Category = item.Category,
-                        DisplayText = item.DisplayText,
+                        Unit = cleanUnit,
+                        Category = string.IsNullOrWhiteSpace(item.Category) ? "כללי" : item.Category,
+                        IsLocked = true, // Force the lock icon
                         IsBought = false
-                    };
+                    });
                 }
             }
         }
 
-        await _database.SyncShoppingListItemsAsync(newList.Id, aggregatedItems.Values.ToList());
+        // 3. Save all aggregated items directly to the database
+        foreach (var item in aggregatedItems)
+        {
+            // Calculate the final display text for the merged item
+            string displayUnit = item.Unit == "יחידות" ? "" : item.Unit;
+            item.DisplayText = string.IsNullOrWhiteSpace(displayUnit) ?
+                $"{item.Quantity} {item.Name}" :
+                $"{item.Quantity} {displayUnit} {item.Name}";
 
+            await _database.SaveShoppingListItemAsync(item);
+        }
+
+        // 4. Reload and display the new merged list
         await LoadAllListsAsync();
         await SwitchListAsync(newList);
+
         WeakReferenceMessenger.Default.Send("ShoppingChanged");
-        await Application.Current.MainPage.DisplayAlert("הצלחה!", "הרשימות מוזגו בהצלחה לרשימה אחת מאוחדת.", "מעולה");
+        await Application.Current.MainPage.DisplayAlert("הצלחה!", "הרשימות מוזגו בהצלחה לרשימה אחת מאוחדת וקבועה.", "מעולה");
     }
 
     [RelayCommand]
@@ -323,6 +360,113 @@ public partial class ShoppingListViewModel : ObservableObject
                 }
             }
         }
+    }
+
+
+    [RelayCommand]
+    public async Task AddManualItemAsync()
+    {
+        if (CurrentShoppingList == null || CurrentShoppingList.Id == -1) return;
+
+        string itemName = await Application.Current.MainPage.DisplayPromptAsync(
+            "הוספת מצרך", "מה תרצה להוסיף לרשימה?", "המשך", "ביטול");
+
+        if (string.IsNullOrWhiteSpace(itemName)) return;
+        itemName = itemName.Trim();
+
+        string quantityStr = await Application.Current.MainPage.DisplayPromptAsync(
+            "כמות", $"כמה {itemName} להוסיף?", "הוסף", "ביטול", keyboard: Keyboard.Numeric);
+
+        if (!double.TryParse(quantityStr, out double manualQty) || manualQty <= 0) return;
+
+        // 1. Fetch existing items
+        var existingItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
+        var variations = TextHelpers.GetPossibleSingulars(itemName);
+        SavedShoppingListItem match = null;
+
+        // 2. Silent Match (Exact or direct Plural/Singular)
+        foreach (var item in existingItems)
+        {
+            var itemVariations = TextHelpers.GetPossibleSingulars(item.Name?.Trim() ?? "");
+            if (variations.Intersect(itemVariations).Any() &&
+                (string.IsNullOrWhiteSpace(item.Unit) || item.Unit == "יחידות"))
+            {
+                match = item;
+                break;
+            }
+        }
+
+        // 3. Smart Typo & Variation Match (Using Levenshtein exactly like the schedule engine)
+        if (match == null)
+        {
+            int maxAllowedDistance = itemName.Length <= 4 ? 1 : 2;
+            var suggestions = existingItems
+                .Where(i => (string.IsNullOrWhiteSpace(i.Unit) || i.Unit == "יחידות"))
+                .Where(i => variations.Any(v =>
+                    (i.Name ?? "").Contains(v) || v.Contains(i.Name ?? "") ||
+                    TextHelpers.ComputeLevenshteinDistance(v, i.Name ?? "") <= maxAllowedDistance))
+                .OrderBy(i => TextHelpers.ComputeLevenshteinDistance(itemName, i.Name ?? ""))
+                .ToList();
+
+            if (suggestions.Any())
+            {
+                var bestMatch = suggestions.First();
+                bool confirm = await Application.Current.MainPage.DisplayAlert(
+                    "זיהוי מצרך",
+                    $"האם התכוונת ל-'{bestMatch.Name}' שכבר קיים ברשימה?",
+                    "כן, אחד אותם", "לא, זה מצרך חדש");
+
+                if (confirm)
+                {
+                    match = bestMatch;
+                }
+            }
+        }
+
+        // 4. Merge or Create
+        if (match != null)
+        {
+            match.ManualQuantity += manualQty;
+            match.Quantity = match.ManualQuantity + match.AutoQuantity;
+            match.IsLocked = true;
+
+            if (match.Quantity > match.CoveredQuantity)
+            {
+                match.IsBought = false;
+            }
+
+            match.UpdateDisplayText();
+            await _database.SaveShoppingListItemAsync(match);
+        }
+        else
+        {
+            // Ask for the category, exactly like we do in LearnNewIngredientAsync!
+            string selectedCategory = await Application.Current.MainPage.DisplayActionSheet(
+                     $"לאיזו מחלקה שייך '{itemName}'?",
+                     "דלג", null,
+                     AppConstants.ShoppingCategories);
+
+            string finalCategory = (selectedCategory == "דלג" || string.IsNullOrEmpty(selectedCategory)) ? "כללי" : selectedCategory;
+
+            // Brand new item with a proper category
+            var newItem = new SavedShoppingListItem
+            {
+                ListId = CurrentShoppingList.Id,
+                Name = itemName,
+                ManualQuantity = manualQty,
+                AutoQuantity = 0,
+                Quantity = manualQty,
+                Unit = "יחידות",
+                Category = finalCategory,
+                IsLocked = true,
+                DisplayText = $"{manualQty} {itemName}",
+                IsBought = false
+            };
+            await _database.SaveShoppingListItemAsync(newItem);
+        }
+
+        // Refresh UI
+        await GenerateListAsync();
     }
 
     #endregion
@@ -392,6 +536,11 @@ public partial class ShoppingListViewModel : ObservableObject
         CustomDurationDays = Preferences.Default.Get($"ShoppingListDuration_{listIdStr}", 7);
         SpecificStartDate = Preferences.Default.Get($"ShoppingListSpecStart_{listIdStr}", DateTime.Today);
         SpecificEndDate = Preferences.Default.Get($"ShoppingListSpecEnd_{listIdStr}", DateTime.Today.AddDays(7));
+        IsStaticTemp = CurrentShoppingList?.IsStatic ?? false;
+        if (IsStaticTemp)
+        {
+            SelectedRangeType = (DateRangeType)(-1);
+        }
     }
 
     private void SavePreferences()
@@ -412,7 +561,18 @@ public partial class ShoppingListViewModel : ObservableObject
         {
             SelectedRangeType = (DateRangeType)parsedRange;
             UpdateVisibility();
+            IsStaticTemp = false;
         }
+    }
+
+    [RelayCommand]
+    public void ToggleStaticMode()
+    {
+        if (IsStaticTemp) return;
+
+        IsStaticTemp = true;
+        SelectedRangeType = (DateRangeType)(-1);
+        UpdateVisibility();
     }
 
     private void UpdateVisibility()
@@ -424,12 +584,7 @@ public partial class ShoppingListViewModel : ObservableObject
     [RelayCommand]
     public void OpenHeader()
     {
-        if (CurrentShoppingList != null && CurrentShoppingList.IsStatic)
-        {
-            Application.Current.MainPage.DisplayAlert("רשימה סגורה", "זוהי רשימה שהתקבלה ממישהו אחר ולכן אינה מתעדכנת לפי תאריכים.", "אישור");
-            return;
-        }
-
+ 
         IsListsMenuOpen = false;
         LoadPreferences();
         UpdateVisibility();
@@ -455,6 +610,23 @@ public partial class ShoppingListViewModel : ObservableObject
 
         SavePreferences();
         CalculateActualDates();
+
+        if (CurrentShoppingList != null)
+        {
+            // Detect if the user just switched this list from Auto-Updating to Static
+            bool justBecameStatic = IsStaticTemp && !CurrentShoppingList.IsStatic;
+
+            CurrentShoppingList.IsStatic = IsStaticTemp;
+            CurrentShoppingList.StartDate = StartDate;
+            CurrentShoppingList.EndDate = EndDate;
+            await _database.SaveShoppingListAsync(CurrentShoppingList);
+
+            if (justBecameStatic)
+            {
+                await _database.SyncShoppingListItemsAsync(CurrentShoppingList.Id, new List<SavedShoppingListItem>());
+            }
+        }
+
         UpdateStatusText();
 
         IsHeaderOpen = false;
@@ -581,10 +753,10 @@ public partial class ShoppingListViewModel : ObservableObject
         }
     }
 
-    private async Task<Dictionary<string, (double Quantity, string Category)>> ProcessAndAggregateIngredientsAsync(
+    private async Task<Dictionary<string, (double Quantity, string Category, DateTime MaxDate)>> ProcessAndAggregateIngredientsAsync(
         List<ScheduledMeal> meals, List<IngredientConversion> conversions)
     {
-        var aggregatedIngredients = new Dictionary<string, (double Quantity, string Category)>();
+        var aggregatedIngredients = new Dictionary<string, (double Quantity, string Category, DateTime MaxDate)>();
 
         foreach (var meal in meals)
         {
@@ -598,14 +770,15 @@ public partial class ShoppingListViewModel : ObservableObject
             {
                 if (string.IsNullOrWhiteSpace(ingredient.Name) || ingredient.Quantity == null) continue;
 
-                await ProcessSingleIngredientAsync(recipe, ingredient, conversions, aggregatedIngredients);
+                // Pass the meal date downwards
+                await ProcessSingleIngredientAsync(recipe, ingredient, meal.Date, conversions, aggregatedIngredients);
             }
         }
 
         return aggregatedIngredients;
     }
 
-    private async Task ProcessSingleIngredientAsync(Recipe recipe, Ingredient ingredient, List<IngredientConversion> conversions, Dictionary<string, (double Quantity, string Category)> aggregatedIngredients)
+    private async Task ProcessSingleIngredientAsync(Recipe recipe, Ingredient ingredient, DateTime mealDate, List<IngredientConversion> conversions, Dictionary<string, (double Quantity, string Category, DateTime MaxDate)> aggregatedIngredients)
     {
         double quantity = ingredient.Quantity.Value;
         string unit = ingredient.Unit?.Trim() ?? "יחידות";
@@ -626,9 +799,64 @@ public partial class ShoppingListViewModel : ObservableObject
             name = conversion.Keyword;
         }
 
-        AggregateFinalIngredient(quantity, unit, name, conversion, aggregatedIngredients);
+        AggregateFinalIngredient(quantity, unit, name, conversion, mealDate, aggregatedIngredients);
     }
 
+    // ... (Keep FindOrSuggestConversionAsync, ApplyCorrectionAsync, LearnNewIngredientAsync exactly as they are) ...
+
+    private void AggregateFinalIngredient(double quantity, string unit, string name, IngredientConversion conversion, DateTime mealDate, Dictionary<string, (double Quantity, string Category, DateTime MaxDate)> aggregatedIngredients)
+    {
+        string finalUnit = unit;
+        string aggregatedKeyName = name;
+        string itemCategory = "כללי";
+
+        if (conversion != null)
+        {
+            itemCategory = string.IsNullOrWhiteSpace(conversion.Category) ? "כללי" : conversion.Category;
+
+            if (name.Contains("שימורים") || unit.Contains("שימורים")) itemCategory = "שימורים";
+
+            bool isVolumeOrWeight = unit == "כוס" || unit == "כף" || unit == "כפית" || unit == "גרם" || unit == "מ״ל";
+
+            var possibleSingulars = TextHelpers.GetPossibleSingulars(name);
+            bool isPluralOfKeyword = possibleSingulars.Contains(conversion.Keyword);
+
+            if (isVolumeOrWeight || isPluralOfKeyword || name == conversion.Keyword)
+            {
+                aggregatedKeyName = conversion.Keyword;
+            }
+
+            if (isVolumeOrWeight)
+            {
+                if ((unit == "כוס" || unit == "כף" || unit == "כפית") && conversion.AmountPerCup > 0)
+                {
+                    if (unit == "כוס") quantity *= conversion.AmountPerCup;
+                    else if (unit == "כף") quantity *= (conversion.AmountPerCup / 16.0);
+                    else if (unit == "כפית") quantity *= (conversion.AmountPerCup / 48.0);
+
+                    finalUnit = conversion.BaseUnit;
+                }
+                else if (unit == "גרם" || unit == "מ״ל")
+                {
+                    finalUnit = unit;
+                }
+            }
+        }
+
+        string dictionaryKey = $"{aggregatedKeyName}_{finalUnit}";
+
+        if (aggregatedIngredients.ContainsKey(dictionaryKey))
+        {
+            var existing = aggregatedIngredients[dictionaryKey];
+            // Calculate the latest date this ingredient is needed
+            DateTime maxDate = mealDate > existing.MaxDate ? mealDate : existing.MaxDate;
+            aggregatedIngredients[dictionaryKey] = (existing.Quantity + quantity, existing.Category, maxDate);
+        }
+        else
+        {
+            aggregatedIngredients.Add(dictionaryKey, (quantity, itemCategory, mealDate));
+        }
+    }
     private async Task<IngredientConversion> FindOrSuggestConversionAsync(Recipe recipe, Ingredient ingredient, string originalName, List<IngredientConversion> conversions)
     {
         var possibleNames = TextHelpers.GetPossibleSingulars(originalName);
@@ -705,9 +933,7 @@ public partial class ShoppingListViewModel : ObservableObject
         string selectedCategory = await Application.Current.MainPage.DisplayActionSheet(
             $"לאיזו מחלקה שייך '{finalName}'?",
             "דלג", null,
-            "ירקות ופירות", "בשרים ודגים", "מוצרי אפייה בסיסיים", "קטניות", "פחמימות יבשות ודגנים",
-            "תבלינים ועשבי תיבול", "ממרחים ומתוקים", "שומנים ושמנים", "מוצרי חלב, ביצים ותחליפים",
-            "סוכרים וממתיקים", "אגוזים וזרעים", "רוטבים ומרינדות", "משקאות ומיצים", "קפואים", "שימורים");
+            AppConstants.ShoppingCategories);
 
         if (selectedCategory == "דלג" || string.IsNullOrEmpty(selectedCategory)) return null;
 
@@ -745,70 +971,15 @@ public partial class ShoppingListViewModel : ObservableObject
         return newConversion;
     }
 
-    private void AggregateFinalIngredient(double quantity, string unit, string name, IngredientConversion conversion, Dictionary<string, (double Quantity, string Category)> aggregatedIngredients)
-    {
-        string finalUnit = unit;
-        string aggregatedKeyName = name;
-        string itemCategory = "כללי";
-
-        if (conversion != null)
-        {
-            itemCategory = string.IsNullOrWhiteSpace(conversion.Category) ? "כללי" : conversion.Category;
-
-            if (name.Contains("שימורים") || unit.Contains("שימורים")) itemCategory = "שימורים";
-
-            bool isVolumeOrWeight = unit == "כוס" || unit == "כף" || unit == "כפית" || unit == "גרם" || unit == "מ״ל";
-
-            var possibleSingulars = TextHelpers.GetPossibleSingulars(name);
-            bool isPluralOfKeyword = possibleSingulars.Contains(conversion.Keyword);
-
-            if (isVolumeOrWeight || isPluralOfKeyword || name == conversion.Keyword)
-            {
-                aggregatedKeyName = conversion.Keyword;
-            }
-
-            if (isVolumeOrWeight)
-            {
-                if ((unit == "כוס" || unit == "כף" || unit == "כפית") && conversion.AmountPerCup > 0)
-                {
-                    if (unit == "כוס") quantity *= conversion.AmountPerCup;
-                    else if (unit == "כף") quantity *= (conversion.AmountPerCup / 16.0);
-                    else if (unit == "כפית") quantity *= (conversion.AmountPerCup / 48.0);
-
-                    finalUnit = conversion.BaseUnit;
-                }
-                else if (unit == "גרם" || unit == "מ״ל")
-                {
-                    finalUnit = unit;
-                }
-            }
-        }
-
-        string dictionaryKey = $"{aggregatedKeyName}_{finalUnit}";
-
-        if (aggregatedIngredients.ContainsKey(dictionaryKey))
-        {
-            var existing = aggregatedIngredients[dictionaryKey];
-            aggregatedIngredients[dictionaryKey] = (existing.Quantity + quantity, existing.Category);
-        }
-        else
-        {
-            aggregatedIngredients.Add(dictionaryKey, (quantity, itemCategory));
-        }
-    }
-
     #endregion
 
     #region UI & Sharing
 
-    private async Task BuildAndGroupShoppingList(Dictionary<string, (double Quantity, string Category)> aggregatedIngredients)
+    private async Task BuildAndGroupShoppingList(Dictionary<string, (double Quantity, string Category, DateTime MaxDate)> aggregatedIngredients)
     {
         CurrentShoppingList.StartDate = StartDate;
         CurrentShoppingList.EndDate = EndDate;
         await _database.SaveShoppingListAsync(CurrentShoppingList);
-
-        var existingItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
-        var boughtNames = existingItems.Where(i => i.IsBought).Select(i => i.Name).ToList();
 
         var flatList = new List<SavedShoppingListItem>();
 
@@ -819,6 +990,7 @@ public partial class ShoppingListViewModel : ObservableObject
             string unit = keyParts[1];
             double finalQuantity = item.Value.Quantity;
             string category = item.Value.Category;
+            DateTime requiredByDate = item.Value.MaxDate;
 
             if (unit == "גרם")
             {
@@ -838,39 +1010,51 @@ public partial class ShoppingListViewModel : ObservableObject
             string displayUnit = (unit == "יחידות") ? "" : unit;
             string finalDisplayText = string.IsNullOrWhiteSpace(displayUnit) ? $"{finalQuantity} {name}" : $"{finalQuantity} {displayUnit} {name}";
 
-            bool isAlreadyBought = boughtNames.Contains(name);
-
             var newItem = new SavedShoppingListItem
             {
                 ListId = CurrentShoppingList.Id,
                 Name = name,
-                DisplayText = finalDisplayText,
                 Category = category,
-                Quantity = finalQuantity,
-                Unit = displayUnit,
-                IsBought = isAlreadyBought
+                AutoQuantity = finalQuantity,
+                ManualQuantity = 0,
+                Quantity = finalQuantity, 
+                Unit = unit,
+                CurrentRequiredBy = requiredByDate
             };
-
-            newItem.PropertyChanged += async (s, e) =>
-            {
-                if (e.PropertyName == nameof(SavedShoppingListItem.IsBought))
-                {
-                    await _database.SaveShoppingListItemAsync(newItem);
-                }
-            };
+            newItem.UpdateDisplayText();
 
             flatList.Add(newItem);
         }
 
         await _database.SyncShoppingListItemsAsync(CurrentShoppingList.Id, flatList);
-
+        var freshItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
         GroupedShoppingItems.Clear();
-        var grouped = flatList.GroupBy(x => x.Category)
+
+        var grouped = freshItems.GroupBy(x => x.Category)
                               .Select(g => new ShoppingItemGroup(g.Key, g))
                               .OrderBy(g => g.CategoryName);
 
         foreach (var group in grouped)
         {
+            foreach (var item in group)
+            {
+                item.PropertyChanged += async (s, e) =>
+                {
+                    if (e.PropertyName == nameof(SavedShoppingListItem.IsBought))
+                    {
+                        // Set the validity date immediately when user clicks the Checkbox
+                        if (item.IsBought && !item.CoveredUntil.HasValue)
+                        {
+                            item.CoveredUntil = item.CurrentRequiredBy ?? DateTime.Today.AddDays(7);
+                        }
+                        else if (!item.IsBought)
+                        {
+                            item.CoveredUntil = null;
+                        }
+                        await _database.SaveShoppingListItemAsync(item);
+                    }
+                };
+            }
             GroupedShoppingItems.Add(group);
         }
     }

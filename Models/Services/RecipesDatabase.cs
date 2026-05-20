@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.Messaging;
+using Recipe_book.Helpers;
 using Recipe_book.Models.Cloud;
 using Recipe_book.Models.Organization;
 using Recipe_book.Models.Recipes;
@@ -924,28 +925,125 @@ public class RecipesDatabase
     }
 
     /// <summary>
-    /// Replaces all items in a specific list with a new set of items. 
-    /// Useful for updating dynamic lists generated from the meal planner.
+    /// Syncs the list intelligently, utilizing TextHelpers and normalizing units/categories
+    /// to ensure manual and auto items bridge perfectly in the UI. Also calculates Smart Checkmarks.
     /// </summary>
-    public async Task SyncShoppingListItemsAsync(int listId, List<SavedShoppingListItem> newItems)
+    public async Task SyncShoppingListItemsAsync(int listId, List<SavedShoppingListItem> autoItemsFromSchedule)
     {
         await Init();
 
-        // 1. Delete old items
+        var list = await GetSavedShoppingListAsync(listId);
+        bool isRollingList = list != null && !list.IsStatic;
+
         var existingItems = await GetItemsForShoppingListAsync(listId);
+        var existingLookup = new Dictionary<string, SavedShoppingListItem>();
+
+        string NormalizeUnit(string u) => string.IsNullOrWhiteSpace(u) || u.Trim() == "יחידות" ? "יחידות" : u.Trim();
+
         foreach (var item in existingItems)
         {
-            await Database.DeleteAsync(item);
+            item.AutoQuantity = 0;
+            string cleanName = item.Name?.Trim() ?? "";
+            string cleanUnit = NormalizeUnit(item.Unit);
+
+            var variations = TextHelpers.GetPossibleSingulars(cleanName);
+            foreach (var variant in variations)
+            {
+                string key = $"{variant}_{cleanUnit}";
+                if (!existingLookup.ContainsKey(key)) existingLookup[key] = item;
+            }
         }
 
-        // 2. Insert new items
-        foreach (var newItem in newItems)
+        foreach (var newAutoItem in autoItemsFromSchedule)
         {
-            newItem.ListId = listId;
-            await Database.InsertAsync(newItem);
+            string cleanName = newAutoItem.Name?.Trim() ?? "";
+            string cleanUnit = NormalizeUnit(newAutoItem.Unit);
+
+            var newVariations = TextHelpers.GetPossibleSingulars(cleanName);
+            SavedShoppingListItem matchedExistingItem = null;
+
+            foreach (var variant in newVariations)
+            {
+                string key = $"{variant}_{cleanUnit}";
+                if (existingLookup.TryGetValue(key, out matchedExistingItem)) break;
+            }
+
+            if (matchedExistingItem != null)
+            {
+                matchedExistingItem.AutoQuantity += newAutoItem.AutoQuantity;
+
+                if (matchedExistingItem.Category == "כללי" && !string.IsNullOrWhiteSpace(newAutoItem.Category) && newAutoItem.Category != "כללי")
+                {
+                    matchedExistingItem.Category = newAutoItem.Category;
+                }
+
+                // Keep track of the furthest required date in memory
+                if (newAutoItem.CurrentRequiredBy.HasValue)
+                {
+                    if (!matchedExistingItem.CurrentRequiredBy.HasValue || newAutoItem.CurrentRequiredBy.Value > matchedExistingItem.CurrentRequiredBy.Value)
+                    {
+                        matchedExistingItem.CurrentRequiredBy = newAutoItem.CurrentRequiredBy;
+                    }
+                }
+            }
+            else
+            {
+                newAutoItem.ListId = listId;
+                newAutoItem.Unit = cleanUnit;
+                existingItems.Add(newAutoItem);
+
+                foreach (var variant in newVariations)
+                {
+                    string key = $"{variant}_{cleanUnit}";
+                    if (!existingLookup.ContainsKey(key)) existingLookup[key] = newAutoItem;
+                }
+            }
+        }
+
+        foreach (var item in existingItems)
+        {
+            if (item.IsBought && item.IsLocked && item.LastCheckedDate.HasValue && DateTime.Today > item.LastCheckedDate.Value.Date)
+            {
+
+                item.ManualQuantity = 0;
+                item.CoveredQuantity = 0;
+                item.IsBought = false;
+                item.IsLocked = false;
+            }
+
+
+            item.Quantity = item.ManualQuantity + item.AutoQuantity;
+            item.IsLocked = item.ManualQuantity > 0;
+
+            // 2. Dynamic Trimming: If the window shrunk (days passed), scale down CoveredQuantity to match
+            if (item.IsBought && item.CoveredQuantity > item.Quantity)
+            {
+                item.CoveredQuantity = item.Quantity;
+            }
+
+            // 3. Delta Logic Check
+            if (item.CoveredQuantity > 0 && item.Quantity > item.CoveredQuantity)
+            {
+                item.IsBought = false; // Pop the checkmark, needs more!
+            }
+            else if (item.CoveredQuantity > 0 && item.Quantity <= item.CoveredQuantity)
+            {
+                item.IsBought = true; // Fully satisfied by previous purchase
+            }
+
+            if (item.Quantity <= 0)
+            {
+                if (item.Id != 0) await Database.DeleteAsync(item);
+            }
+            else
+            {
+                item.UpdateDisplayText();
+
+                if (item.Id != 0) await Database.UpdateAsync(item);
+                else await Database.InsertAsync(item);
+            }
         }
     }
-
     #endregion
     //--------------
 }

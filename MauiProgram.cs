@@ -80,6 +80,8 @@ namespace Recipe_book
             builder.Services.AddTransient<LibraryPage>();
             builder.Services.AddTransient<ShoppingListPage>();
 
+            //Services
+            builder.Services.AddSingleton<IFirebaseAuthService, FirebaseAuthService>();
 
             return builder.Build();
         }
@@ -92,6 +94,7 @@ namespace Recipe_book
 #if ANDROID
                 events.AddAndroid(android => android.OnCreate((activity, state) =>
                     CrossFirebase.Initialize(activity, new CrossFirebaseSettings(
+                        isAuthEnabled: true,
                         isFirestoreEnabled: true,
                         isAnalyticsEnabled: false,
                         isCrashlyticsEnabled: false)))); //need to be true in the futur 

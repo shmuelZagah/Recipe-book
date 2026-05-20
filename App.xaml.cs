@@ -24,6 +24,8 @@ public partial class App : Application
     {
         base.OnStart();
 
+        _ = InitializeUserAsync();
+
         // Check if a deep link is waiting in the room
         if (!string.IsNullOrEmpty(PendingDeepLinkUrl))
         {
@@ -35,6 +37,24 @@ public partial class App : Application
             {
                 this.SendOnAppLinkRequestReceived(new Uri(urlToProcess));
             });
+        }
+    }
+
+    private async Task InitializeUserAsync()
+    {
+        try
+        {
+            var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
+
+            if (authService != null)
+            {
+                string uid = await authService.SignInAnonymouslyAsync();
+                System.Diagnostics.Debug.WriteLine($"[AUTH SUCCESS]: User initialized with UID: {uid}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AUTH ERROR]: Failed to initialize user - {ex.Message}");
         }
     }
 

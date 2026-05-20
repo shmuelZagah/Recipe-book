@@ -38,7 +38,13 @@
                     <Label Text="{Binding StatusText}" 
                            TextColor="Gray" 
                            FontSize="12" 
-                           HorizontalOptions="Start" />
+                           HorizontalOptions="Start">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding CurrentShoppingList.IsStatic}" Value="True">
+                                <Setter Property="IsVisible" Value="False" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
                 </VerticalStackLayout>
 
                 <ImageButton Grid.Column="1" 
@@ -68,8 +74,17 @@
 
             <Grid RowDefinitions="Auto, *">
 
-                <Grid Grid.Row="0" IsVisible="{Binding IsHeaderClosed}" Padding="20,10,20,5">
-                    <Label HorizontalOptions="End" 
+                <Grid Grid.Row="0" IsVisible="{Binding IsHeaderClosed}" Padding="20,10,20,5" ColumnDefinitions="*, Auto">
+
+                    <HorizontalStackLayout Grid.Column="0" Spacing="5" VerticalOptions="Center" HorizontalOptions="Start" IsVisible="{Binding HasValidList}">
+                        <HorizontalStackLayout.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding AddManualItemCommand}" />
+                        </HorizontalStackLayout.GestureRecognizers>
+                        <Image Source="lock_simple_icon.svg" WidthRequest="16" HeightRequest="16" VerticalOptions="Center" Opacity="0.6"/>
+                        <Label Text="הוסף מצרך ידני" TextColor="{StaticResource Primary}" FontSize="14" FontAttributes="Bold" VerticalOptions="Center"/>
+                    </HorizontalStackLayout>
+
+                    <Label Grid.Column="1" HorizontalOptions="End" 
                            Text="הסר פריטים שסומנו" 
                            TextColor="{StaticResource Primary}" 
                            FontSize="14" 
@@ -99,9 +114,10 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
                             <Frame Padding="10,5" Margin="0,5" CornerRadius="8" HasShadow="False" BorderColor="#EEEEEE" BackgroundColor="White">
-                                <HorizontalStackLayout Spacing="15" VerticalOptions="Center">
-                                    <CheckBox IsChecked="{Binding IsBought}" Color="{StaticResource Primary}" />
-                                    <Label Text="{Binding DisplayText}" VerticalOptions="Center" FontSize="16" TextColor="Black">
+                                <Grid ColumnDefinitions="Auto, *, Auto">
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsBought}" Color="{StaticResource Primary}" VerticalOptions="Center"/>
+
+                                    <Label Grid.Column="1" Text="{Binding DisplayText}" VerticalOptions="Center" FontSize="16" TextColor="Black" Margin="15,0">
                                         <Label.Triggers>
                                             <DataTrigger TargetType="Label" Binding="{Binding IsBought}" Value="True">
                                                 <Setter Property="TextDecorations" Value="Strikethrough" />
@@ -109,7 +125,19 @@
                                             </DataTrigger>
                                         </Label.Triggers>
                                     </Label>
-                                </HorizontalStackLayout>
+
+                                    <VerticalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center" HorizontalOptions="Center">
+                                        <Image Source="clock_icon.svg" WidthRequest="16" HeightRequest="16" Opacity="0.7">
+                                            <Image.Triggers>
+                                                <DataTrigger TargetType="Image" Binding="{Binding AutoQuantity}" Value="0">
+                                                    <Setter Property="IsVisible" Value="False" />
+                                                </DataTrigger>
+                                            </Image.Triggers>
+                                        </Image>
+
+                                        <Image Source="lock_simple_icon.svg" WidthRequest="16" HeightRequest="16" Opacity="0.7" IsVisible="{Binding IsLocked}" />
+                                    </VerticalStackLayout>
+                                </Grid>
                             </Frame>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
@@ -120,135 +148,162 @@
                 </CollectionView>
             </Grid>
 
-            <Border IsVisible="{Binding IsHeaderOpen}" Padding="15,20" StrokeShape="RoundRectangle 12" BackgroundColor="White" StrokeThickness="1" Stroke="#E8E8E8" Margin="20,10,20,0" VerticalOptions="Start" ZIndex="10">
+            <Border IsVisible="{Binding IsHeaderOpen}" 
+        Padding="15,20" 
+        StrokeShape="RoundRectangle 12" 
+        BackgroundColor="White" 
+        StrokeThickness="1" 
+        Stroke="#E8E8E8" 
+        Margin="20,10,20,15" 
+        VerticalOptions="Fill" 
+        ZIndex="10">
                 <Border.Shadow>
                     <Shadow Brush="Black" Offset="0,6" Opacity="0.1" Radius="10" />
                 </Border.Shadow>
-                <VerticalStackLayout Spacing="15">
-                    <Label Text="הגדר טווח עדכון לרשימה זו" FontAttributes="Bold" FontSize="16" TextColor="{StaticResource Primary}" HorizontalOptions="Center" />
 
-                    <FlexLayout Wrap="Wrap" JustifyContent="Center" AlignItems="Center">
-                        <FlexLayout.Resources>
-                            <Style TargetType="Button">
-                                <Setter Property="BackgroundColor" Value="#F0F0F0"/>
-                                <Setter Property="TextColor" Value="Gray"/>
-                                <Setter Property="CornerRadius" Value="8"/>
-                                <Setter Property="HeightRequest" Value="45"/>
-                                <Setter Property="Padding" Value="15,0"/>
-                                <Setter Property="Margin" Value="5"/>
-                                <Setter Property="FontAttributes" Value="Bold"/>
-                            </Style>
-                        </FlexLayout.Resources>
+                <ScrollView>
+                    <VerticalStackLayout Spacing="15">
+                        <Label Text="הגדר טווח עדכון לרשימה זו" FontAttributes="Bold" FontSize="16" TextColor="{StaticResource Primary}" HorizontalOptions="Center" />
 
-                        <Button Text="יום אחד" Command="{Binding SelectRangeTypeCommand}" CommandParameter="Day">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Day">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                        <Button Text="השבוע" Command="{Binding SelectRangeTypeCommand}" CommandParameter="Week">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Week">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                        <Button Text="שבועיים" Command="{Binding SelectRangeTypeCommand}" CommandParameter="TwoWeeks">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="TwoWeeks">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                        <Button Text="שבוע הבא" Command="{Binding SelectRangeTypeCommand}" CommandParameter="NextWeek">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="NextWeek">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                        <Button Text="חודש" Command="{Binding SelectRangeTypeCommand}" CommandParameter="Month">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Month">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                        <Button Text="אחר..." Command="{Binding SelectRangeTypeCommand}" CommandParameter="CustomRolling">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="CustomRolling">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                    </FlexLayout>
-
-                    <VerticalStackLayout IsVisible="{Binding IsCustomRollingVisible}" Spacing="10" Margin="0,5">
-                        <Grid ColumnDefinitions="Auto, *, Auto" VerticalOptions="Center">
-                            <Label Grid.Column="0" Text="התחל מעוד:" VerticalOptions="Center" TextColor="Gray" FontAttributes="Bold"/>
-                            <Entry Grid.Column="1" Text="{Binding CustomOffsetDays}" Keyboard="Numeric" HorizontalTextAlignment="Center" Margin="10,0"/>
-                            <Label Grid.Column="2" Text="ימים" VerticalOptions="Center" TextColor="Gray"/>
-                        </Grid>
-                        <Grid ColumnDefinitions="Auto, *, Auto" VerticalOptions="Center">
-                            <Label Grid.Column="0" Text="למשך:" VerticalOptions="Center" TextColor="Gray" FontAttributes="Bold"/>
-                            <Entry Grid.Column="1" Text="{Binding CustomDurationDays}" Keyboard="Numeric" HorizontalTextAlignment="Center" Margin="10,0"/>
-                            <Label Grid.Column="2" Text="ימים" VerticalOptions="Center" TextColor="Gray"/>
-                        </Grid>
-                    </VerticalStackLayout>
-
-                    <BoxView HeightRequest="1" Color="#EEEEEE" Margin="0,5"/>
-                    <Label Text="--- או ---" HorizontalOptions="Center" TextColor="LightGray" FontSize="14"/>
-                    <BoxView HeightRequest="1" Color="#EEEEEE" Margin="0,5"/>
-
-                    <Label Text="תאריכים ספציפיים (נעול ביומן)" FontAttributes="Bold" FontSize="16" TextColor="{StaticResource Primary}" HorizontalOptions="Center" />
-
-                    <Button Text="בחר תאריכים" 
-                            ImageSource="calendar_main_icon.svg"
-                            ContentLayout="Right, 8"
-                            Command="{Binding SelectRangeTypeCommand}" 
-                            CommandParameter="SpecificDates" 
+                        <Button Text="רשימה קבועה" 
+                            Command="{Binding ToggleStaticModeCommand}"
                             BackgroundColor="#F0F0F0" 
                             TextColor="Gray" 
                             CornerRadius="8" 
                             HeightRequest="45" 
-                            Margin="20,0" 
                             FontAttributes="Bold">
-                        <Button.Triggers>
-                            <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="SpecificDates">
-                                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
-                                <Setter Property="TextColor" Value="White" />
-                            </DataTrigger>
-                        </Button.Triggers>
-                    </Button>
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsStaticTemp}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
 
-                    <Grid IsVisible="{Binding IsSpecificDatesVisible}" ColumnDefinitions="*, Auto, *" ColumnSpacing="10" Margin="0,10,0,0">
-                        <VerticalStackLayout Grid.Column="0">
-                            <Label Text="מאת:" FontSize="12" TextColor="Gray" HorizontalOptions="Center"/>
-                            <DatePicker Date="{Binding SpecificStartDate}" Format="dd/MM/yyyy" TextColor="Black" HorizontalOptions="Center"/>
+                        <BoxView HeightRequest="1" Color="#EEEEEE" Margin="0,5"/>
+
+                        <FlexLayout Wrap="Wrap" JustifyContent="Center" AlignItems="Center">
+                            <FlexLayout.Resources>
+                                <Style TargetType="Button">
+                                    <Setter Property="BackgroundColor" Value="#F0F0F0"/>
+                                    <Setter Property="TextColor" Value="Gray"/>
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                    <Setter Property="HeightRequest" Value="45"/>
+                                    <Setter Property="Padding" Value="15,0"/>
+                                    <Setter Property="Margin" Value="5"/>
+                                    <Setter Property="FontAttributes" Value="Bold"/>
+                                </Style>
+                            </FlexLayout.Resources>
+
+                            <Button Text="יום אחד" Command="{Binding SelectRangeTypeCommand}" CommandParameter="Day">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Day">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="השבוע" Command="{Binding SelectRangeTypeCommand}" CommandParameter="Week">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Week">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="שבועיים" Command="{Binding SelectRangeTypeCommand}" CommandParameter="TwoWeeks">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="TwoWeeks">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="שבוע הבא" Command="{Binding SelectRangeTypeCommand}" CommandParameter="NextWeek">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="NextWeek">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="חודש" Command="{Binding SelectRangeTypeCommand}" CommandParameter="Month">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="Month">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button Text="אחר..." Command="{Binding SelectRangeTypeCommand}" CommandParameter="CustomRolling">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="CustomRolling">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </FlexLayout>
+
+                        <VerticalStackLayout IsVisible="{Binding IsCustomRollingVisible}" Spacing="10" Margin="0,5">
+                            <Grid ColumnDefinitions="Auto, *, Auto" VerticalOptions="Center">
+                                <Label Grid.Column="0" Text="התחל מעוד:" VerticalOptions="Center" TextColor="Gray" FontAttributes="Bold"/>
+                                <Entry Grid.Column="1" Text="{Binding CustomOffsetDays}" Keyboard="Numeric" HorizontalTextAlignment="Center" Margin="10,0"/>
+                                <Label Grid.Column="2" Text="ימים" VerticalOptions="Center" TextColor="Gray"/>
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto, *, Auto" VerticalOptions="Center">
+                                <Label Grid.Column="0" Text="למשך:" VerticalOptions="Center" TextColor="Gray" FontAttributes="Bold"/>
+                                <Entry Grid.Column="1" Text="{Binding CustomDurationDays}" Keyboard="Numeric" HorizontalTextAlignment="Center" Margin="10,0"/>
+                                <Label Grid.Column="2" Text="ימים" VerticalOptions="Center" TextColor="Gray"/>
+                            </Grid>
                         </VerticalStackLayout>
-                        <Label Grid.Column="1" Text="-" VerticalOptions="Center" FontSize="20" TextColor="Gray"/>
-                        <VerticalStackLayout Grid.Column="2">
-                            <Label Text="עד:" FontSize="12" TextColor="Gray" HorizontalOptions="Center"/>
-                            <DatePicker Date="{Binding SpecificEndDate}" Format="dd/MM/yyyy" TextColor="Black" HorizontalOptions="Center"/>
-                        </VerticalStackLayout>
-                    </Grid>
 
-                    <BoxView HeightRequest="1" Color="#EEEEEE" Margin="0,10"/>
+                        <BoxView HeightRequest="1" Color="#EEEEEE" Margin="0,5"/>
+                        <Label Text="--- או ---" HorizontalOptions="Center" TextColor="LightGray" FontSize="14"/>
+                        <BoxView HeightRequest="1" Color="#EEEEEE" Margin="0,5"/>
 
-                    <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
-                        <Button Grid.Column="0" Text="ביטול" Command="{Binding CancelSelectionCommand}" BackgroundColor="Transparent" TextColor="Gray" BorderColor="Gray" BorderWidth="1" CornerRadius="8" HeightRequest="45" FontAttributes="Bold"/>
-                        <Button Grid.Column="1" Text="סגור והצג" Command="{Binding ApplyAndCloseCommand}" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="8" HeightRequest="45" FontAttributes="Bold"/>
-                    </Grid>
-                </VerticalStackLayout>
+                        <Label Text="תאריכים ספציפיים (נעול ביומן)" FontAttributes="Bold" FontSize="16" TextColor="{StaticResource Primary}" HorizontalOptions="Center" />
+
+                        <Button Text="בחר תאריכים" 
+                    ImageSource="calendar_main_icon.svg"
+                    ContentLayout="Right, 8"
+                    Command="{Binding SelectRangeTypeCommand}" 
+                    CommandParameter="SpecificDates" 
+                    BackgroundColor="#F0F0F0" 
+                    TextColor="Gray" 
+                    CornerRadius="8" 
+                    HeightRequest="45" 
+                    Margin="20,0" 
+                    FontAttributes="Bold">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding SelectedRangeType}" Value="SpecificDates">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+
+                        <Grid IsVisible="{Binding IsSpecificDatesVisible}" ColumnDefinitions="*, Auto, *" ColumnSpacing="10" Margin="0,10,0,0">
+                            <VerticalStackLayout Grid.Column="0">
+                                <Label Text="מאת:" FontSize="12" TextColor="Gray" HorizontalOptions="Center"/>
+                                <DatePicker Date="{Binding SpecificStartDate}" Format="dd/MM/yyyy" TextColor="Black" HorizontalOptions="Center"/>
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1" Text="-" VerticalOptions="Center" FontSize="20" TextColor="Gray"/>
+                            <VerticalStackLayout Grid.Column="2">
+                                <Label Text="עד:" FontSize="12" TextColor="Gray" HorizontalOptions="Center"/>
+                                <DatePicker Date="{Binding SpecificEndDate}" Format="dd/MM/yyyy" TextColor="Black" HorizontalOptions="Center"/>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <BoxView HeightRequest="1" Color="#EEEEEE" Margin="0,10"/>
+
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                            <Button Grid.Column="0" Text="ביטול" Command="{Binding CancelSelectionCommand}" BackgroundColor="Transparent" TextColor="Gray" BorderColor="Gray" BorderWidth="1" CornerRadius="8" HeightRequest="45" FontAttributes="Bold"/>
+                            <Button Grid.Column="1" Text="אישור" Command="{Binding ApplyAndCloseCommand}" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="8" HeightRequest="45" FontAttributes="Bold"/>
+                        </Grid>
+                    </VerticalStackLayout>
+                </ScrollView>
             </Border>
-
             <Grid BackgroundColor="#99000000" IsVisible="{Binding IsMergeModeActive}" ZIndex="20">
                 <Frame VerticalOptions="Center" HorizontalOptions="Center" WidthRequest="320" MaximumHeightRequest="450" CornerRadius="15" Padding="20">
                     <VerticalStackLayout Spacing="15">

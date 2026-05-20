@@ -46,6 +46,7 @@ public partial class SchedulePage : ContentView, ISwipeAwarePage
     }
 
     // Handles quick "Today" shortcut navigation triggers cleanly
+    //To Fix : the bord and the hand use list dont comunicte properly
     private void OnGoToTodayClicked(object sender, EventArgs e)
     {
         if (_viewModel != null)
