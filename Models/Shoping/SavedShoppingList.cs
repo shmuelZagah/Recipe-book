@@ -19,9 +19,4 @@ public class SavedShoppingList
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 
-    /// <summary>
-    /// True if the list is manually managed. False if it automatically 
-    /// updates when the scheduled meals change.
-    /// </summary>
-    public bool IsStatic { get; set; }
 }

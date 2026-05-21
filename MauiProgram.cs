@@ -81,6 +81,8 @@ namespace Recipe_book
             builder.Services.AddTransient<ShoppingListPage>();
 
             //Services
+            builder.Services.AddSingleton<Recipe_book.Services.Shopping.ShoppingListBuilderService>();
+            builder.Services.AddSingleton<Recipe_book.Services.Shopping.ShoppingListActionService>();
             builder.Services.AddSingleton<IFirebaseAuthService, FirebaseAuthService>();
 
             return builder.Build();

@@ -1,21 +1,14 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.Maui.ApplicationModel.DataTransfer;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Storage;
 using Recipe_book.Helpers;
-using Recipe_book.Models.Cloud;
 using Recipe_book.Models.Enums;
-using Recipe_book.Models.Recipes;
 using Recipe_book.Models.Shopping;
 using Recipe_book.Services;
+using Recipe_book.Services.Shopping;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Recipe_book.ViewModels;
@@ -23,556 +16,119 @@ namespace Recipe_book.ViewModels;
 public partial class ShoppingListViewModel : ObservableObject
 {
     private readonly RecipesDatabase _database;
+    private readonly ShoppingListBuilderService _builderService;
+    private readonly ShoppingListActionService _actionService;
+    private string _pendingNewListName;
 
-    #region Properties
-
+    #region UI Properties
     public static int? PendingImportId { get; set; }
     public static Action RefreshActivePage;
 
-    [ObservableProperty]
-    private string emptyViewText = "אין מצרכים מתוכננים בטווח הנבחר";
-
-    [ObservableProperty]
-    private SavedShoppingList currentShoppingList;
-
+    [ObservableProperty] private string emptyViewText = "אין מצרכים ברשימה זו";
+    [ObservableProperty] private SavedShoppingList currentShoppingList;
     public ObservableCollection<SavedShoppingList> SavedLists { get; } = new();
-
-    [ObservableProperty]
-    private bool isListsMenuOpen = false;
-
-    [ObservableProperty]
-    private DateTime startDate = DateTime.Today;
-
-    [ObservableProperty]
-    private DateTime endDate = DateTime.Today.AddDays(7);
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsHeaderClosed))]
-    private bool isHeaderOpen = false;
-
-    [ObservableProperty]
-    private bool isLoading = false;
-
-    [ObservableProperty]
-    private string loadingText = String.Empty;
-
-    private string defaultLoadingText = "טוען, נא להמתין";
-
-    public bool IsHeaderClosed => !IsHeaderOpen;
-
-    [ObservableProperty]
-    private bool isStaticTemp;
-
     public ObservableCollection<ShoppingItemGroup> GroupedShoppingItems { get; } = new();
-
-    [ObservableProperty]
-    private bool isMergeModeActive = false;
-
     public ObservableCollection<SelectableListDto> MergeableLists { get; } = new();
 
-    [ObservableProperty]
-    private bool hasValidList = true;
-
-    private int? importedListId;
-    public int? ImportedListId
-    {
-        get => importedListId;
-        set
-        {
-            importedListId = value;
-            if (value.HasValue)
-            {
-                MainThread.BeginInvokeOnMainThread(async () => await HandleImportedListAsync(value.Value));
-            }
-        }
-    }
-
-    #endregion
-
-
-    public ShoppingListViewModel(RecipesDatabase database)
-    {
-        _database = database;
-
-        RefreshActivePage = () =>
-        {
-            MainThread.BeginInvokeOnMainThread(async () => await InitializeAutoLoadAsync());
-        };
-
-        // Added "RefreshRecipes" to catch edits from the RecipeEditor
-        WeakReferenceMessenger.Default.Register<string>(this, async (r, m) =>
-        {
-            if (m == "ScheduleChanged" || m == "RecipesChanged" || m == "RefreshRecipes")
-            {
-                await InitializeAutoLoadAsync();
-            }
-        });
-    }
-
-    private async Task HandleImportedListAsync(int id)
-    {
-        await LoadAllListsAsync();
-        var list = SavedLists.FirstOrDefault(l => l.Id == id);
-        if (list != null)
-        {
-            await SwitchListAsync(list);
-        }
-        importedListId = null;
-    }
-
-    #region List Management Logic
-
-    public async Task LoadAllListsAsync()
-    {
-        var lists = await _database.GetSavedShoppingListsAsync();
-        SavedLists.Clear();
-        foreach (var list in lists)
-        {
-            SavedLists.Add(list);
-        }
-    }
-
-    [RelayCommand]
-    public void ToggleListsMenu()
-    {
-        IsListsMenuOpen = !IsListsMenuOpen;
-        IsHeaderOpen = false;
-    }
-
-    [RelayCommand]
-    public async Task SwitchListAsync(SavedShoppingList selectedList)
-    {
-        if (selectedList == null) return;
-
-        CurrentShoppingList = selectedList;
-        IsListsMenuOpen = false;
-        HasValidList = true;
-
-        LoadPreferences();
-        UpdateVisibility();
-        CalculateActualDates();
-        UpdateStatusText();
-
-        await GenerateListAsync();
-    }
-
-    [RelayCommand]
-    public async Task RenameListAsync(SavedShoppingList listToRename)
-    {
-        if (listToRename == null) return;
-
-        string newName = await Application.Current.MainPage.DisplayPromptAsync(
-            "שינוי שם רשימה",
-            "הזן שם חדש לרשימה:",
-            "שמור",
-            "ביטול",
-            listToRename.Title,
-            maxLength: 40,
-            keyboard: Keyboard.Text);
-
-        if (!string.IsNullOrWhiteSpace(newName) && newName != listToRename.Title)
-        {
-            listToRename.Title = newName.Trim();
-
-            await _database.SaveShoppingListAsync(listToRename);
-
-            if (CurrentShoppingList?.Id == listToRename.Id)
-            {
-                OnPropertyChanged(nameof(CurrentShoppingList));
-            }
-
-            await LoadAllListsAsync();
-        }
-    }
-
-    [RelayCommand]
-    public async Task CreateNewListAsync()
-    {
-        string listName = await Application.Current.MainPage.DisplayPromptAsync(
-            "רשימה חדשה", "איך תרצה לקרוא לרשימה?", "צור", "ביטול");
-
-        if (string.IsNullOrWhiteSpace(listName)) return;
-
-        var newList = new SavedShoppingList
-        {
-            Title = listName,
-            IsStatic = true,
-            StartDate = DateTime.Today,
-            EndDate = DateTime.Today.AddDays(7),
-            CreatedAt = DateTime.Now
-        };
-
-        await _database.SaveShoppingListAsync(newList);
-        await LoadAllListsAsync();
-
-        await SwitchListAsync(newList);
-    }
-
-    [RelayCommand]
-    public void OpenMergeMode()
-    {
-        MergeableLists.Clear();
-        foreach (var list in SavedLists)
-        {
-            MergeableLists.Add(new SelectableListDto { List = list, IsSelected = false });
-        }
-
-        IsListsMenuOpen = false;
-        IsMergeModeActive = true;
-    }
-
-    [RelayCommand]
-    public void CancelMerge()
-    {
-        IsMergeModeActive = false;
-    }
-
-    [RelayCommand]
-    public async Task ConfirmMergeAsync()
-    {
-        var selectedLists = MergeableLists.Where(l => l.IsSelected).Select(l => l.List).ToList();
-
-        if (selectedLists.Count < 2)
-        {
-            await Application.Current.MainPage.DisplayAlert("שגיאה", "יש לבחור לפחות 2 רשימות למיזוג.", "אישור");
-            return;
-        }
-
-        string newListName = await Application.Current.MainPage.DisplayPromptAsync(
-            "רשימה ממוזגת", "איך לקרוא לרשימה הממוזגת החדשה?", "המשך", "ביטול");
-
-        if (string.IsNullOrWhiteSpace(newListName)) return;
-
-        IsMergeModeActive = false;
-
-        // 1. Create the new list and force it to be STATIC (no scheduled updates)
-        var newList = new SavedShoppingList
-        {
-            Title = newListName,
-            IsStatic = true,
-            CreatedAt = DateTime.Now
-        };
-
-        await _database.SaveShoppingListAsync(newList);
-
-        // 2. Smart Aggregation using TextHelpers
-        var aggregatedItems = new List<SavedShoppingListItem>();
-        string NormalizeUnit(string u) => string.IsNullOrWhiteSpace(u) || u.Trim() == "יחידות" ? "יחידות" : u.Trim();
-
-        foreach (var list in selectedLists)
-        {
-            var items = await _database.GetItemsForShoppingListAsync(list.Id);
-
-            foreach (var item in items)
-            {
-                string cleanName = item.Name?.Trim() ?? "";
-                string cleanUnit = NormalizeUnit(item.Unit);
-
-                var variations = TextHelpers.GetPossibleSingulars(cleanName);
-                SavedShoppingListItem match = null;
-
-                // Search for an existing match in our newly aggregated list
-                foreach (var aggItem in aggregatedItems)
-                {
-                    var aggVariations = TextHelpers.GetPossibleSingulars(aggItem.Name);
-
-                    if (NormalizeUnit(aggItem.Unit) == cleanUnit &&
-                        variations.Intersect(aggVariations).Any())
-                    {
-                        match = aggItem;
-                        break;
-                    }
-                }
-
-                if (match != null)
-                {
-                    // Found a match! Add the TOTAL quantity of the incoming item into the MANUAL quantity
-                    match.ManualQuantity += item.Quantity;
-                    match.Quantity = match.ManualQuantity;
-                }
-                else
-                {
-                    // New item for the merged list. Make it 100% manual and locked.
-                    aggregatedItems.Add(new SavedShoppingListItem
-                    {
-                        ListId = newList.Id,
-                        Name = cleanName,
-                        // Take the total quantity (Manual + Auto) from the old list and make it pure Manual
-                        ManualQuantity = item.Quantity,
-                        AutoQuantity = 0,
-                        Quantity = item.Quantity,
-                        Unit = cleanUnit,
-                        Category = string.IsNullOrWhiteSpace(item.Category) ? "כללי" : item.Category,
-                        IsLocked = true, // Force the lock icon
-                        IsBought = false
-                    });
-                }
-            }
-        }
-
-        // 3. Save all aggregated items directly to the database
-        foreach (var item in aggregatedItems)
-        {
-            // Calculate the final display text for the merged item
-            string displayUnit = item.Unit == "יחידות" ? "" : item.Unit;
-            item.DisplayText = string.IsNullOrWhiteSpace(displayUnit) ?
-                $"{item.Quantity} {item.Name}" :
-                $"{item.Quantity} {displayUnit} {item.Name}";
-
-            await _database.SaveShoppingListItemAsync(item);
-        }
-
-        // 4. Reload and display the new merged list
-        await LoadAllListsAsync();
-        await SwitchListAsync(newList);
-
-        WeakReferenceMessenger.Default.Send("ShoppingChanged");
-        await Application.Current.MainPage.DisplayAlert("הצלחה!", "הרשימות מוזגו בהצלחה לרשימה אחת מאוחדת וקבועה.", "מעולה");
-    }
-
-    [RelayCommand]
-    public async Task DeleteListAsync(SavedShoppingList listToDelete)
-    {
-        if (listToDelete == null) return;
-
-        bool confirm = await Application.Current.MainPage.DisplayAlert(
-            "מחיקת רשימה", $"האם אתה בטוח שברצונך למחוק את '{listToDelete.Title}'?", "כן, מחק", "ביטול");
-
-        if (confirm)
-        {
-            await _database.DeleteShoppingListAsync(listToDelete);
-            await LoadAllListsAsync();
-
-            if (CurrentShoppingList?.Id == listToDelete.Id)
-            {
-                if (SavedLists.Any())
-                {
-                    var fallbackList = SavedLists.FirstOrDefault(l => !l.IsStatic) ?? SavedLists.First();
-                    await SwitchListAsync(fallbackList);
-                }
-                else
-                {
-                    CurrentShoppingList = new SavedShoppingList { Title = "אין רשימות כרגע", Id = -1, IsStatic = true };
-                    HasValidList = false;
-                    EmptyViewText = "";
-                    GroupedShoppingItems.Clear();
-                    StatusText = "לא קיימות רשימות. לחץ על התפריט ליצירת רשימה חדשה.";
-                }
-            }
-        }
-    }
-
-
-    [RelayCommand]
-    public async Task AddManualItemAsync()
-    {
-        if (CurrentShoppingList == null || CurrentShoppingList.Id == -1) return;
-
-        string itemName = await Application.Current.MainPage.DisplayPromptAsync(
-            "הוספת מצרך", "מה תרצה להוסיף לרשימה?", "המשך", "ביטול");
-
-        if (string.IsNullOrWhiteSpace(itemName)) return;
-        itemName = itemName.Trim();
-
-        string quantityStr = await Application.Current.MainPage.DisplayPromptAsync(
-            "כמות", $"כמה {itemName} להוסיף?", "הוסף", "ביטול", keyboard: Keyboard.Numeric);
-
-        if (!double.TryParse(quantityStr, out double manualQty) || manualQty <= 0) return;
-
-        // 1. Fetch existing items
-        var existingItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
-        var variations = TextHelpers.GetPossibleSingulars(itemName);
-        SavedShoppingListItem match = null;
-
-        // 2. Silent Match (Exact or direct Plural/Singular)
-        foreach (var item in existingItems)
-        {
-            var itemVariations = TextHelpers.GetPossibleSingulars(item.Name?.Trim() ?? "");
-            if (variations.Intersect(itemVariations).Any() &&
-                (string.IsNullOrWhiteSpace(item.Unit) || item.Unit == "יחידות"))
-            {
-                match = item;
-                break;
-            }
-        }
-
-        // 3. Smart Typo & Variation Match (Using Levenshtein exactly like the schedule engine)
-        if (match == null)
-        {
-            int maxAllowedDistance = itemName.Length <= 4 ? 1 : 2;
-            var suggestions = existingItems
-                .Where(i => (string.IsNullOrWhiteSpace(i.Unit) || i.Unit == "יחידות"))
-                .Where(i => variations.Any(v =>
-                    (i.Name ?? "").Contains(v) || v.Contains(i.Name ?? "") ||
-                    TextHelpers.ComputeLevenshteinDistance(v, i.Name ?? "") <= maxAllowedDistance))
-                .OrderBy(i => TextHelpers.ComputeLevenshteinDistance(itemName, i.Name ?? ""))
-                .ToList();
-
-            if (suggestions.Any())
-            {
-                var bestMatch = suggestions.First();
-                bool confirm = await Application.Current.MainPage.DisplayAlert(
-                    "זיהוי מצרך",
-                    $"האם התכוונת ל-'{bestMatch.Name}' שכבר קיים ברשימה?",
-                    "כן, אחד אותם", "לא, זה מצרך חדש");
-
-                if (confirm)
-                {
-                    match = bestMatch;
-                }
-            }
-        }
-
-        // 4. Merge or Create
-        if (match != null)
-        {
-            match.ManualQuantity += manualQty;
-            match.Quantity = match.ManualQuantity + match.AutoQuantity;
-            match.IsLocked = true;
-
-            if (match.Quantity > match.CoveredQuantity)
-            {
-                match.IsBought = false;
-            }
-
-            match.UpdateDisplayText();
-            await _database.SaveShoppingListItemAsync(match);
-        }
-        else
-        {
-            // Ask for the category, exactly like we do in LearnNewIngredientAsync!
-            string selectedCategory = await Application.Current.MainPage.DisplayActionSheet(
-                     $"לאיזו מחלקה שייך '{itemName}'?",
-                     "דלג", null,
-                     AppConstants.ShoppingCategories);
-
-            string finalCategory = (selectedCategory == "דלג" || string.IsNullOrEmpty(selectedCategory)) ? "כללי" : selectedCategory;
-
-            // Brand new item with a proper category
-            var newItem = new SavedShoppingListItem
-            {
-                ListId = CurrentShoppingList.Id,
-                Name = itemName,
-                ManualQuantity = manualQty,
-                AutoQuantity = 0,
-                Quantity = manualQty,
-                Unit = "יחידות",
-                Category = finalCategory,
-                IsLocked = true,
-                DisplayText = $"{manualQty} {itemName}",
-                IsBought = false
-            };
-            await _database.SaveShoppingListItemAsync(newItem);
-        }
-
-        // Refresh UI
-        await GenerateListAsync();
-    }
-
-    #endregion
-
-    #region Navigation & Date Logic
-
+    [ObservableProperty] private bool isListsMenuOpen = false;
+    [ObservableProperty] private bool isLoading = false;
+    [ObservableProperty] private string loadingText = String.Empty;
+    [ObservableProperty] private bool isMergeModeActive = false;
+    [ObservableProperty] private bool hasValidList = true;
     [ObservableProperty] private string statusText;
+
+    // Wizard Panel State Properties
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(IsHeaderClosed))] private bool isHeaderOpen = false;
+    public bool IsHeaderClosed => !IsHeaderOpen;
+
     [ObservableProperty] private DateRangeType selectedRangeType = DateRangeType.Week;
     [ObservableProperty] private bool isCustomRollingVisible;
     [ObservableProperty] private bool isSpecificDatesVisible;
-
     [ObservableProperty] private int customOffsetDays = 0;
     [ObservableProperty] private int customDurationDays = 7;
-
     [ObservableProperty] private DateTime specificStartDate = DateTime.Today;
     [ObservableProperty] private DateTime specificEndDate = DateTime.Today.AddDays(7);
+    [ObservableProperty] private bool isEmptyListTemp = false;
+    #endregion
 
+    public ShoppingListViewModel(RecipesDatabase database, ShoppingListBuilderService builderService, ShoppingListActionService actionService)
+    {
+        _database = database;
+        _builderService = builderService;
+        _actionService = actionService;
+
+        RefreshActivePage = () => { MainThread.BeginInvokeOnMainThread(async () => await InitializeAutoLoadAsync()); };
+    }
+
+    #region Auto Load & Base List Switch
     public async Task InitializeAutoLoadAsync()
     {
         await LoadAllListsAsync();
-
         if (SavedLists.Count == 0)
         {
-            CurrentShoppingList = new SavedShoppingList { Title = "אין רשימות כרגע", Id = -1, IsStatic = true };
-            HasValidList = false;
-            EmptyViewText = "";
-            GroupedShoppingItems.Clear();
-            StatusText = "לא קיימות רשימות. לחץ על התפריט ליצירת רשימה חדשה.";
+            CurrentShoppingList = new SavedShoppingList { Title = "אין רשימות כרגע", Id = -1 };
+            HasValidList = false; EmptyViewText = ""; GroupedShoppingItems.Clear();
+            StatusText = "לא קיימות רשימות. לחץ על ה- + ליצירת רשימה חדשה.";
             return;
         }
 
-        HasValidList = true;
-        EmptyViewText = "אין מצרכים מתוכננים בטווח הנבחר";
+        HasValidList = true; EmptyViewText = "אין מצרכים ברשימה זו";
 
         if (PendingImportId.HasValue)
         {
             var targetList = SavedLists.FirstOrDefault(l => l.Id == PendingImportId.Value);
             PendingImportId = null;
-            if (targetList != null)
-            {
-                await SwitchListAsync(targetList);
-                return;
-            }
+            if (targetList != null) { await SwitchListAsync(targetList); return; }
         }
 
-        if (CurrentShoppingList == null || CurrentShoppingList.Id == -1)
-        {
-            CurrentShoppingList = SavedLists.FirstOrDefault(l => !l.IsStatic) ?? SavedLists.First();
-        }
+        if (CurrentShoppingList == null || CurrentShoppingList.Id == -1) CurrentShoppingList = SavedLists.First();
+        await SwitchListAsync(CurrentShoppingList);
+    }
 
-        LoadPreferences();
-        UpdateVisibility();
-        CalculateActualDates();
+    public async Task LoadAllListsAsync()
+    {
+        var lists = await _database.GetSavedShoppingListsAsync();
+        SavedLists.Clear();
+        foreach (var list in lists) SavedLists.Add(list);
+    }
+
+    [RelayCommand] public void ToggleListsMenu() => IsListsMenuOpen = !IsListsMenuOpen;
+
+    [RelayCommand]
+    public async Task SwitchListAsync(SavedShoppingList selectedList)
+    {
+        if (selectedList == null) return;
+        CurrentShoppingList = selectedList;
+        IsListsMenuOpen = false; HasValidList = true;
         UpdateStatusText();
         await GenerateListAsync();
     }
 
-    private void LoadPreferences()
+    private void UpdateStatusText()
     {
-        string listIdStr = CurrentShoppingList?.Id.ToString() ?? "0";
-
-        string savedRangeStr = Preferences.Default.Get($"ShoppingListRange_{listIdStr}", nameof(DateRangeType.Week));
-        if (Enum.TryParse(typeof(DateRangeType), savedRangeStr, out var parsedRange))
-            SelectedRangeType = (DateRangeType)parsedRange;
-
-        CustomOffsetDays = Preferences.Default.Get($"ShoppingListOffset_{listIdStr}", 0);
-        CustomDurationDays = Preferences.Default.Get($"ShoppingListDuration_{listIdStr}", 7);
-        SpecificStartDate = Preferences.Default.Get($"ShoppingListSpecStart_{listIdStr}", DateTime.Today);
-        SpecificEndDate = Preferences.Default.Get($"ShoppingListSpecEnd_{listIdStr}", DateTime.Today.AddDays(7));
-        IsStaticTemp = CurrentShoppingList?.IsStatic ?? false;
-        if (IsStaticTemp)
-        {
-            SelectedRangeType = (DateRangeType)(-1);
-        }
+        if (CurrentShoppingList == null) { StatusText = ""; return; }
+        if (CurrentShoppingList.StartDate.HasValue && CurrentShoppingList.EndDate.HasValue)
+            StatusText = $"לתאריכים: {CurrentShoppingList.StartDate.Value:dd.MM} - {CurrentShoppingList.EndDate.Value:dd.MM}";
+        else
+            StatusText = "רשימה קבועה (ללא תאריכים)";
     }
+    #endregion
 
-    private void SavePreferences()
-    {
-        string listIdStr = CurrentShoppingList?.Id.ToString() ?? "0";
-
-        Preferences.Default.Set($"ShoppingListRange_{listIdStr}", SelectedRangeType.ToString());
-        Preferences.Default.Set($"ShoppingListOffset_{listIdStr}", CustomOffsetDays);
-        Preferences.Default.Set($"ShoppingListDuration_{listIdStr}", CustomDurationDays);
-        Preferences.Default.Set($"ShoppingListSpecStart_{listIdStr}", SpecificStartDate);
-        Preferences.Default.Set($"ShoppingListSpecEnd_{listIdStr}", SpecificEndDate);
-    }
-
+    #region Creation Wizard Navigation
     [RelayCommand]
     public void SelectRangeType(string rangeTypeStr)
     {
         if (Enum.TryParse(typeof(DateRangeType), rangeTypeStr, out var parsedRange))
         {
             SelectedRangeType = (DateRangeType)parsedRange;
-            UpdateVisibility();
-            IsStaticTemp = false;
+            IsEmptyListTemp = false; UpdateVisibility();
         }
     }
 
     [RelayCommand]
-    public void ToggleStaticMode()
+    public void ToggleEmptyListMode()
     {
-        if (IsStaticTemp) return;
-
-        IsStaticTemp = true;
-        SelectedRangeType = (DateRangeType)(-1);
-        UpdateVisibility();
+        IsEmptyListTemp = true; SelectedRangeType = (DateRangeType)(-1); UpdateVisibility();
     }
 
     private void UpdateVisibility()
@@ -581,22 +137,18 @@ public partial class ShoppingListViewModel : ObservableObject
         IsSpecificDatesVisible = SelectedRangeType == DateRangeType.SpecificDates;
     }
 
-    [RelayCommand]
-    public void OpenHeader()
-    {
- 
-        IsListsMenuOpen = false;
-        LoadPreferences();
-        UpdateVisibility();
-        IsHeaderOpen = true;
-    }
+    [RelayCommand] public void CancelSelection() => IsHeaderOpen = false;
 
     [RelayCommand]
-    public void CancelSelection()
+    public async Task CreateNewListAsync()
     {
-        IsHeaderOpen = false;
-        LoadPreferences();
+        string listName = await Application.Current.MainPage.DisplayPromptAsync("רשימה חדשה", "איך תרצה לקרוא לרשימה?", "המשך", "ביטול");
+        if (string.IsNullOrWhiteSpace(listName)) return;
+
+        _pendingNewListName = listName;
+        IsListsMenuOpen = false; IsEmptyListTemp = false; SelectedRangeType = DateRangeType.Week;
         UpdateVisibility();
+        IsHeaderOpen = true;
     }
 
     [RelayCommand]
@@ -608,134 +160,53 @@ public partial class ShoppingListViewModel : ObservableObject
             return;
         }
 
-        SavePreferences();
-        CalculateActualDates();
+        IsHeaderOpen = false;
+        DateTime? targetStartDate = DateTime.Today; DateTime? targetEndDate = DateTime.Today;
 
-        if (CurrentShoppingList != null)
+        if (IsEmptyListTemp) { targetStartDate = null; targetEndDate = null; }
+        else
         {
-            // Detect if the user just switched this list from Auto-Updating to Static
-            bool justBecameStatic = IsStaticTemp && !CurrentShoppingList.IsStatic;
-
-            CurrentShoppingList.IsStatic = IsStaticTemp;
-            CurrentShoppingList.StartDate = StartDate;
-            CurrentShoppingList.EndDate = EndDate;
-            await _database.SaveShoppingListAsync(CurrentShoppingList);
-
-            if (justBecameStatic)
+            switch (SelectedRangeType)
             {
-                await _database.SyncShoppingListItemsAsync(CurrentShoppingList.Id, new List<SavedShoppingListItem>());
+                case DateRangeType.Day: targetEndDate = DateTime.Today; break;
+                case DateRangeType.Week: targetEndDate = DateTime.Today.AddDays(7); break;
+                case DateRangeType.TwoWeeks: targetEndDate = DateTime.Today.AddDays(14); break;
+                case DateRangeType.NextWeek: targetStartDate = DateTime.Today.AddDays(7); targetEndDate = DateTime.Today.AddDays(14); break;
+                case DateRangeType.Month: targetEndDate = DateTime.Today.AddDays(30); break;
+                case DateRangeType.CustomRolling: targetStartDate = DateTime.Today.AddDays(CustomOffsetDays); targetEndDate = targetStartDate.Value.AddDays(CustomDurationDays); break;
+                case DateRangeType.SpecificDates: targetStartDate = SpecificStartDate.Date; targetEndDate = SpecificEndDate.Date; break;
             }
         }
 
-        UpdateStatusText();
+        var newList = new SavedShoppingList { Title = _pendingNewListName, StartDate = targetStartDate, EndDate = targetEndDate, CreatedAt = DateTime.Now };
+        await _database.SaveShoppingListAsync(newList);
 
-        IsHeaderOpen = false;
-        await GenerateListAsync();
-    }
-
-    private void CalculateActualDates()
-    {
-        switch (SelectedRangeType)
+        if (!IsEmptyListTemp && targetStartDate.HasValue && targetEndDate.HasValue)
         {
-            case DateRangeType.Day:
-                StartDate = DateTime.Today;
-                EndDate = DateTime.Today;
-                break;
-            case DateRangeType.Week:
-                StartDate = DateTime.Today;
-                EndDate = DateTime.Today.AddDays(7);
-                break;
-            case DateRangeType.TwoWeeks:
-                StartDate = DateTime.Today;
-                EndDate = DateTime.Today.AddDays(14);
-                break;
-            case DateRangeType.Month:
-                StartDate = DateTime.Today;
-                EndDate = DateTime.Today.AddDays(30);
-                break;
-            case DateRangeType.NextWeek:
-                StartDate = DateTime.Today.AddDays(7);
-                EndDate = DateTime.Today.AddDays(14);
-                break;
-            case DateRangeType.CustomRolling:
-                StartDate = DateTime.Today.AddDays(CustomOffsetDays);
-                EndDate = StartDate.AddDays(CustomDurationDays);
-                break;
-            case DateRangeType.SpecificDates:
-                StartDate = SpecificStartDate.Date;
-                EndDate = SpecificEndDate.Date;
-                break;
-        }
-    }
-
-    private void UpdateStatusText()
-    {
-        if (CurrentShoppingList != null && CurrentShoppingList.IsStatic)
-        {
-            StatusText = $"רשימה סטטית (אינה מתעדכנת מזמנים)";
-            return;
+            IsLoading = true; LoadingText = "מחלץ מצרכים מלוח הארוחות...";
+            try
+            {
+                // Delegate core compilation engine heavy lifting to the Builder Service
+                var compiledFlatSnapshot = await _builderService.BuildIngredientsFromScheduleAsync(newList.Id, targetStartDate.Value, targetEndDate.Value);
+                await _database.SaveStaticShoppingListItemsAsync(newList.Id, compiledFlatSnapshot);
+            }
+            finally { IsLoading = false; }
         }
 
-        string formattedStart = StartDate.ToString("dd.MM");
-        string formattedEnd = EndDate.ToString("dd.MM");
-
-        switch (SelectedRangeType)
-        {
-            case DateRangeType.Day:
-                StatusText = $"להיום ({formattedStart})";
-                break;
-            case DateRangeType.Week:
-                StatusText = $"לשבוע הקרוב ({formattedStart} - {formattedEnd})";
-                break;
-            case DateRangeType.TwoWeeks:
-                StatusText = $"לשבועיים הקרובים ({formattedStart} - {formattedEnd})";
-                break;
-            case DateRangeType.Month:
-                StatusText = $"לחודש הקרוב ({formattedStart} - {formattedEnd})";
-                break;
-            case DateRangeType.NextWeek:
-                StatusText = $"לשבוע הבא ({formattedStart} - {formattedEnd})";
-                break;
-            case DateRangeType.CustomRolling:
-                StatusText = $"ל-{CustomDurationDays} ימים ({formattedStart} - {formattedEnd})";
-                break;
-            case DateRangeType.SpecificDates:
-                StatusText = $"לתאריכים ({formattedStart} - {formattedEnd})";
-                break;
-        }
+        await LoadAllListsAsync();
+        await SwitchListAsync(newList);
     }
-
     #endregion
 
-    #region Core Generation Logic
-
+    #region Standard Maintenance Commands
     [RelayCommand]
     public async Task GenerateListAsync()
     {
         GroupedShoppingItems.Clear();
+        if (CurrentShoppingList == null || CurrentShoppingList.Id == -1) return;
 
-        if (CurrentShoppingList != null && CurrentShoppingList.IsStatic)
-        {
-            await LoadStaticListItemsAsync();
-            return;
-        }
-
-        var mealsInRange = await _database.GetScheduledMealsAsync(StartDate.Date, EndDate.Date);
-        var conversions = await _database.GetIngredientConversionsAsync();
-        conversions = conversions.OrderByDescending(c => c.Keyword.Length).ToList();
-
-        var aggregatedIngredients = await ProcessAndAggregateIngredientsAsync(mealsInRange, conversions);
-
-        await BuildAndGroupShoppingList(aggregatedIngredients);
-    }
-
-    private async Task LoadStaticListItemsAsync()
-    {
         var items = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
-
-        var grouped = items.GroupBy(x => x.Category)
-                           .Select(g => new ShoppingItemGroup(g.Key, g))
-                           .OrderBy(g => g.CategoryName);
+        var grouped = items.GroupBy(x => x.Category).Select(g => new ShoppingItemGroup(g.Key, g)).OrderBy(g => g.CategoryName);
 
         foreach (var group in grouped)
         {
@@ -743,474 +214,135 @@ public partial class ShoppingListViewModel : ObservableObject
             {
                 item.PropertyChanged += async (s, e) =>
                 {
-                    if (e.PropertyName == nameof(SavedShoppingListItem.IsBought))
-                    {
-                        await _database.SaveShoppingListItemAsync(item);
-                    }
+                    if (e.PropertyName == nameof(SavedShoppingListItem.IsBought)) await _database.SaveShoppingListItemAsync(item);
                 };
             }
             GroupedShoppingItems.Add(group);
         }
     }
 
-    private async Task<Dictionary<string, (double Quantity, string Category, DateTime MaxDate)>> ProcessAndAggregateIngredientsAsync(
-        List<ScheduledMeal> meals, List<IngredientConversion> conversions)
+    [RelayCommand]
+    public async Task AddManualItemAsync()
     {
-        var aggregatedIngredients = new Dictionary<string, (double Quantity, string Category, DateTime MaxDate)>();
+        if (CurrentShoppingList == null || CurrentShoppingList.Id == -1) return;
+        string itemName = await Application.Current.MainPage.DisplayPromptAsync("הוספת מצרך", "מה תרצה להוסיף לרשימה?", "המשך", "ביטול");
+        if (string.IsNullOrWhiteSpace(itemName)) return;
+        itemName = itemName.Trim();
 
-        foreach (var meal in meals)
+        string quantityStr = await Application.Current.MainPage.DisplayPromptAsync("כמות", $"כמה {itemName} להוסיף?", "הוסף", "ביטול", keyboard: Keyboard.Numeric);
+        if (!double.TryParse(quantityStr, out double addedQty) || addedQty <= 0) return;
+
+        var existingItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
+        var variations = TextHelpers.GetPossibleSingulars(itemName);
+        SavedShoppingListItem match = existingItems.FirstOrDefault(item => variations.Intersect(TextHelpers.GetPossibleSingulars(item.Name?.Trim() ?? "")).Any() && (string.IsNullOrWhiteSpace(item.Unit) || item.Unit == "יחידות"));
+
+        if (match != null)
         {
-            var recipe = await _database.GetRecipeAsync(meal.RecipeId);
-            if (recipe == null) continue;
-
-            var recipeIngredients = await _database.GetIngredientsAsync(meal.RecipeId);
-            if (recipeIngredients == null || !recipeIngredients.Any()) continue;
-
-            foreach (var ingredient in recipeIngredients)
-            {
-                if (string.IsNullOrWhiteSpace(ingredient.Name) || ingredient.Quantity == null) continue;
-
-                // Pass the meal date downwards
-                await ProcessSingleIngredientAsync(recipe, ingredient, meal.Date, conversions, aggregatedIngredients);
-            }
-        }
-
-        return aggregatedIngredients;
-    }
-
-    private async Task ProcessSingleIngredientAsync(Recipe recipe, Ingredient ingredient, DateTime mealDate, List<IngredientConversion> conversions, Dictionary<string, (double Quantity, string Category, DateTime MaxDate)> aggregatedIngredients)
-    {
-        double quantity = ingredient.Quantity.Value;
-        string unit = ingredient.Unit?.Trim() ?? "יחידות";
-        string name = ingredient.Name.Trim();
-
-        if (unit == "ק״ג") { quantity *= 1000; unit = "גרם"; }
-        else if (unit == "ליטר") { quantity *= 1000; unit = "מ״ל"; }
-
-        var conversion = await FindOrSuggestConversionAsync(recipe, ingredient, name, conversions);
-
-        name = ingredient.Name.Trim();
-        bool isConvertibleVolume = unit == "כוס" || unit == "כף" || unit == "כפית";
-
-        if (conversion == null)
-        {
-            conversion = await LearnNewIngredientAsync(recipe, ingredient, name, unit, isConvertibleVolume, conversions);
-            if (conversion == null) return;
-            name = conversion.Keyword;
-        }
-
-        AggregateFinalIngredient(quantity, unit, name, conversion, mealDate, aggregatedIngredients);
-    }
-
-    // ... (Keep FindOrSuggestConversionAsync, ApplyCorrectionAsync, LearnNewIngredientAsync exactly as they are) ...
-
-    private void AggregateFinalIngredient(double quantity, string unit, string name, IngredientConversion conversion, DateTime mealDate, Dictionary<string, (double Quantity, string Category, DateTime MaxDate)> aggregatedIngredients)
-    {
-        string finalUnit = unit;
-        string aggregatedKeyName = name;
-        string itemCategory = "כללי";
-
-        if (conversion != null)
-        {
-            itemCategory = string.IsNullOrWhiteSpace(conversion.Category) ? "כללי" : conversion.Category;
-
-            if (name.Contains("שימורים") || unit.Contains("שימורים")) itemCategory = "שימורים";
-
-            bool isVolumeOrWeight = unit == "כוס" || unit == "כף" || unit == "כפית" || unit == "גרם" || unit == "מ״ל";
-
-            var possibleSingulars = TextHelpers.GetPossibleSingulars(name);
-            bool isPluralOfKeyword = possibleSingulars.Contains(conversion.Keyword);
-
-            if (isVolumeOrWeight || isPluralOfKeyword || name == conversion.Keyword)
-            {
-                aggregatedKeyName = conversion.Keyword;
-            }
-
-            if (isVolumeOrWeight)
-            {
-                if ((unit == "כוס" || unit == "כף" || unit == "כפית") && conversion.AmountPerCup > 0)
-                {
-                    if (unit == "כוס") quantity *= conversion.AmountPerCup;
-                    else if (unit == "כף") quantity *= (conversion.AmountPerCup / 16.0);
-                    else if (unit == "כפית") quantity *= (conversion.AmountPerCup / 48.0);
-
-                    finalUnit = conversion.BaseUnit;
-                }
-                else if (unit == "גרם" || unit == "מ״ל")
-                {
-                    finalUnit = unit;
-                }
-            }
-        }
-
-        string dictionaryKey = $"{aggregatedKeyName}_{finalUnit}";
-
-        if (aggregatedIngredients.ContainsKey(dictionaryKey))
-        {
-            var existing = aggregatedIngredients[dictionaryKey];
-            // Calculate the latest date this ingredient is needed
-            DateTime maxDate = mealDate > existing.MaxDate ? mealDate : existing.MaxDate;
-            aggregatedIngredients[dictionaryKey] = (existing.Quantity + quantity, existing.Category, maxDate);
+            match.Quantity += addedQty; match.IsBought = false; match.UpdateDisplayText();
+            await _database.SaveShoppingListItemAsync(match);
         }
         else
         {
-            aggregatedIngredients.Add(dictionaryKey, (quantity, itemCategory, mealDate));
-        }
-    }
-    private async Task<IngredientConversion> FindOrSuggestConversionAsync(Recipe recipe, Ingredient ingredient, string originalName, List<IngredientConversion> conversions)
-    {
-        var possibleNames = TextHelpers.GetPossibleSingulars(originalName);
+            string selectedCategory = await Application.Current.MainPage.DisplayActionSheet($"לאיזו מחלקה שייך '{itemName}'?", "דלג", null, AppConstants.ShoppingCategories);
+            string finalCategory = (selectedCategory == "דלג" || string.IsNullOrEmpty(selectedCategory)) ? "כללי" : selectedCategory;
 
-        var conversion = conversions.FirstOrDefault(c => possibleNames.Any(p => c.Keyword == p || originalName.Contains(c.Keyword) || p.Contains(c.Keyword)));
-
-        if (conversion == null)
-        {
-            int maxAllowedDistance = originalName.Length <= 4 ? 1 : 2;
-
-            var suggestions = conversions
-                .Where(c => possibleNames.Any(p =>
-                    c.Keyword.Contains(p) || p.Contains(c.Keyword) ||
-                    TextHelpers.ComputeLevenshteinDistance(p, c.Keyword) <= maxAllowedDistance))
-                .OrderBy(c => TextHelpers.ComputeLevenshteinDistance(originalName, c.Keyword))
-                .Select(c => c.Keyword)
-                .Distinct()
-                .Take(4)
-                .ToList();
-
-            if (suggestions.Any())
-            {
-                suggestions.Add("משהו אחר (צור חדש)");
-
-                string selectedOption = await Application.Current.MainPage.DisplayActionSheet(
-                    $"במתכון '{recipe.Title}' כתבת '{originalName}'. למה התכוונת?", "דלג", null, suggestions.ToArray());
-
-                if (selectedOption != "דלג" && !string.IsNullOrEmpty(selectedOption) && selectedOption != "משהו אחר (צור חדש)")
-                {
-                    conversion = conversions.First(c => c.Keyword == selectedOption);
-                    await ApplyCorrectionAsync(ingredient, originalName, selectedOption);
-                }
-            }
-        }
-        return conversion;
-    }
-
-    private async Task ApplyCorrectionAsync(Ingredient currentIngredient, string oldName, string newName)
-    {
-        string choice = await Application.Current.MainPage.DisplayActionSheet(
-            $"לשנות את '{oldName}' ל-'{newName}' רק כאן או בכל המתכונים?",
-            "רק במתכון הזה", null, "בכל המתכונים שלי");
-
-        if (choice == "בכל המתכונים שלי")
-        {
-            var allIngredients = await _database.GetIngredientsByNameAsync(oldName);
-
-            foreach (var ing in allIngredients)
-            {
-                ing.Name = newName;
-                await _database.SaveIngredientAsync(ing);
-            }
-            currentIngredient.Name = newName;
-        }
-        else
-        {
-            currentIngredient.Name = newName;
-            await _database.SaveIngredientAsync(currentIngredient);
-        }
-    }
-
-    private async Task<IngredientConversion> LearnNewIngredientAsync(Recipe recipe, Ingredient ingredient, string currentName, string unit, bool isConvertibleVolume, List<IngredientConversion> conversions)
-    {
-        string finalName = await Application.Current.MainPage.DisplayPromptAsync(
-            "מצרך חדש", $"במתכון '{recipe.Title}' כתבת '{currentName}'. איך תרצה לקרוא לזה במערכת?", initialValue: currentName);
-
-        if (string.IsNullOrWhiteSpace(finalName)) return null;
-
-        if (finalName != currentName)
-        {
-            await ApplyCorrectionAsync(ingredient, currentName, finalName);
-        }
-
-        string selectedCategory = await Application.Current.MainPage.DisplayActionSheet(
-            $"לאיזו מחלקה שייך '{finalName}'?",
-            "דלג", null,
-            AppConstants.ShoppingCategories);
-
-        if (selectedCategory == "דלג" || string.IsNullOrEmpty(selectedCategory)) return null;
-
-        double gramsPerCup = 0;
-        bool skippedVolume = false;
-
-        if (isConvertibleVolume)
-        {
-            string result = await Application.Current.MainPage.DisplayPromptAsync(
-                "משקל המצרך", $"כמה גרם שוקלת כוס אחת של '{finalName}'?", "שמור ולמד", "דלג", keyboard: Keyboard.Numeric);
-
-            if (string.IsNullOrWhiteSpace(result)) skippedVolume = true;
-            else
-            {
-                double.TryParse(result, out gramsPerCup);
-                if (gramsPerCup <= 0) skippedVolume = true;
-            }
-        }
-
-        string savedBaseUnit = "יחידות";
-        if (isConvertibleVolume && !skippedVolume) savedBaseUnit = "גרם";
-        else if (unit == "גרם" || unit == "מ״ל") savedBaseUnit = unit;
-
-        var newConversion = new IngredientConversion
-        {
-            Keyword = finalName,
-            BaseUnit = savedBaseUnit,
-            AmountPerCup = gramsPerCup,
-            Category = selectedCategory
-        };
-
-        await _database.AddIngredientConversionAsync(newConversion);
-        conversions.Add(newConversion);
-
-        return newConversion;
-    }
-
-    #endregion
-
-    #region UI & Sharing
-
-    private async Task BuildAndGroupShoppingList(Dictionary<string, (double Quantity, string Category, DateTime MaxDate)> aggregatedIngredients)
-    {
-        CurrentShoppingList.StartDate = StartDate;
-        CurrentShoppingList.EndDate = EndDate;
-        await _database.SaveShoppingListAsync(CurrentShoppingList);
-
-        var flatList = new List<SavedShoppingListItem>();
-
-        foreach (var item in aggregatedIngredients)
-        {
-            var keyParts = item.Key.Split('_');
-            string name = keyParts[0];
-            string unit = keyParts[1];
-            double finalQuantity = item.Value.Quantity;
-            string category = item.Value.Category;
-            DateTime requiredByDate = item.Value.MaxDate;
-
-            if (unit == "גרם")
-            {
-                finalQuantity = Math.Ceiling(finalQuantity / 10.0) * 10.0;
-                if (finalQuantity >= 1000) { finalQuantity /= 1000.0; unit = "ק״ג"; }
-            }
-            else if (unit == "מ״ל")
-            {
-                finalQuantity = Math.Ceiling(finalQuantity / 10.0) * 10.0;
-                if (finalQuantity >= 1000) { finalQuantity /= 1000.0; unit = "ליטר"; }
-            }
-            else
-            {
-                finalQuantity = Math.Ceiling(finalQuantity);
-            }
-
-            string displayUnit = (unit == "יחידות") ? "" : unit;
-            string finalDisplayText = string.IsNullOrWhiteSpace(displayUnit) ? $"{finalQuantity} {name}" : $"{finalQuantity} {displayUnit} {name}";
-
-            var newItem = new SavedShoppingListItem
-            {
-                ListId = CurrentShoppingList.Id,
-                Name = name,
-                Category = category,
-                AutoQuantity = finalQuantity,
-                ManualQuantity = 0,
-                Quantity = finalQuantity, 
-                Unit = unit,
-                CurrentRequiredBy = requiredByDate
-            };
+            var newItem = new SavedShoppingListItem { ListId = CurrentShoppingList.Id, Name = itemName, Quantity = addedQty, Unit = "יחידות", Category = finalCategory, IsBought = false };
             newItem.UpdateDisplayText();
-
-            flatList.Add(newItem);
+            await _database.SaveShoppingListItemAsync(newItem);
         }
+        await GenerateListAsync();
+    }
 
-        await _database.SyncShoppingListItemsAsync(CurrentShoppingList.Id, flatList);
-        var freshItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
-        GroupedShoppingItems.Clear();
-
-        var grouped = freshItems.GroupBy(x => x.Category)
-                              .Select(g => new ShoppingItemGroup(g.Key, g))
-                              .OrderBy(g => g.CategoryName);
-
-        foreach (var group in grouped)
+    [RelayCommand]
+    public async Task DeleteListAsync(SavedShoppingList listToDelete)
+    {
+        if (listToDelete == null) return;
+        if (await Application.Current.MainPage.DisplayAlert("מחיקת רשימה", $"האם אתה בטוח שברצונך למחוק את '{listToDelete.Title}'?", "כן, מחק", "ביטול"))
         {
-            foreach (var item in group)
-            {
-                item.PropertyChanged += async (s, e) =>
-                {
-                    if (e.PropertyName == nameof(SavedShoppingListItem.IsBought))
-                    {
-                        // Set the validity date immediately when user clicks the Checkbox
-                        if (item.IsBought && !item.CoveredUntil.HasValue)
-                        {
-                            item.CoveredUntil = item.CurrentRequiredBy ?? DateTime.Today.AddDays(7);
-                        }
-                        else if (!item.IsBought)
-                        {
-                            item.CoveredUntil = null;
-                        }
-                        await _database.SaveShoppingListItemAsync(item);
-                    }
-                };
-            }
-            GroupedShoppingItems.Add(group);
+            await _database.DeleteShoppingListAsync(listToDelete);
+            await LoadAllListsAsync();
+            if (CurrentShoppingList?.Id == listToDelete.Id) await InitializeAutoLoadAsync();
         }
     }
 
     [RelayCommand]
     public async Task ClearBoughtItemsAsync()
     {
-        bool answer = await Application.Current.MainPage.DisplayAlert(
-            "איפוס קניות",
-            "האם אתה בטוח שברצונך לנקות את כל הסימונים מהרשימה?",
-            "כן, נקה הכל",
-            "ביטול");
-
-        if (answer)
+        if (await Application.Current.MainPage.DisplayAlert("איפוס קניות", "האם אתה בטוח שברצונך לנקות את כל הסימונים מהרשימה?", "כן, נקה הכל", "ביטול"))
         {
             foreach (var group in GroupedShoppingItems)
-            {
-                foreach (var item in group)
-                {
-                    if (item.IsBought)
-                    {
-                        item.IsBought = false;
-                    }
-                }
-            }
+                foreach (var item in group) if (item.IsBought) item.IsBought = false;
         }
     }
 
     [RelayCommand]
+    public async Task RenameListAsync(SavedShoppingList listToRename)
+    {
+        if (listToRename == null) return;
+        string newName = await Application.Current.MainPage.DisplayPromptAsync("שינוי שם רשימה", "הזן שם חדש לרשימה:", "שמור", "ביטול", listToRename.Title, maxLength: 40);
+        if (!string.IsNullOrWhiteSpace(newName) && newName != listToRename.Title)
+        {
+            listToRename.Title = newName.Trim();
+            await _database.SaveShoppingListAsync(listToRename);
+            if (CurrentShoppingList?.Id == listToRename.Id) OnPropertyChanged(nameof(CurrentShoppingList));
+            await LoadAllListsAsync();
+        }
+    }
+    #endregion
+
+    #region Merge Commands Logic
+    [RelayCommand]
+    public void OpenMergeMode()
+    {
+        MergeableLists.Clear();
+        foreach (var list in SavedLists) MergeableLists.Add(new SelectableListDto { List = list, IsSelected = false });
+        IsListsMenuOpen = false; IsMergeModeActive = true;
+    }
+
+    [RelayCommand] public void CancelMerge() => IsMergeModeActive = false;
+
+    [RelayCommand]
+    public async Task ConfirmMergeAsync()
+    {
+        var selectedLists = MergeableLists.Where(l => l.IsSelected).Select(l => l.List).ToList();
+        if (selectedLists.Count < 2) { await Application.Current.MainPage.DisplayAlert("שגיאה", "יש לבחור לפחות 2 רשימות למיזוג.", "אישור"); return; }
+
+        string newListName = await Application.Current.MainPage.DisplayPromptAsync("רשימה ממוזגת", "איך לקרוא לרשימה הממוזגת החדשה?", "המשך", "ביטול");
+        if (string.IsNullOrWhiteSpace(newListName)) return;
+
+        IsMergeModeActive = false;
+        var newList = new SavedShoppingList { Title = newListName, CreatedAt = DateTime.Now };
+        await _database.SaveShoppingListAsync(newList);
+
+        // Delegate static collection flattening and merging out to Action Service
+        await _actionService.MergeListsAsync(newList.Id, selectedLists);
+
+        await LoadAllListsAsync();
+        await SwitchListAsync(newList);
+        await Application.Current.MainPage.DisplayAlert("הצלחה!", "הרשימות מוזגו בהצלחה לרשימה אחת מאוחדת וקבועה.", "מעולה");
+    }
+    #endregion
+
+    #region Share Pipeline Delegation
+    [RelayCommand]
     public async Task ShareListAsync()
     {
-        if (GroupedShoppingItems == null || !GroupedShoppingItems.Any())
+        if (GroupedShoppingItems == null || !GroupedShoppingItems.Any()) { await Application.Current.MainPage.DisplayAlert("רשימה ריקה", "אין מצרכים ברשימה לשתף.", "אישור"); return; }
+        string shareOption = await Application.Current.MainPage.DisplayActionSheet("איך תרצה לשתף את הרשימה?", "ביטול", null, "טקסט רגיל", "קישור לאפליקציה");
+        if (shareOption == "ביטול" || string.IsNullOrEmpty(shareOption)) return;
+
+        IsLoading = true; LoadingText = "מכין שיתוף...";
+        try
         {
-            await Application.Current.MainPage.DisplayAlert("רשימה ריקה", "אין מצרכים ברשימה לשתף.", "אישור");
-            return;
+            // Delegate external integrations pipeline out to Action Service
+            await _actionService.ExecuteSharePipelineAsync(CurrentShoppingList, GroupedShoppingItems, shareOption);
         }
-
-        string shareOption = await Application.Current.MainPage.DisplayActionSheet(
-            "איך תרצה לשתף את הרשימה?",
-            "ביטול",
-            null,
-            "טקסט רגיל",
-            "קישור לאפליקציה");
-
-        if (shareOption == "ביטול" || string.IsNullOrEmpty(shareOption))
-        {
-            return;
-        }
-
-        string textToShare = "";
-
-        if (shareOption == "טקסט רגיל")
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"*{CurrentShoppingList?.Title ?? "רשימת קניות"}:*");
-            sb.AppendLine();
-
-            foreach (var group in GroupedShoppingItems)
-            {
-                sb.AppendLine($"--- *{group.CategoryName}* ---");
-                foreach (var item in group)
-                {
-                    string checkIcon = item.IsBought ? "✅" : "🔲";
-                    sb.AppendLine($"{checkIcon} {item.DisplayText}");
-                }
-                sb.AppendLine();
-            }
-            textToShare = sb.ToString();
-        }
-        else if (shareOption == "קישור לאפליקציה")
-        {
-            IsLoading = true;
-            LoadingText = "מייצר קישור לשיתוף רשימת הקניות, נא להמתין";
-            try
-            {
-                var sharedDto = new SharedListDto
-                {
-                    T = CurrentShoppingList?.Title ?? "רשימה משותפת"
-                };
-
-                var allItemNames = new HashSet<string>();
-
-                foreach (var group in GroupedShoppingItems)
-                {
-                    foreach (var item in group)
-                    {
-                        allItemNames.Add(item.Name);
-                        sharedDto.I.Add(new SharedItemDto
-                        {
-                            N = item.Name,
-                            Q = item.Quantity,
-                            U = item.Unit,
-                            C = item.Category
-                        });
-                    }
-                }
-
-                var allConversions = await _database.GetIngredientConversionsAsync();
-                var relevantConversions = allConversions.Where(c => allItemNames.Contains(c.Keyword)).ToList();
-
-                foreach (var conv in relevantConversions)
-                {
-                    sharedDto.C.Add(new SharedConversionDto
-                    {
-                        K = conv.Keyword,
-                        B = conv.BaseUnit,
-                        A = conv.AmountPerCup,
-                        C = conv.Category
-                    });
-                }
-
-                string jsonPayload = JsonSerializer.Serialize(sharedDto);
-
-                var cloudModel = new SharedShoppingListCloudModel
-                {
-                    ListName = sharedDto.T,
-                    PayloadJson = jsonPayload
-                };
-
-                var firestoreService = new FirestoreService();
-                string newCloudId = await firestoreService.UploadSharedListAsync(cloudModel);
-
-                if (string.IsNullOrEmpty(newCloudId))
-                {
-                    await Application.Current.MainPage.DisplayAlert("שגיאה", "לא הצלחנו לייצר קישור לענן. אנא בדוק את החיבור לאינטרנט.", "אישור");
-                    return;
-                }
-
-                await _database.RegisterSharedListForDeletionAsync(newCloudId, cloudModel.ExpiresAt);
-
-                string deepLink = $"https://recipe-book-d9389.web.app/sharelist?id={newCloudId}";
-
-                var sbLink = new StringBuilder();
-                sbLink.AppendLine($"*{cloudModel.ListName}*");
-                sbLink.AppendLine("שלחתי לך רשימת קניות מרוכזת באפליקציה!");
-                sbLink.AppendLine("לחץ על הקישור כדי לייבא אותה (כולל המרות מצרכים):");
-                sbLink.AppendLine();
-                sbLink.AppendLine(deepLink);
-
-                textToShare = sbLink.ToString();
-            }
-            finally
-            {
-                LoadingText = defaultLoadingText;
-                IsLoading = false;
-            }
-        }
-
-        await Share.Default.RequestAsync(new ShareTextRequest
-        {
-            Text = textToShare,
-            Title = "שיתוף רשימת קניות"
-        });
+        finally { IsLoading = false; }
     }
     #endregion
 }
+
+
 
 public partial class SelectableListDto : ObservableObject
 {

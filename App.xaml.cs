@@ -205,10 +205,10 @@ public partial class App : Application
                                     }
                                 }
 
+                                // 1. Modified: Removed IsStatic because all lists are now static
                                 var newList = new SavedShoppingList
                                 {
                                     Title = sharedDto.T + " (מיובא)",
-                                    IsStatic = true,
                                     CreatedAt = DateTime.Now
                                 };
                                 await db.SaveShoppingListAsync(newList);
@@ -231,7 +231,8 @@ public partial class App : Application
                                     });
                                 }
 
-                                await db.SyncShoppingListItemsAsync(newList.Id, flatList);
+                                // 2. Modified: Using the new static save method
+                                await db.SaveStaticShoppingListItemsAsync(newList.Id, flatList);
 
                                 // --- FIX: Safe Navigation Without Route Parameters ---
                                 MainThread.BeginInvokeOnMainThread(async () =>
