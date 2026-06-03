@@ -101,28 +101,52 @@ public class ShoppingListActionService
         }
         else if (shareOption == "קישור לאפליקציה")
         {
-            var sharedDto = new SharedListDto { T = currentList?.Title ?? "רשימה משותפת" };
+            var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
+            string currentUid = authService?.GetCurrentUserId() ?? "Unknown";
+
+            var cloudModel = new SharedShoppingListCloudModel
+            {
+                ListName = currentList?.Title ?? "רשימה משותפת",
+                UpdatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.SpecifyKind(DateTime.UtcNow.AddMonths(6), DateTimeKind.Utc)
+            };
+            cloudModel.PartnerUids.Add(currentUid);
+
             var allItemNames = new HashSet<string>();
+            var itemsListDto = new List<SharedCloudItemDto>();
 
             foreach (var group in groupedItems)
             {
                 foreach (var item in group)
                 {
                     allItemNames.Add(item.Name);
-                    sharedDto.I.Add(new SharedItemDto { N = item.Name, Q = item.Quantity, U = item.Unit, C = item.Category });
+                    itemsListDto.Add(new SharedCloudItemDto
+                    {
+                        N = item.Name,
+                        Q = item.Quantity,
+                        U = string.IsNullOrWhiteSpace(item.Unit) ? "יחידות" : item.Unit,
+                        C = item.Category,
+                        IsBought = item.IsBought
+                    });
                 }
             }
+            cloudModel.ItemsJson = System.Text.Json.JsonSerializer.Serialize(itemsListDto);
 
             var allConversions = await _database.GetIngredientConversionsAsync();
             var relevantConversions = allConversions.Where(c => allItemNames.Contains(c.Keyword)).ToList();
+            var convsListDto = new List<SharedCloudConversionDto>();
 
             foreach (var conv in relevantConversions)
             {
-                sharedDto.C.Add(new SharedConversionDto { K = conv.Keyword, B = conv.BaseUnit, A = conv.AmountPerCup, C = conv.Category });
+                convsListDto.Add(new SharedCloudConversionDto
+                {
+                    K = conv.Keyword,
+                    B = conv.BaseUnit,
+                    A = conv.AmountPerCup,
+                    C = conv.Category
+                });
             }
-
-            string jsonPayload = JsonSerializer.Serialize(sharedDto);
-            var cloudModel = new SharedShoppingListCloudModel { ListName = sharedDto.T, PayloadJson = jsonPayload };
+            cloudModel.ConversionsJson = System.Text.Json.JsonSerializer.Serialize(convsListDto);
 
             var firestoreService = new FirestoreService();
             string newCloudId = await firestoreService.UploadSharedListAsync(cloudModel);
@@ -133,13 +157,16 @@ public class ShoppingListActionService
                 return;
             }
 
-            await _database.RegisterSharedListForDeletionAsync(newCloudId, cloudModel.ExpiresAt);
+            currentList.CloudId = newCloudId;
+            currentList.IsShared = true;
+            await _database.SaveShoppingListAsync(currentList);
+
             string deepLink = $"https://recipe-book-d9389.web.app/sharelist?id={newCloudId}";
 
             var sbLink = new StringBuilder();
             sbLink.AppendLine($"*{cloudModel.ListName}*");
             sbLink.AppendLine("שלחתי לך רשימת קניות מרוכזת באפליקציה!");
-            sbLink.AppendLine("לחץ על הקישור כדי לייבא אותה (כולל המרות מצרכים):");
+            sbLink.AppendLine("לחץ על הקישור כדי שניכנס ונהל אותה יחד:");
             sbLink.AppendLine();
             sbLink.AppendLine(deepLink);
 

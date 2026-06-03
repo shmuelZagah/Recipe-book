@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Plugin.Firebase.Firestore;
 using Recipe_book.Helpers;
+using Recipe_book.Models.Cloud;
 using Recipe_book.Models.Enums;
 using Recipe_book.Models.Shopping;
 using Recipe_book.Services;
@@ -20,7 +22,10 @@ public partial class ShoppingListViewModel : ObservableObject
     private readonly ShoppingListActionService _actionService;
     private string _pendingNewListName;
 
+    //------------------------------
     #region UI Properties
+    //------------------------------
+
     public static int? PendingImportId { get; set; }
     public static Action RefreshActivePage;
 
@@ -49,7 +54,18 @@ public partial class ShoppingListViewModel : ObservableObject
     [ObservableProperty] private DateTime specificStartDate = DateTime.Today;
     [ObservableProperty] private DateTime specificEndDate = DateTime.Today.AddDays(7);
     [ObservableProperty] private bool isEmptyListTemp = false;
+
+    public ObservableCollection<AbstractShoppingList> AbstractLists { get; } = new();
+    private int? _selectedAbstractListIdForCreation;
+    [ObservableProperty] private bool isEditingTemplateMode = false;
+    [ObservableProperty] private AbstractShoppingList currentAbstractTemplate;
+
+    private IDisposable _cloudListener;
+    private SharedShoppingListCloudModel _currentCloudSnapshot; 
+    private bool _isSyncingFromCloud = false;
+
     #endregion
+    //------------------------------
 
     public ShoppingListViewModel(RecipesDatabase database, ShoppingListBuilderService builderService, ShoppingListActionService actionService)
     {
@@ -90,28 +106,161 @@ public partial class ShoppingListViewModel : ObservableObject
         var lists = await _database.GetSavedShoppingListsAsync();
         SavedLists.Clear();
         foreach (var list in lists) SavedLists.Add(list);
+
+        var abstractLists = await _database.GetAbstractShoppingListsAsync();
+        AbstractLists.Clear();
+        foreach (var aList in abstractLists) AbstractLists.Add(aList);
     }
 
     [RelayCommand] public void ToggleListsMenu() => IsListsMenuOpen = !IsListsMenuOpen;
 
+    
     [RelayCommand]
     public async Task SwitchListAsync(SavedShoppingList selectedList)
     {
         if (selectedList == null) return;
+        IsEditingTemplateMode = false;
         CurrentShoppingList = selectedList;
         IsListsMenuOpen = false; HasValidList = true;
+        UpdateStatusText();
+
+        _cloudListener?.Dispose();
+        _cloudListener = null;
+        _currentCloudSnapshot = null;
+
+        await GenerateListAsync();
+
+        if (CurrentShoppingList.IsShared && !string.IsNullOrEmpty(CurrentShoppingList.CloudId))
+        {
+            var firestore = new FirestoreService();
+            _cloudListener = firestore.ListenToSharedList(CurrentShoppingList.CloudId, OnCloudListUpdated);
+        }
+    }
+
+    private async Task PushCurrentListToCloudAsync()
+    {
+        if (CurrentShoppingList == null || !CurrentShoppingList.IsShared) return;
+
+        var firestore = new FirestoreService();
+
+        if (_currentCloudSnapshot == null)
+        {
+            _currentCloudSnapshot = await firestore.GetSharedListFromCloudAsync(CurrentShoppingList.CloudId);
+            if (_currentCloudSnapshot == null) return;
+        }
+
+        var localItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
+        var itemsListDto = new List<SharedCloudItemDto>();
+
+        foreach (var item in localItems)
+        {
+            itemsListDto.Add(new SharedCloudItemDto
+            {
+                N = item.Name,
+                Q = item.Quantity,
+                U = string.IsNullOrWhiteSpace(item.Unit) ? "יחידות" : item.Unit,
+                C = item.Category,
+                IsBought = item.IsBought
+            });
+        }
+
+        _currentCloudSnapshot.ItemsJson = System.Text.Json.JsonSerializer.Serialize(itemsListDto);
+
+        var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
+        _currentCloudSnapshot.LastActionBy = authService?.GetCurrentUserId();
+        _currentCloudSnapshot.UpdatedAt = DateTime.UtcNow;
+
+        await firestore.UpdateSharedListAsync(_currentCloudSnapshot);
+    }
+
+    private void OnCloudListUpdated(SharedShoppingListCloudModel cloudList)
+    {
+        if (cloudList == null || CurrentShoppingList == null || CurrentShoppingList.Id == -1) return;
+
+        var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
+        string currentUid = authService?.GetCurrentUserId();
+
+        if (!string.IsNullOrEmpty(currentUid) && cloudList.LastActionBy == currentUid) return;
+
+        _currentCloudSnapshot = cloudList;
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            _isSyncingFromCloud = true;
+
+            try
+            {
+                var flatList = new List<SavedShoppingListItem>();
+
+                if (!string.IsNullOrEmpty(cloudList.ItemsJson))
+                {
+                    var itemsDto = System.Text.Json.JsonSerializer.Deserialize<List<SharedCloudItemDto>>(cloudList.ItemsJson);
+                    if (itemsDto != null)
+                    {
+                        foreach (var cloudItem in itemsDto)
+                        {
+                            string n = cloudItem.N ?? "";
+                            double q = cloudItem.Q;
+                            string u = string.IsNullOrWhiteSpace(cloudItem.U) ? "יחידות" : cloudItem.U;
+                            string c = string.IsNullOrWhiteSpace(cloudItem.C) ? "כללי" : cloudItem.C;
+                            bool isBought = cloudItem.IsBought;
+
+                            string displayUnit = u == "יחידות" ? "" : u;
+                            string displayTxt = string.IsNullOrWhiteSpace(displayUnit) ? $"{q} {n}" : $"{q} {displayUnit} {n}";
+
+                            flatList.Add(new SavedShoppingListItem
+                            {
+                                ListId = CurrentShoppingList.Id,
+                                Name = n,
+                                Quantity = q,
+                                Unit = displayUnit,
+                                Category = c,
+                                DisplayText = displayTxt,
+                                IsBought = isBought
+                            });
+                        }
+                    }
+                }
+
+                await _database.SaveStaticShoppingListItemsAsync(CurrentShoppingList.Id, flatList);
+                await GenerateListAsync();
+            }
+            finally
+            {
+                _isSyncingFromCloud = false;
+            }
+        });
+    }
+
+    [RelayCommand]
+    public async Task SwitchToTemplateEditAsync(AbstractShoppingList template)
+    {
+        if (template == null) return;
+        CurrentAbstractTemplate = template;
+        IsEditingTemplateMode = true;
+        CurrentShoppingList = new SavedShoppingList { Title = template.Title, Id = -2 };
+
+        IsListsMenuOpen = false;
+        HasValidList = true;
         UpdateStatusText();
         await GenerateListAsync();
     }
 
     private void UpdateStatusText()
     {
+        if (IsEditingTemplateMode)
+        {
+            StatusText = "מצב עריכת שלד בסיסי (השינויים יישמרו בתבנית)";
+            return;
+        }
+
         if (CurrentShoppingList == null) { StatusText = ""; return; }
         if (CurrentShoppingList.StartDate.HasValue && CurrentShoppingList.EndDate.HasValue)
             StatusText = $"לתאריכים: {CurrentShoppingList.StartDate.Value:dd.MM} - {CurrentShoppingList.EndDate.Value:dd.MM}";
         else
             StatusText = "רשימה קבועה (ללא תאריכים)";
     }
+
     #endregion
 
     #region Creation Wizard Navigation
@@ -146,11 +295,56 @@ public partial class ShoppingListViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(listName)) return;
 
         _pendingNewListName = listName;
+        _selectedAbstractListIdForCreation = null;
         IsListsMenuOpen = false; IsEmptyListTemp = false; SelectedRangeType = DateRangeType.Week;
         UpdateVisibility();
         IsHeaderOpen = true;
     }
 
+    [RelayCommand]
+    public async Task CreateListFromTemplateAsync(AbstractShoppingList template)
+    {
+        if (template == null) return;
+
+        string listName = await Application.Current.MainPage.DisplayPromptAsync(
+            "רשימה חדשה מתבנית", $"איך תרצה לקרוא לרשימה המבוססת על '{template.Title}'?", "המשך", "ביטול", $"{template.Title} - מתוכנן");
+        if (string.IsNullOrWhiteSpace(listName)) return;
+
+        _pendingNewListName = listName;
+        _selectedAbstractListIdForCreation = template.Id;
+        IsListsMenuOpen = false; IsEmptyListTemp = false; SelectedRangeType = DateRangeType.Week;
+        UpdateVisibility();
+        IsHeaderOpen = true;
+    }
+
+    [RelayCommand]
+    public async Task CreateNewTemplateAsync()
+    {
+        string templateName = await Application.Current.MainPage.DisplayPromptAsync("שלד רשימה חדש", "הזן שם עבור תבנית הרשימה האבסטרקטית:", "צור", "ביטול");
+        if (string.IsNullOrWhiteSpace(templateName)) return;
+
+        var newTemplate = new AbstractShoppingList
+        {
+            Title = templateName.Trim(),
+            CreatedAt = DateTime.Now
+        };
+
+        await _database.SaveAbstractShoppingListAsync(newTemplate);
+        await LoadAllListsAsync();
+
+        await SwitchToTemplateEditAsync(newTemplate);
+    }
+
+    [RelayCommand]
+    public async Task DeleteTemplateAsync(AbstractShoppingList templateToDelete)
+    {
+        if (templateToDelete == null) return;
+        if (await Application.Current.MainPage.DisplayAlert("מחיקת שלד", $"האם אתה בטוח שברצונך למחוק את תבנית השלד '{templateToDelete.Title}'?", "כן, מחק", "ביטול"))
+        {
+            await _database.DeleteAbstractShoppingListAsync(templateToDelete);
+            await LoadAllListsAsync();
+        }
+    }
     [RelayCommand]
     public async Task ApplyAndCloseAsync()
     {
@@ -181,16 +375,25 @@ public partial class ShoppingListViewModel : ObservableObject
         var newList = new SavedShoppingList { Title = _pendingNewListName, StartDate = targetStartDate, EndDate = targetEndDate, CreatedAt = DateTime.Now };
         await _database.SaveShoppingListAsync(newList);
 
-        if (!IsEmptyListTemp && targetStartDate.HasValue && targetEndDate.HasValue)
+        if (!IsEmptyListTemp || _selectedAbstractListIdForCreation.HasValue)
         {
-            IsLoading = true; LoadingText = "מחלץ מצרכים מלוח הארוחות...";
+            IsLoading = true; LoadingText = "מחלץ וממזג מצרכים...";
             try
             {
-                // Delegate core compilation engine heavy lifting to the Builder Service
-                var compiledFlatSnapshot = await _builderService.BuildIngredientsFromScheduleAsync(newList.Id, targetStartDate.Value, targetEndDate.Value);
+                // Delegate compilation payload build out to service with option abstract blueprint injection
+                var compiledFlatSnapshot = await _builderService.BuildIngredientsFromScheduleAsync(
+                    newList.Id,
+                    IsEmptyListTemp ? null : targetStartDate,
+                    IsEmptyListTemp ? null : targetEndDate,
+                    _selectedAbstractListIdForCreation);
+
                 await _database.SaveStaticShoppingListItemsAsync(newList.Id, compiledFlatSnapshot);
             }
-            finally { IsLoading = false; }
+            finally
+            {
+                IsLoading = false;
+                _selectedAbstractListIdForCreation = null; // Flush assignment state pipeline context
+            }
         }
 
         await LoadAllListsAsync();
@@ -203,18 +406,55 @@ public partial class ShoppingListViewModel : ObservableObject
     public async Task GenerateListAsync()
     {
         GroupedShoppingItems.Clear();
+
+        if (IsEditingTemplateMode)
+        {
+            if (CurrentAbstractTemplate == null) return;
+            var templateItems = await _database.GetItemsForAbstractListAsync(CurrentAbstractTemplate.Id);
+
+            // Map Abstract items to SavedShoppingListItems so the XAML GUI requires zero configuration changes
+            var mappedItems = templateItems.Select(i =>
+            {
+                var item = new SavedShoppingListItem
+                {
+                    Id = i.Id,
+                    ListId = i.ListId,
+                    Name = i.Name,
+                    Quantity = i.Quantity,
+                    Unit = i.Unit,
+                    Category = i.Category,
+                    IsBought = false
+                };
+
+                item.UpdateDisplayText();
+
+                return item;
+            }).ToList();
+
+            var grouped = mappedItems.GroupBy(x => x.Category).Select(g => new ShoppingItemGroup(g.Key, g)).OrderBy(g => g.CategoryName);
+            foreach (var group in grouped) GroupedShoppingItems.Add(group);
+            return;
+        }
+
         if (CurrentShoppingList == null || CurrentShoppingList.Id == -1) return;
-
         var items = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
-        var grouped = items.GroupBy(x => x.Category).Select(g => new ShoppingItemGroup(g.Key, g)).OrderBy(g => g.CategoryName);
+        var aggregatedGrouped = items.GroupBy(x => x.Category).Select(g => new ShoppingItemGroup(g.Key, g)).OrderBy(g => g.CategoryName);
 
-        foreach (var group in grouped)
+        foreach (var group in aggregatedGrouped)
         {
             foreach (var item in group)
             {
                 item.PropertyChanged += async (s, e) =>
                 {
-                    if (e.PropertyName == nameof(SavedShoppingListItem.IsBought)) await _database.SaveShoppingListItemAsync(item);
+                    if (e.PropertyName == nameof(SavedShoppingListItem.IsBought))
+                    {
+                        await _database.SaveShoppingListItemAsync(item);
+
+                        if (!_isSyncingFromCloud)
+                        {
+                            await PushCurrentListToCloudAsync();
+                        }
+                    }
                 };
             }
             GroupedShoppingItems.Add(group);
@@ -224,32 +464,94 @@ public partial class ShoppingListViewModel : ObservableObject
     [RelayCommand]
     public async Task AddManualItemAsync()
     {
-        if (CurrentShoppingList == null || CurrentShoppingList.Id == -1) return;
-        string itemName = await Application.Current.MainPage.DisplayPromptAsync("הוספת מצרך", "מה תרצה להוסיף לרשימה?", "המשך", "ביטול");
+        if (!IsEditingTemplateMode && (CurrentShoppingList == null || CurrentShoppingList.Id == -1)) return;
+        if (IsEditingTemplateMode && CurrentAbstractTemplate == null) return;
+
+        string itemName = await Application.Current.MainPage.DisplayPromptAsync("הוספת מצרך", "מה תרצה להוסיף?", "המשך", "ביטול");
         if (string.IsNullOrWhiteSpace(itemName)) return;
         itemName = itemName.Trim();
 
         string quantityStr = await Application.Current.MainPage.DisplayPromptAsync("כמות", $"כמה {itemName} להוסיף?", "הוסף", "ביטול", keyboard: Keyboard.Numeric);
         if (!double.TryParse(quantityStr, out double addedQty) || addedQty <= 0) return;
 
-        var existingItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
-        var variations = TextHelpers.GetPossibleSingulars(itemName);
-        SavedShoppingListItem match = existingItems.FirstOrDefault(item => variations.Intersect(TextHelpers.GetPossibleSingulars(item.Name?.Trim() ?? "")).Any() && (string.IsNullOrWhiteSpace(item.Unit) || item.Unit == "יחידות"));
+        string finalCategory = null;
+        var itemVariations = TextHelpers.GetPossibleSingulars(itemName);
 
-        if (match != null)
+        if (IsEditingTemplateMode)
         {
-            match.Quantity += addedQty; match.IsBought = false; match.UpdateDisplayText();
-            await _database.SaveShoppingListItemAsync(match);
+            var templateItems = await _database.GetItemsForAbstractListAsync(CurrentAbstractTemplate.Id);
+            var match = templateItems.FirstOrDefault(i => itemVariations.Intersect(TextHelpers.GetPossibleSingulars(i.Name)).Any() && (string.IsNullOrWhiteSpace(i.Unit) || i.Unit == "יחידות"));
+            if (match != null)
+            {
+                match.Quantity += addedQty;
+                match.UpdateDisplayText(); 
+                await _database.SaveAbstractShoppingListItemAsync(match);
+                await GenerateListAsync();
+                return;
+            }
+        }
+        else
+        {
+            var currentItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
+            var match = currentItems.FirstOrDefault(i => itemVariations.Intersect(TextHelpers.GetPossibleSingulars(i.Name)).Any() && (string.IsNullOrWhiteSpace(i.Unit) || i.Unit == "יחידות"));
+            if (match != null)
+            {
+                match.Quantity += addedQty;
+                match.UpdateDisplayText();
+                await _database.SaveShoppingListItemAsync(match);
+
+                if (CurrentShoppingList.IsShared) await PushCurrentListToCloudAsync();
+                await GenerateListAsync();
+                return;
+            }
+        }
+
+        var conversions = await _database.GetIngredientConversionsAsync();
+        var convMatch = conversions.FirstOrDefault(c => itemVariations.Contains(c.Keyword));
+
+        if (convMatch != null && !string.IsNullOrWhiteSpace(convMatch.Category))
+        {
+            finalCategory = convMatch.Category; 
         }
         else
         {
             string selectedCategory = await Application.Current.MainPage.DisplayActionSheet($"לאיזו מחלקה שייך '{itemName}'?", "דלג", null, AppConstants.ShoppingCategories);
-            string finalCategory = (selectedCategory == "דלג" || string.IsNullOrEmpty(selectedCategory)) ? "כללי" : selectedCategory;
+            finalCategory = (selectedCategory == "דלג" || string.IsNullOrEmpty(selectedCategory)) ? "כללי" : selectedCategory;
+        }
 
-            var newItem = new SavedShoppingListItem { ListId = CurrentShoppingList.Id, Name = itemName, Quantity = addedQty, Unit = "יחידות", Category = finalCategory, IsBought = false };
+        if (IsEditingTemplateMode)
+        {
+            var newItem = new AbstractShoppingListItem
+            {
+                ListId = CurrentAbstractTemplate.Id,
+                Name = itemName,
+                Quantity = addedQty,
+                Unit = "יחידות",
+                Category = finalCategory
+            };
+            newItem.UpdateDisplayText();
+            await _database.SaveAbstractShoppingListItemAsync(newItem);
+        }
+        else
+        {
+            var newItem = new SavedShoppingListItem
+            {
+                ListId = CurrentShoppingList.Id,
+                Name = itemName,
+                Quantity = addedQty,
+                Unit = "יחידות",
+                Category = finalCategory,
+                IsBought = false
+            };
             newItem.UpdateDisplayText();
             await _database.SaveShoppingListItemAsync(newItem);
         }
+
+        if (!IsEditingTemplateMode && CurrentShoppingList != null && CurrentShoppingList.IsShared)
+        {
+            await PushCurrentListToCloudAsync();
+        }
+
         await GenerateListAsync();
     }
 
@@ -259,6 +561,39 @@ public partial class ShoppingListViewModel : ObservableObject
         if (listToDelete == null) return;
         if (await Application.Current.MainPage.DisplayAlert("מחיקת רשימה", $"האם אתה בטוח שברצונך למחוק את '{listToDelete.Title}'?", "כן, מחק", "ביטול"))
         {
+            if (listToDelete.IsShared && !string.IsNullOrEmpty(listToDelete.CloudId))
+            {
+                try
+                {
+                    var firestore = new FirestoreService();
+                    var cloudList = await firestore.GetSharedListFromCloudAsync(listToDelete.CloudId);
+
+                    if (cloudList != null)
+                    {
+                        var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
+                        string currentUid = authService?.GetCurrentUserId();
+
+                        if (!string.IsNullOrEmpty(currentUid) && cloudList.PartnerUids.Contains(currentUid))
+                        {
+                            cloudList.PartnerUids.Remove(currentUid);
+
+                            if (cloudList.PartnerUids.Count == 0)
+                            {
+                                await firestore.DeleteSharedListFromCloudAsync(listToDelete.CloudId);
+                            }
+                            else
+                            {
+                                await firestore.UpdateSharedListAsync(cloudList);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error handling cloud deletion: {ex.Message}");
+                }
+            }
+
             await _database.DeleteShoppingListAsync(listToDelete);
             await LoadAllListsAsync();
             if (CurrentShoppingList?.Id == listToDelete.Id) await InitializeAutoLoadAsync();
@@ -272,6 +607,11 @@ public partial class ShoppingListViewModel : ObservableObject
         {
             foreach (var group in GroupedShoppingItems)
                 foreach (var item in group) if (item.IsBought) item.IsBought = false;
+
+            if (CurrentShoppingList.IsShared)
+            {
+                await PushCurrentListToCloudAsync();
+            }
         }
     }
 
@@ -324,6 +664,7 @@ public partial class ShoppingListViewModel : ObservableObject
     #endregion
 
     #region Share Pipeline Delegation
+
     [RelayCommand]
     public async Task ShareListAsync()
     {
@@ -334,8 +675,13 @@ public partial class ShoppingListViewModel : ObservableObject
         IsLoading = true; LoadingText = "מכין שיתוף...";
         try
         {
-            // Delegate external integrations pipeline out to Action Service
             await _actionService.ExecuteSharePipelineAsync(CurrentShoppingList, GroupedShoppingItems, shareOption);
+
+            // Attaches the real-time cloud listener for the creator immediately after sharing
+            if (CurrentShoppingList.IsShared)
+            {
+                await SwitchListAsync(CurrentShoppingList);
+            }
         }
         finally { IsLoading = false; }
     }
@@ -350,27 +696,4 @@ public partial class SelectableListDto : ObservableObject
 
     [ObservableProperty]
     private bool isSelected;
-}
-
-public class SharedListDto
-{
-    public string T { get; set; }
-    public List<SharedItemDto> I { get; set; } = new();
-    public List<SharedConversionDto> C { get; set; } = new();
-}
-
-public class SharedItemDto
-{
-    public string N { get; set; }
-    public double Q { get; set; }
-    public string U { get; set; }
-    public string C { get; set; }
-}
-
-public class SharedConversionDto
-{
-    public string K { get; set; }
-    public string B { get; set; }
-    public double A { get; set; }
-    public string C { get; set; }
 }

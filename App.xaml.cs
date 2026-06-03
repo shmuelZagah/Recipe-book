@@ -24,15 +24,21 @@ public partial class App : Application
     {
         base.OnStart();
 
-        _ = InitializeUserAsync();
+        // Wait for auth to complete BEFORE processing any deep link
+        _ = InitializeAndHandleDeepLinkAsync();
+    }
 
-        // Check if a deep link is waiting in the room
+    private async Task InitializeAndHandleDeepLinkAsync()
+    {
+        // Step 1: Make sure the user is authenticated first
+        await InitializeUserAsync();
+
+        // Step 2: Only NOW it's safe to process the deep link
         if (!string.IsNullOrEmpty(PendingDeepLinkUrl))
         {
             string urlToProcess = PendingDeepLinkUrl;
-            PendingDeepLinkUrl = null; // Clear the room
+            PendingDeepLinkUrl = null;
 
-            // UI is strictly ready now, safe to process!
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 this.SendOnAppLinkRequestReceived(new Uri(urlToProcess));
@@ -132,7 +138,7 @@ public partial class App : Application
                 }
 
                 // ==========================================
-                // Handle Shared Folders (Cloud Download)
+                // Handle Shared Folders 
                 // ==========================================
                 else if (uri.AbsolutePath.ToLower() == "/folder")
                 {
@@ -170,7 +176,7 @@ public partial class App : Application
                 }
 
                 // ==========================================
-                // Handle Shared Shopping Lists (Cloud Download)
+                // Handle Shared Shopping Lists (online)
                 // ==========================================
                 else if (uri.AbsolutePath.ToLower() == "/sharelist")
                 {
@@ -179,79 +185,109 @@ public partial class App : Application
 
                     if (!string.IsNullOrEmpty(cloudId))
                     {
+                        var allLocalLists = await db.GetSavedShoppingListsAsync();
+                        var existingList = allLocalLists.FirstOrDefault(l => l.CloudId == cloudId);
+
+                        if (existingList != null)
+                        {
+                            MainThread.BeginInvokeOnMainThread(() =>
+                            {
+                                ShoppingListViewModel.PendingImportId = existingList.Id;
+                                Recipe_book.MainPage.SwitchTabAction?.Invoke(3);
+                                ShoppingListViewModel.RefreshActivePage?.Invoke();
+                            });
+
+                            return;
+                        }
+
                         var firestoreService = new FirestoreService();
                         var importedList = await firestoreService.GetSharedListFromCloudAsync(cloudId);
 
-                        if (importedList != null && !string.IsNullOrEmpty(importedList.PayloadJson))
+                        if (importedList != null && !string.IsNullOrEmpty(importedList.ItemsJson))
                         {
-                            var sharedDto = JsonSerializer.Deserialize<SharedListDto>(importedList.PayloadJson);
+                            var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
+                            string currentUid = authService?.GetCurrentUserId();
 
-                            if (sharedDto != null)
+                            if (!string.IsNullOrEmpty(currentUid) && !importedList.PartnerUids.Contains(currentUid))
                             {
-                                var existingConversions = await db.GetIngredientConversionsAsync();
-                                var existingKeywords = existingConversions.Select(c => c.Keyword).ToHashSet();
+                                importedList.PartnerUids.Add(currentUid);
+                                await firestoreService.UpdateSharedListAsync(importedList);
+                            }
 
-                                foreach (var conv in sharedDto.C)
+                            var existingConversions = await db.GetIngredientConversionsAsync();
+                            var existingKeywords = existingConversions.Select(c => c.Keyword).ToHashSet();
+
+                            if (!string.IsNullOrEmpty(importedList.ConversionsJson))
+                            {
+                                var convsDto = System.Text.Json.JsonSerializer.Deserialize<List<SharedCloudConversionDto>>(importedList.ConversionsJson);
+                                if (convsDto != null)
                                 {
-                                    if (!existingKeywords.Contains(conv.K))
+                                    foreach (var conv in convsDto)
                                     {
-                                        await db.AddIngredientConversionAsync(new IngredientConversion
+                                        string k = conv.K;
+                                        if (!string.IsNullOrEmpty(k) && !existingKeywords.Contains(k))
                                         {
-                                            Keyword = conv.K,
-                                            BaseUnit = conv.B,
-                                            AmountPerCup = conv.A,
-                                            Category = conv.C
+                                            await db.AddIngredientConversionAsync(new IngredientConversion
+                                            {
+                                                Keyword = k,
+                                                BaseUnit = string.IsNullOrWhiteSpace(conv.B) ? "יחידות" : conv.B,
+                                                AmountPerCup = conv.A,
+                                                Category = string.IsNullOrWhiteSpace(conv.C) ? "כללי" : conv.C
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+
+                            var newList = new SavedShoppingList
+                            {
+                                Title = importedList.ListName,
+                                CreatedAt = DateTime.Now,
+                                CloudId = cloudId,
+                                IsShared = true
+                            };
+                            await db.SaveShoppingListAsync(newList);
+
+                            var flatList = new List<SavedShoppingListItem>();
+                            var itemsDto = System.Text.Json.JsonSerializer.Deserialize<List<SharedCloudItemDto>>(importedList.ItemsJson);
+
+                            if (itemsDto != null)
+                            {
+                                foreach (var cloudItem in itemsDto)
+                                {
+                                    string n = cloudItem.N ?? "";
+                                    string u = string.IsNullOrWhiteSpace(cloudItem.U) ? "יחידות" : cloudItem.U;
+                                    string c = string.IsNullOrWhiteSpace(cloudItem.C) ? "כללי" : cloudItem.C;
+                                    double q = cloudItem.Q;
+                                    bool isBought = cloudItem.IsBought;
+
+                                    string displayUnit = (u == "יחידות") ? "" : u;
+                                    string displayTxt = string.IsNullOrWhiteSpace(displayUnit) ? $"{q} {n}" : $"{q} {displayUnit} {n}";
+
+                                    if (!string.IsNullOrWhiteSpace(n))
+                                    {
+                                        flatList.Add(new SavedShoppingListItem
+                                        {
+                                            ListId = newList.Id,
+                                            Name = n,
+                                            Quantity = q,
+                                            Unit = displayUnit,
+                                            Category = c,
+                                            DisplayText = displayTxt,
+                                            IsBought = isBought
                                         });
                                     }
                                 }
-
-                                // 1. Modified: Removed IsStatic because all lists are now static
-                                var newList = new SavedShoppingList
-                                {
-                                    Title = sharedDto.T + " (מיובא)",
-                                    CreatedAt = DateTime.Now
-                                };
-                                await db.SaveShoppingListAsync(newList);
-
-                                var flatList = new List<SavedShoppingListItem>();
-                                foreach (var item in sharedDto.I)
-                                {
-                                    string displayUnit = item.U == "יחידות" ? "" : item.U;
-                                    string displayTxt = string.IsNullOrWhiteSpace(displayUnit) ? $"{item.Q} {item.N}" : $"{item.Q} {displayUnit} {item.N}";
-
-                                    flatList.Add(new SavedShoppingListItem
-                                    {
-                                        ListId = newList.Id,
-                                        Name = item.N,
-                                        Quantity = item.Q,
-                                        Unit = displayUnit,
-                                        Category = item.C,
-                                        DisplayText = displayTxt,
-                                        IsBought = false
-                                    });
-                                }
-
-                                // 2. Modified: Using the new static save method
-                                await db.SaveStaticShoppingListItemsAsync(newList.Id, flatList);
-
-                                // --- FIX: Safe Navigation Without Route Parameters ---
-                                MainThread.BeginInvokeOnMainThread(async () =>
-                                {
-                                    await App.Current.MainPage.DisplayAlert("הצלחה! 🎉", $"הרשימה '{sharedDto.T}' יובאה בהצלחה יחד עם המצרכים. תוכל למצוא אותה בתפריט הרשימות במסך הקניות.", "מעולה");
-
-                                    ShoppingListViewModel.PendingImportId = newList.Id;
-
-                                    Recipe_book.MainPage.SwitchTabAction?.Invoke(3);
-
-                                    ShoppingListViewModel.RefreshActivePage?.Invoke();
-                                });
                             }
-                        }
-                        else
-                        {
+
+                            await db.SaveStaticShoppingListItemsAsync(newList.Id, flatList);
+
                             MainThread.BeginInvokeOnMainThread(async () =>
                             {
-                                await App.Current.MainPage.DisplayAlert("שגיאה", "לא הצלחנו למצוא את הרשימה בענן. ייתכן שהקישור שבור, נמחק או פג תוקף.", "אישור");
+                                await App.Current.MainPage.DisplayAlert("הצלחה! 🎉", $"הרשימה '{importedList.ListName}' יובאה בהצלחה.", "מעולה");
+                                ShoppingListViewModel.PendingImportId = newList.Id;
+                                Recipe_book.MainPage.SwitchTabAction?.Invoke(3);
+                                ShoppingListViewModel.RefreshActivePage?.Invoke();
                             });
                         }
                     }

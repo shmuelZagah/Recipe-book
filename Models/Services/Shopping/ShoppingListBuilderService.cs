@@ -18,15 +18,49 @@ public class ShoppingListBuilderService
     }
 
     /// <summary>
-    /// Harvests ingredients from scheduled meals within a specific range and compiles a flat static snapshot list.
+    /// Harvests ingredients from scheduled meals within a specific range, optionally merging them with a predefined abstract template, and compiles a flat static snapshot list.
     /// </summary>
-    public async Task<List<SavedShoppingListItem>> BuildIngredientsFromScheduleAsync(int listId, DateTime startDate, DateTime endDate)
+    public async Task<List<SavedShoppingListItem>> BuildIngredientsFromScheduleAsync(int listId, DateTime? startDate, DateTime? endDate, int? abstractListId = null)
     {
-        var mealsInRange = await _database.GetScheduledMealsAsync(startDate, endDate);
-        var conversions = await _database.GetIngredientConversionsAsync();
-        conversions = conversions.OrderByDescending(c => c.Keyword.Length).ToList();
+        var aggregatedIngredients = new Dictionary<string, (double Quantity, string Category)>();
 
-        var aggregatedIngredients = await ProcessAndAggregateIngredientsAsync(mealsInRange, conversions);
+        // 1. FIRST: If an abstract template is provided, load its baseline items into the aggregator
+        if (abstractListId.HasValue)
+        {
+            var templateItems = await _database.GetItemsForAbstractListAsync(abstractListId.Value);
+
+            foreach (var templateItem in templateItems)
+            {
+                string cleanName = templateItem.Name?.Trim() ?? "";
+                string cleanUnit = string.IsNullOrWhiteSpace(templateItem.Unit) || templateItem.Unit.Trim() == "יחידות" ? "יחידות" : templateItem.Unit.Trim();
+                string category = string.IsNullOrWhiteSpace(templateItem.Category) ? "כללי" : templateItem.Category;
+
+                string dictionaryKey = $"{cleanName}_{cleanUnit}";
+
+                if (aggregatedIngredients.ContainsKey(dictionaryKey))
+                {
+                    var existing = aggregatedIngredients[dictionaryKey];
+                    aggregatedIngredients[dictionaryKey] = (existing.Quantity + templateItem.Quantity, existing.Category);
+                }
+                else
+                {
+                    aggregatedIngredients.Add(dictionaryKey, (templateItem.Quantity, category));
+                }
+            }
+        }
+
+        // 2. SECOND: If date targets exist, process meals and merge them on top of the abstract baseline
+        if (startDate.HasValue && endDate.HasValue)
+        {
+            var mealsInRange = await _database.GetScheduledMealsAsync(startDate.Value, endDate.Value);
+            var conversions = await _database.GetIngredientConversionsAsync();
+            conversions = conversions.OrderByDescending(c => c.Keyword.Length).ToList();
+
+            // We pass the existing aggregatedIngredients dictionary to accumulate on top of it
+            await ProcessAndAggregateIngredientsAsync(mealsInRange, conversions, aggregatedIngredients);
+        }
+
+        // 3. FINAL: Flatten the dictionary into actual DB models
         var flatList = new List<SavedShoppingListItem>();
 
         foreach (var item in aggregatedIngredients)
@@ -65,12 +99,11 @@ public class ShoppingListBuilderService
 
         return flatList;
     }
-
-    private async Task<Dictionary<string, (double Quantity, string Category)>> ProcessAndAggregateIngredientsAsync(
-        List<ScheduledMeal> meals, List<IngredientConversion> conversions)
+    private async Task ProcessAndAggregateIngredientsAsync(
+         List<ScheduledMeal> meals,
+         List<IngredientConversion> conversions,
+         Dictionary<string, (double Quantity, string Category)> aggregatedIngredients) 
     {
-        var aggregatedIngredients = new Dictionary<string, (double Quantity, string Category)>();
-
         foreach (var meal in meals)
         {
             var recipe = await _database.GetRecipeAsync(meal.RecipeId);
@@ -85,8 +118,6 @@ public class ShoppingListBuilderService
                 await ProcessSingleIngredientAsync(recipe, ingredient, conversions, aggregatedIngredients);
             }
         }
-
-        return aggregatedIngredients;
     }
 
     private async Task ProcessSingleIngredientAsync(Recipe recipe, Ingredient ingredient, List<IngredientConversion> conversions, Dictionary<string, (double Quantity, string Category)> aggregatedIngredients)

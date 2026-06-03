@@ -4,9 +4,9 @@ using System;
 namespace Recipe_book.Models.Shopping;
 
 /// <summary>
-/// Represents a saved shopping list in the database.
+/// Represents a template/abstract shopping list used as a base for creating actual lists.
 /// </summary>
-public class SavedShoppingList
+public class AbstractShoppingList
 {
     [PrimaryKey, AutoIncrement]
     public int Id { get; set; }
@@ -14,9 +14,4 @@ public class SavedShoppingList
     public string Title { get; set; }
 
     public DateTime CreatedAt { get; set; }
-
-    // Nullable dates mean the list is not bound to a specific timeframe
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
-
 }

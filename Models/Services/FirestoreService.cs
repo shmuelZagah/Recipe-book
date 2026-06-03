@@ -298,13 +298,50 @@ public class FirestoreService
             var firestore = CrossFirebaseFirestore.Current;
             await firestore.GetCollection("SharedLists").GetDocument(cloudId).DeleteDocumentAsync();
 
-            System.Diagnostics.Debug.WriteLine($"Shared list {cloudId} automatically deleted by Garbage Collector.");
+            System.Diagnostics.Debug.WriteLine($"Shared list {cloudId} completely deleted from cloud.");
             return true;
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error deleting shared list: {ex.Message}");
             return false;
+        }
+    }
+
+    public IDisposable ListenToSharedList(string cloudId, Action<SharedShoppingListCloudModel> onUpdate)
+    {
+        if (string.IsNullOrEmpty(cloudId)) return null;
+
+        var firestore = CrossFirebaseFirestore.Current;
+        var docRef = firestore.GetCollection("SharedLists").GetDocument(cloudId);
+
+        var listener = docRef.AddSnapshotListener<SharedShoppingListCloudModel>((snapshot) =>
+        {
+            //If the file is null
+            if (snapshot != null && snapshot.Data != null)
+            {
+                var list = snapshot.Data;
+                list.CloudId = cloudId;
+
+                onUpdate?.Invoke(list);
+            }
+        });
+
+        return listener;
+    }
+    public async Task UpdateSharedListAsync(SharedShoppingListCloudModel sharedList)
+    {
+        try
+        {
+            sharedList.UpdatedAt = DateTime.UtcNow;
+
+            var firestore = CrossFirebaseFirestore.Current;
+            // Fixed: Using SetDataAsync which properly serializes the C# object
+            await firestore.GetCollection("SharedLists").GetDocument(sharedList.CloudId).SetDataAsync(sharedList);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating shared list in cloud: {ex.Message}");
         }
     }
 

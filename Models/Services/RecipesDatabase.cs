@@ -83,6 +83,8 @@ public class RecipesDatabase
         await Database.CreateTableAsync<SavedShoppingList>();
         await Database.CreateTableAsync<SavedShoppingListItem>();
         await Database.CreateTableAsync<IngredientConversion>();
+        await Database.CreateTableAsync<AbstractShoppingList>();
+        await Database.CreateTableAsync<AbstractShoppingListItem>();
 
         // --- Cloud & Garbage Collection ---
         await Database.CreateTableAsync<PendingCloudDeletion>();
@@ -687,35 +689,64 @@ public class RecipesDatabase
     }
 
     /// <summary>
-    /// Processes the dedicated Shared Shopping Lists TTL queue in O(1).
+    /// Processes the local queue of pending shared list deletions. 
+    /// Decrements the user reference count on the cloud document, updating or completely purging it if no partners remain.
     /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ProcessExpiredSharedListsAsync()
     {
         try
         {
+            // Abort immediately if there is no active internet connection
             if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet) return;
             await Init();
 
-            var oldestItem = await Database.Table<PendingSharedListDeletion>()
-                                           .OrderBy(x => x.ExpiresAt)
-                                           .FirstOrDefaultAsync();
-
-            if (oldestItem == null) return;
-
-            if (DateTime.UtcNow < oldestItem.ExpiresAt)
-            {
-                System.Diagnostics.Debug.WriteLine("List GC: Oldest item still valid. Exiting early.");
-                return;
-            }
-
+            // Fetch all items from the pending synchronization queue that are ready for execution
             var expiredItems = await Database.Table<PendingSharedListDeletion>()
                                              .Where(x => x.ExpiresAt <= DateTime.UtcNow)
                                              .ToListAsync();
 
+            if (!expiredItems.Any()) return;
+
+            var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
+            string currentUid = authService?.GetCurrentUserId();
+
             foreach (var item in expiredItems)
             {
-                bool deleted = await _firestoreService.DeleteSharedListFromCloudAsync(item.SharedListId);
-                if (deleted) await Database.DeleteAsync(item);
+                bool handled = false;
+                var cloudList = await _firestoreService.GetSharedListFromCloudAsync(item.SharedListId);
+
+                if (cloudList == null)
+                {
+                    // The document is already gone from the cloud, mark as handled
+                    handled = true;
+                }
+                else
+                {
+                    // Remove the current user from the remote partners collection
+                    if (!string.IsNullOrEmpty(currentUid) && cloudList.PartnerUids.Contains(currentUid))
+                    {
+                        cloudList.PartnerUids.Remove(currentUid);
+                    }
+
+                    // Complete cloud purge condition: No active partners left OR the absolute TTL has expired
+                    if (cloudList.PartnerUids.Count == 0 || DateTime.UtcNow > cloudList.ExpiresAt)
+                    {
+                        handled = await _firestoreService.DeleteSharedListFromCloudAsync(item.SharedListId);
+                    }
+                    else
+                    {
+                        // Other partners are still active, simply update the reference array in the cloud
+                        await _firestoreService.UpdateSharedListAsync(cloudList);
+                        handled = true;
+                    }
+                }
+
+                // If the cloud synchronization transaction succeeded, remove from the local queue
+                if (handled)
+                {
+                    await Database.DeleteAsync(item);
+                }
             }
         }
         catch (Exception ex)
@@ -897,6 +928,16 @@ public class RecipesDatabase
             await Database.DeleteAsync(item);
         }
 
+        if (list.IsShared && !string.IsNullOrEmpty(list.CloudId))
+        {
+            await Database.InsertAsync(new PendingSharedListDeletion
+            {
+                SharedListId = list.CloudId,
+                ExpiresAt = DateTime.UtcNow 
+            });
+            _ = Task.Run(async () => await ProcessExpiredSharedListsAsync());
+        }
+
         await Database.DeleteAsync(list);
     }
 
@@ -931,25 +972,85 @@ public class RecipesDatabase
     {
         await Init();
 
-        // 1. Clear any existing items for this specific list to prevent duplication
-        var existingItems = await Database.Table<SavedShoppingListItem>()
-                                          .Where(i => i.ListId == listId)
-                                          .ToListAsync();
-
-        foreach (var item in existingItems)
+        // 1. Delete all old items for this specific list to prevent duplication loops
+        var oldItems = await Database.Table<SavedShoppingListItem>().Where(i => i.ListId == listId).ToListAsync();
+        foreach (var oldItem in oldItems)
         {
-            await Database.DeleteAsync(item);
+            await Database.DeleteAsync(oldItem);
         }
 
-        // 2. Insert the new static snapshot items into the database
+        // 2. Insert the fresh snapshot from the cloud (or from local generation)
         foreach (var item in items)
         {
-            item.ListId = listId;
-            item.UpdateDisplayText();
-
             await Database.InsertAsync(item);
         }
     }
+    #endregion
+    //--------------
+
+    //--------------
+    #region Abstract Shopping Lists CRUD
+    //--------------
+
+    public async Task<List<AbstractShoppingList>> GetAbstractShoppingListsAsync()
+    {
+        await Init();
+        return await Database.Table<AbstractShoppingList>().OrderByDescending(l => l.CreatedAt).ToListAsync();
+    }
+
+    public async Task<AbstractShoppingList> GetAbstractShoppingListAsync(int listId)
+    {
+        await Init();
+        return await Database.Table<AbstractShoppingList>().Where(l => l.Id == listId).FirstOrDefaultAsync();
+    }
+
+    public async Task<int> SaveAbstractShoppingListAsync(AbstractShoppingList list)
+    {
+        await Init();
+        if (list.Id != 0)
+        {
+            return await Database.UpdateAsync(list);
+        }
+        else
+        {
+            list.CreatedAt = DateTime.Now;
+            return await Database.InsertAsync(list);
+        }
+    }
+
+    public async Task DeleteAbstractShoppingListAsync(AbstractShoppingList list)
+    {
+        await Init();
+        var items = await GetItemsForAbstractListAsync(list.Id);
+        foreach (var item in items)
+        {
+            await Database.DeleteAsync(item);
+        }
+        await Database.DeleteAsync(list);
+    }
+
+    public async Task<List<AbstractShoppingListItem>> GetItemsForAbstractListAsync(int listId)
+    {
+        await Init();
+        return await Database.Table<AbstractShoppingListItem>().Where(i => i.ListId == listId).ToListAsync();
+    }
+
+    public async Task<int> SaveAbstractShoppingListItemAsync(AbstractShoppingListItem item)
+    {
+        await Init();
+        item.UpdateDisplayText();
+        if (item.Id != 0)
+            return await Database.UpdateAsync(item);
+        else
+            return await Database.InsertAsync(item);
+    }
+
+    public async Task<int> DeleteAbstractShoppingListItemAsync(AbstractShoppingListItem item)
+    {
+        await Init();
+        return await Database.DeleteAsync(item);
+    }
+
     #endregion
     //--------------
 }
