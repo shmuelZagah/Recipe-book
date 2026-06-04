@@ -6,19 +6,27 @@ namespace Recipe_book.Models.Cloud;
 
 public class SharedCloudItemDto
 {
-    public string N { get; set; }
-    public double Q { get; set; }
-    public string U { get; set; }
-    public string C { get; set; }
-    public bool IsBought { get; set; }
+    [FirestoreDocumentId]
+    public string DocumentId { get; set; } 
+
+    [FirestoreProperty("N")] public string N { get; set; }
+    [FirestoreProperty("Q")] public double Q { get; set; }
+    [FirestoreProperty("U")] public string U { get; set; }
+    [FirestoreProperty("C")] public string C { get; set; }
+    [FirestoreProperty("IsBought")] public bool IsBought { get; set; }
+
+    [FirestoreProperty("LastActionBy")] public string LastActionBy { get; set; }
 }
 
 public class SharedCloudConversionDto
 {
-    public string K { get; set; }
-    public string B { get; set; }
-    public double A { get; set; }
-    public string C { get; set; }
+    [FirestoreDocumentId]
+    public string DocumentId { get; set; }
+
+    [FirestoreProperty("K")] public string K { get; set; }
+    [FirestoreProperty("B")] public string B { get; set; }
+    [FirestoreProperty("A")] public double A { get; set; }
+    [FirestoreProperty("C")] public string C { get; set; }
 }
 
 public class SharedShoppingListCloudModel
@@ -29,17 +37,8 @@ public class SharedShoppingListCloudModel
     [FirestoreProperty("ListName")]
     public string ListName { get; set; }
 
-    [FirestoreProperty("ItemsJson")]
-    public string ItemsJson { get; set; }
-
-    [FirestoreProperty("ConversionsJson")]
-    public string ConversionsJson { get; set; }
-
     [FirestoreProperty("PartnerUids")]
     public List<string> PartnerUids { get; set; } = new();
-
-    [FirestoreProperty("LastActionBy")]
-    public string LastActionBy { get; set; }
 
     [FirestoreProperty("UpdatedAtTicks")]
     public long UpdatedAtTicks { get; set; }

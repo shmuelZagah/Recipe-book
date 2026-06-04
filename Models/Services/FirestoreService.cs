@@ -242,29 +242,51 @@ public class FirestoreService
     #region SHOPPING LISTS CLOUD OPERATIONS
     // ==========================================
 
-    public async Task<string> UploadSharedListAsync(SharedShoppingListCloudModel sharedList)
+    /// <summary>
+    /// Uploads a new shared shopping list along with its items and conversions stored in sub-collections.
+    /// This architecture ensures atomic updates per item and prevents data loss during concurrent edits.
+    /// </summary>
+    public async Task<string> UploadSharedListWithSubCollectionsAsync(SharedShoppingListCloudModel sharedList, List<SharedCloudItemDto> items, List<SharedCloudConversionDto> conversions)
     {
         try
         {
             var firestore = CrossFirebaseFirestore.Current;
-            var collection = firestore.GetCollection("SharedLists");
+            var docRef = firestore.GetCollection("SharedLists").CreateDocument();
+            sharedList.CloudId = docRef.Id;
 
-            var doc = collection.CreateDocument();
-            sharedList.CloudId = doc.Id;
+            // 1. Save the parent document (Metadata, Uids, Dates)
+            await docRef.SetDataAsync(sharedList);
 
-            // The model is completely flat, so it uploads safely and easily
-            await doc.SetDataAsync(sharedList);
+            // 2. Save items into the "Items" sub-collection using the item name as the document ID
+            var itemsCollection = docRef.GetCollection("Items");
+            foreach (var item in items)
+            {
+                string safeId = item.N.Replace("/", "_");
+                await itemsCollection.GetDocument(safeId).SetDataAsync(item);
+            }
 
-            System.Diagnostics.Debug.WriteLine($"Shared list uploaded successfully! ID: {doc.Id}");
-            return doc.Id;
+            // 3. Save conversions into the "Conversions" sub-collection
+            var convCollection = docRef.GetCollection("Conversions");
+            foreach (var conv in conversions)
+            {
+                string safeId = conv.K.Replace("/", "_");
+                await convCollection.GetDocument(safeId).SetDataAsync(conv);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"Shared list with sub-collections uploaded successfully! ID: {docRef.Id}");
+            return docRef.Id;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error uploading shared list: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Error uploading shared list with sub-collections: {ex.Message}");
             return null;
         }
     }
 
+    /// <summary>
+    /// Fetches the parent shared list document from the cloud.
+    /// Note: This only fetches the metadata, not the nested sub-collections.
+    /// </summary>
     public async Task<SharedShoppingListCloudModel> GetSharedListFromCloudAsync(string cloudId)
     {
         if (string.IsNullOrEmpty(cloudId)) return null;
@@ -274,7 +296,7 @@ public class FirestoreService
             var firestore = CrossFirebaseFirestore.Current;
             var snapshot = await firestore.GetCollection("SharedLists").GetDocument(cloudId).GetDocumentSnapshotAsync<SharedShoppingListCloudModel>();
 
-            if (snapshot != null)
+            if (snapshot != null && snapshot.Data != null)
             {
                 var list = snapshot.Data;
                 list.CloudId = cloudId;
@@ -289,6 +311,59 @@ public class FirestoreService
         return null;
     }
 
+    /// <summary>
+    /// Fetches all items from the "Items" sub-collection for a specific shared list.
+    /// </summary>
+    public async Task<List<SharedCloudItemDto>> GetSharedListItemsFromCloudAsync(string cloudId)
+    {
+        if (string.IsNullOrEmpty(cloudId)) return new List<SharedCloudItemDto>();
+
+        try
+        {
+            var firestore = CrossFirebaseFirestore.Current;
+            var snapshot = await firestore.GetCollection("SharedLists").GetDocument(cloudId).GetCollection("Items").GetDocumentsAsync<SharedCloudItemDto>();
+
+            if (snapshot != null && snapshot.Documents != null)
+            {
+                return snapshot.Documents.Select(d => d.Data).Where(d => d != null).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error fetching shared list items from cloud: {ex.Message}");
+        }
+
+        return new List<SharedCloudItemDto>();
+    }
+
+    /// <summary>
+    /// Fetches all conversions from the "Conversions" sub-collection for a specific shared list.
+    /// </summary>
+    public async Task<List<SharedCloudConversionDto>> GetSharedListConversionsFromCloudAsync(string cloudId)
+    {
+        if (string.IsNullOrEmpty(cloudId)) return new List<SharedCloudConversionDto>();
+
+        try
+        {
+            var firestore = CrossFirebaseFirestore.Current;
+            var snapshot = await firestore.GetCollection("SharedLists").GetDocument(cloudId).GetCollection("Conversions").GetDocumentsAsync<SharedCloudConversionDto>();
+
+            if (snapshot != null && snapshot.Documents != null)
+            {
+                return snapshot.Documents.Select(d => d.Data).Where(d => d != null).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error fetching shared list conversions from cloud: {ex.Message}");
+        }
+
+        return new List<SharedCloudConversionDto>();
+    }
+
+    /// <summary>
+    /// Deletes the parent shared list document from the cloud.
+    /// </summary>
     public async Task<bool> DeleteSharedListFromCloudAsync(string cloudId)
     {
         if (string.IsNullOrEmpty(cloudId)) return true;
@@ -298,7 +373,7 @@ public class FirestoreService
             var firestore = CrossFirebaseFirestore.Current;
             await firestore.GetCollection("SharedLists").GetDocument(cloudId).DeleteDocumentAsync();
 
-            System.Diagnostics.Debug.WriteLine($"Shared list {cloudId} completely deleted from cloud.");
+            System.Diagnostics.Debug.WriteLine($"Shared list {cloudId} parent document deleted from cloud.");
             return true;
         }
         catch (Exception ex)
@@ -308,40 +383,64 @@ public class FirestoreService
         }
     }
 
-    public IDisposable ListenToSharedList(string cloudId, Action<SharedShoppingListCloudModel> onUpdate)
+    /// <summary>
+    /// Listens for real-time changes specifically within the 'Items' sub-collection.
+    /// Returns the listener so it can be disposed when the user leaves the list view.
+    /// </summary>
+    public IDisposable ListenToSharedListItems(string cloudId, Action<IEnumerable<SharedCloudItemDto>> onUpdate)
     {
         if (string.IsNullOrEmpty(cloudId)) return null;
 
         var firestore = CrossFirebaseFirestore.Current;
-        var docRef = firestore.GetCollection("SharedLists").GetDocument(cloudId);
+        var itemsCollectionRef = firestore.GetCollection("SharedLists").GetDocument(cloudId).GetCollection("Items");
 
-        var listener = docRef.AddSnapshotListener<SharedShoppingListCloudModel>((snapshot) =>
+        var listener = itemsCollectionRef.AddSnapshotListener<SharedCloudItemDto>((snapshot) =>
         {
-            //If the file is null
-            if (snapshot != null && snapshot.Data != null)
+            if (snapshot != null && snapshot.Documents != null)
             {
-                var list = snapshot.Data;
-                list.CloudId = cloudId;
-
-                onUpdate?.Invoke(list);
+                var items = snapshot.Documents.Select(d => d.Data).Where(d => d != null).ToList();
+                onUpdate?.Invoke(items);
             }
         });
 
         return listener;
     }
-    public async Task UpdateSharedListAsync(SharedShoppingListCloudModel sharedList)
+
+    /// <summary>
+    /// Updates a single item within the 'Items' sub-collection atomically.
+    /// This prevents overwriting other users' concurrent changes.
+    /// </summary>
+    public async Task UpdateSharedListItemAsync(string cloudId, SharedCloudItemDto item)
+    {
+        if (string.IsNullOrEmpty(cloudId) || item == null) return;
+
+        try
+        {
+            var firestore = CrossFirebaseFirestore.Current;
+            string safeId = item.N.Replace("/", "_");
+            await firestore.GetCollection("SharedLists").GetDocument(cloudId).GetCollection("Items").GetDocument(safeId).SetDataAsync(item);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating single item: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Updates the parent shared list document metadata (e.g., PartnerUids, UpdatedAtTicks).
+    /// </summary>
+    public async Task UpdateSharedListMetadataAsync(SharedShoppingListCloudModel sharedList)
     {
         try
         {
-            sharedList.UpdatedAt = DateTime.UtcNow;
+            sharedList.UpdatedAtTicks = DateTime.UtcNow.Ticks;
 
             var firestore = CrossFirebaseFirestore.Current;
-            // Fixed: Using SetDataAsync which properly serializes the C# object
             await firestore.GetCollection("SharedLists").GetDocument(sharedList.CloudId).SetDataAsync(sharedList);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error updating shared list in cloud: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Error updating shared list metadata in cloud: {ex.Message}");
         }
     }
 

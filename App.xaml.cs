@@ -185,25 +185,10 @@ public partial class App : Application
 
                     if (!string.IsNullOrEmpty(cloudId))
                     {
-                        var allLocalLists = await db.GetSavedShoppingListsAsync();
-                        var existingList = allLocalLists.FirstOrDefault(l => l.CloudId == cloudId);
-
-                        if (existingList != null)
-                        {
-                            MainThread.BeginInvokeOnMainThread(() =>
-                            {
-                                ShoppingListViewModel.PendingImportId = existingList.Id;
-                                Recipe_book.MainPage.SwitchTabAction?.Invoke(3);
-                                ShoppingListViewModel.RefreshActivePage?.Invoke();
-                            });
-
-                            return;
-                        }
-
                         var firestoreService = new FirestoreService();
                         var importedList = await firestoreService.GetSharedListFromCloudAsync(cloudId);
 
-                        if (importedList != null && !string.IsNullOrEmpty(importedList.ItemsJson))
+                        if (importedList != null)
                         {
                             var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
                             string currentUid = authService?.GetCurrentUserId();
@@ -211,30 +196,30 @@ public partial class App : Application
                             if (!string.IsNullOrEmpty(currentUid) && !importedList.PartnerUids.Contains(currentUid))
                             {
                                 importedList.PartnerUids.Add(currentUid);
-                                await firestoreService.UpdateSharedListAsync(importedList);
+                                await firestoreService.UpdateSharedListMetadataAsync(importedList);
                             }
+
+                            // Fetch sub-collections directly!
+                            var itemsDto = await firestoreService.GetSharedListItemsFromCloudAsync(cloudId);
+                            var convsDto = await firestoreService.GetSharedListConversionsFromCloudAsync(cloudId);
 
                             var existingConversions = await db.GetIngredientConversionsAsync();
                             var existingKeywords = existingConversions.Select(c => c.Keyword).ToHashSet();
 
-                            if (!string.IsNullOrEmpty(importedList.ConversionsJson))
+                            if (convsDto != null)
                             {
-                                var convsDto = System.Text.Json.JsonSerializer.Deserialize<List<SharedCloudConversionDto>>(importedList.ConversionsJson);
-                                if (convsDto != null)
+                                foreach (var conv in convsDto)
                                 {
-                                    foreach (var conv in convsDto)
+                                    string k = conv.K;
+                                    if (!string.IsNullOrEmpty(k) && !existingKeywords.Contains(k))
                                     {
-                                        string k = conv.K;
-                                        if (!string.IsNullOrEmpty(k) && !existingKeywords.Contains(k))
+                                        await db.AddIngredientConversionAsync(new IngredientConversion
                                         {
-                                            await db.AddIngredientConversionAsync(new IngredientConversion
-                                            {
-                                                Keyword = k,
-                                                BaseUnit = string.IsNullOrWhiteSpace(conv.B) ? "יחידות" : conv.B,
-                                                AmountPerCup = conv.A,
-                                                Category = string.IsNullOrWhiteSpace(conv.C) ? "כללי" : conv.C
-                                            });
-                                        }
+                                            Keyword = k,
+                                            BaseUnit = string.IsNullOrWhiteSpace(conv.B) ? "יחידות" : conv.B,
+                                            AmountPerCup = conv.A,
+                                            Category = string.IsNullOrWhiteSpace(conv.C) ? "כללי" : conv.C
+                                        });
                                     }
                                 }
                             }
@@ -249,7 +234,6 @@ public partial class App : Application
                             await db.SaveShoppingListAsync(newList);
 
                             var flatList = new List<SavedShoppingListItem>();
-                            var itemsDto = System.Text.Json.JsonSerializer.Deserialize<List<SharedCloudItemDto>>(importedList.ItemsJson);
 
                             if (itemsDto != null)
                             {
@@ -288,6 +272,13 @@ public partial class App : Application
                                 ShoppingListViewModel.PendingImportId = newList.Id;
                                 Recipe_book.MainPage.SwitchTabAction?.Invoke(3);
                                 ShoppingListViewModel.RefreshActivePage?.Invoke();
+                            });
+                        }
+                        else
+                        {
+                            MainThread.BeginInvokeOnMainThread(async () =>
+                            {
+                                await App.Current.MainPage.DisplayAlert("שגיאה", "לא הצלחנו למצוא את הרשימה בענן. ייתכן שהקישור שבור או נמחק.", "אישור");
                             });
                         }
                     }

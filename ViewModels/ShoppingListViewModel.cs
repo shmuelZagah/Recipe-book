@@ -61,7 +61,6 @@ public partial class ShoppingListViewModel : ObservableObject
     [ObservableProperty] private AbstractShoppingList currentAbstractTemplate;
 
     private IDisposable _cloudListener;
-    private SharedShoppingListCloudModel _currentCloudSnapshot; 
     private bool _isSyncingFromCloud = false;
 
     #endregion
@@ -126,104 +125,157 @@ public partial class ShoppingListViewModel : ObservableObject
 
         _cloudListener?.Dispose();
         _cloudListener = null;
-        _currentCloudSnapshot = null;
 
         await GenerateListAsync();
 
         if (CurrentShoppingList.IsShared && !string.IsNullOrEmpty(CurrentShoppingList.CloudId))
         {
             var firestore = new FirestoreService();
-            _cloudListener = firestore.ListenToSharedList(CurrentShoppingList.CloudId, OnCloudListUpdated);
+            _cloudListener = firestore.ListenToSharedListItems(CurrentShoppingList.CloudId, OnCloudListItemsUpdated);
         }
     }
 
-    private async Task PushCurrentListToCloudAsync()
+
+    /// <summary>
+    /// Implements surgical Smart UI Merging using strict Value Comparison.
+    /// Updates only changed properties directly in the UI without full reloads, 
+    /// completely eliminating screen flickering and duplication loops under heavy load.
+    /// </summary>
+    private void OnCloudListItemsUpdated(IEnumerable<SharedCloudItemDto> cloudItems)
     {
-        if (CurrentShoppingList == null || !CurrentShoppingList.IsShared) return;
-
-        var firestore = new FirestoreService();
-
-        if (_currentCloudSnapshot == null)
-        {
-            _currentCloudSnapshot = await firestore.GetSharedListFromCloudAsync(CurrentShoppingList.CloudId);
-            if (_currentCloudSnapshot == null) return;
-        }
-
-        var localItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
-        var itemsListDto = new List<SharedCloudItemDto>();
-
-        foreach (var item in localItems)
-        {
-            itemsListDto.Add(new SharedCloudItemDto
-            {
-                N = item.Name,
-                Q = item.Quantity,
-                U = string.IsNullOrWhiteSpace(item.Unit) ? "יחידות" : item.Unit,
-                C = item.Category,
-                IsBought = item.IsBought
-            });
-        }
-
-        _currentCloudSnapshot.ItemsJson = System.Text.Json.JsonSerializer.Serialize(itemsListDto);
-
-        var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
-        _currentCloudSnapshot.LastActionBy = authService?.GetCurrentUserId();
-        _currentCloudSnapshot.UpdatedAt = DateTime.UtcNow;
-
-        await firestore.UpdateSharedListAsync(_currentCloudSnapshot);
-    }
-
-    private void OnCloudListUpdated(SharedShoppingListCloudModel cloudList)
-    {
-        if (cloudList == null || CurrentShoppingList == null || CurrentShoppingList.Id == -1) return;
-
-        var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
-        string currentUid = authService?.GetCurrentUserId();
-
-        if (!string.IsNullOrEmpty(currentUid) && cloudList.LastActionBy == currentUid) return;
-
-        _currentCloudSnapshot = cloudList;
+        if (cloudItems == null || CurrentShoppingList == null || CurrentShoppingList.Id == -1) return;
 
         MainThread.BeginInvokeOnMainThread(async () =>
         {
-            _isSyncingFromCloud = true;
+            _isSyncingFromCloud = true; // Prevents triggering local PropertyChanged events which cause echo uploads
 
             try
             {
+                // 1. Sync the local SQLite database silently
                 var flatList = new List<SavedShoppingListItem>();
-
-                if (!string.IsNullOrEmpty(cloudList.ItemsJson))
+                foreach (var cloudItem in cloudItems)
                 {
-                    var itemsDto = System.Text.Json.JsonSerializer.Deserialize<List<SharedCloudItemDto>>(cloudList.ItemsJson);
-                    if (itemsDto != null)
+                    string n = cloudItem.N ?? "";
+                    string u = string.IsNullOrWhiteSpace(cloudItem.U) ? "יחידות" : cloudItem.U;
+                    string c = string.IsNullOrWhiteSpace(cloudItem.C) ? "כללי" : cloudItem.C;
+
+                    string displayUnit = u == "יחידות" ? "" : u;
+                    string displayTxt = string.IsNullOrWhiteSpace(displayUnit) ? $"{cloudItem.Q} {n}" : $"{cloudItem.Q} {displayUnit} {n}";
+
+                    flatList.Add(new SavedShoppingListItem
                     {
-                        foreach (var cloudItem in itemsDto)
+                        ListId = CurrentShoppingList.Id,
+                        Name = n,
+                        Quantity = cloudItem.Q,
+                        Unit = displayUnit,
+                        Category = c,
+                        DisplayText = displayTxt, // התיקון: שומרים את הטקסט כדי שלא יימחק מהמסד!
+                        IsBought = cloudItem.IsBought
+                    });
+                }
+
+                await _database.SaveStaticShoppingListItemsAsync(CurrentShoppingList.Id, flatList);
+
+                // 2. Surgical UI Merge: Compare values and update existing objects
+                var allUiItems = GroupedShoppingItems.SelectMany(g => g).ToList();
+
+                foreach (var cloudItem in cloudItems)
+                {
+                    var existingUiItem = allUiItems.FirstOrDefault(i => i.Name == cloudItem.N);
+
+                    string n = cloudItem.N ?? "";
+                    string u = string.IsNullOrWhiteSpace(cloudItem.U) ? "יחידות" : cloudItem.U;
+                    string c = string.IsNullOrWhiteSpace(cloudItem.C) ? "כללי" : cloudItem.C;
+                    string displayUnit = u == "יחידות" ? "" : u;
+                    string displayTxt = string.IsNullOrWhiteSpace(displayUnit) ? $"{cloudItem.Q} {n}" : $"{cloudItem.Q} {displayUnit} {n}";
+
+                    if (existingUiItem != null)
+                    {
+                        bool isChanged = false;
+
+                        if (existingUiItem.Quantity != cloudItem.Q)
                         {
-                            string n = cloudItem.N ?? "";
-                            double q = cloudItem.Q;
-                            string u = string.IsNullOrWhiteSpace(cloudItem.U) ? "יחידות" : cloudItem.U;
-                            string c = string.IsNullOrWhiteSpace(cloudItem.C) ? "כללי" : cloudItem.C;
-                            bool isBought = cloudItem.IsBought;
+                            existingUiItem.Quantity = cloudItem.Q;
+                            isChanged = true;
+                        }
 
-                            string displayUnit = u == "יחידות" ? "" : u;
-                            string displayTxt = string.IsNullOrWhiteSpace(displayUnit) ? $"{q} {n}" : $"{q} {displayUnit} {n}";
+                        if (existingUiItem.IsBought != cloudItem.IsBought)
+                        {
+                            existingUiItem.IsBought = cloudItem.IsBought;
+                            isChanged = true;
+                        }
 
-                            flatList.Add(new SavedShoppingListItem
+                        if (isChanged)
+                        {
+                            existingUiItem.DisplayText = displayTxt; // מעדכן ישירות את השדה
+                            existingUiItem.UpdateDisplayText();
+                        }
+
+                        allUiItems.Remove(existingUiItem);
+                    }
+                    else
+                    {
+                        // New item added from cloud: Inject surgically without full reload
+                        var newItem = new SavedShoppingListItem
+                        {
+                            ListId = CurrentShoppingList.Id,
+                            Name = n,
+                            Quantity = cloudItem.Q,
+                            Unit = displayUnit,
+                            Category = c,
+                            DisplayText = displayTxt, // התיקון: דואג שהטקסט יופיע מיד על המסך!
+                            IsBought = cloudItem.IsBought
+                        };
+                        newItem.UpdateDisplayText();
+
+                        // Attach listener just like GenerateListAsync does
+                        newItem.PropertyChanged += async (s, e) =>
+                        {
+                            if (e.PropertyName == nameof(SavedShoppingListItem.IsBought))
                             {
-                                ListId = CurrentShoppingList.Id,
-                                Name = n,
-                                Quantity = q,
-                                Unit = displayUnit,
-                                Category = c,
-                                DisplayText = displayTxt,
-                                IsBought = isBought
-                            });
+                                await _database.SaveShoppingListItemAsync(newItem);
+                                if (!_isSyncingFromCloud && CurrentShoppingList.IsShared)
+                                {
+                                    var firestore = new FirestoreService();
+                                    var dto = new SharedCloudItemDto
+                                    {
+                                        DocumentId = newItem.Name.Replace("/", "_"),
+                                        N = newItem.Name,
+                                        Q = newItem.Quantity,
+                                        U = newItem.Unit,
+                                        C = newItem.Category,
+                                        IsBought = newItem.IsBought
+                                    };
+                                    await firestore.UpdateSharedListItemAsync(CurrentShoppingList.CloudId, dto);
+                                }
+                            }
+                        };
+
+                        var targetGroup = GroupedShoppingItems.FirstOrDefault(g => g.CategoryName == c);
+                        if (targetGroup != null)
+                        {
+                            targetGroup.Add(newItem);
+                        }
+                        else
+                        {
+                            GroupedShoppingItems.Add(new ShoppingItemGroup(c, new[] { newItem }));
                         }
                     }
                 }
 
-                await _database.SaveStaticShoppingListItemsAsync(CurrentShoppingList.Id, flatList);
-                await GenerateListAsync();
+                // 3. Process deletions: items left in 'allUiItems' no longer exist in the cloud
+                foreach (var deletedItem in allUiItems)
+                {
+                    var group = GroupedShoppingItems.FirstOrDefault(g => g.CategoryName == deletedItem.Category);
+                    if (group != null)
+                    {
+                        group.Remove(deletedItem);
+                        if (group.Count == 0)
+                        {
+                            GroupedShoppingItems.Remove(group);
+                        }
+                    }
+                }
             }
             finally
             {
@@ -231,6 +283,7 @@ public partial class ShoppingListViewModel : ObservableObject
             }
         });
     }
+
 
     [RelayCommand]
     public async Task SwitchToTemplateEditAsync(AbstractShoppingList template)
@@ -450,9 +503,19 @@ public partial class ShoppingListViewModel : ObservableObject
                     {
                         await _database.SaveShoppingListItemAsync(item);
 
-                        if (!_isSyncingFromCloud)
+                        if (!_isSyncingFromCloud && CurrentShoppingList.IsShared)
                         {
-                            await PushCurrentListToCloudAsync();
+                            var firestore = new FirestoreService();
+                            var dto = new SharedCloudItemDto
+                            {
+                                DocumentId = item.Name.Replace("/", "_"),
+                                N = item.Name,
+                                Q = item.Quantity,
+                                U = item.Unit,
+                                C = item.Category,
+                                IsBought = item.IsBought
+                            };
+                            await firestore.UpdateSharedListItemAsync(CurrentShoppingList.CloudId, dto);
                         }
                     }
                 };
@@ -484,7 +547,7 @@ public partial class ShoppingListViewModel : ObservableObject
             if (match != null)
             {
                 match.Quantity += addedQty;
-                match.UpdateDisplayText(); 
+                match.UpdateDisplayText();
                 await _database.SaveAbstractShoppingListItemAsync(match);
                 await GenerateListAsync();
                 return;
@@ -500,7 +563,21 @@ public partial class ShoppingListViewModel : ObservableObject
                 match.UpdateDisplayText();
                 await _database.SaveShoppingListItemAsync(match);
 
-                if (CurrentShoppingList.IsShared) await PushCurrentListToCloudAsync();
+                if (CurrentShoppingList.IsShared)
+                {
+                    var firestore = new FirestoreService();
+                    var dto = new SharedCloudItemDto
+                    {
+                        DocumentId = match.Name.Replace("/", "_"),
+                        N = match.Name,
+                        Q = match.Quantity,
+                        U = match.Unit,
+                        C = match.Category,
+                        IsBought = match.IsBought
+                    };
+                    await firestore.UpdateSharedListItemAsync(CurrentShoppingList.CloudId, dto);
+                }
+
                 await GenerateListAsync();
                 return;
             }
@@ -511,7 +588,7 @@ public partial class ShoppingListViewModel : ObservableObject
 
         if (convMatch != null && !string.IsNullOrWhiteSpace(convMatch.Category))
         {
-            finalCategory = convMatch.Category; 
+            finalCategory = convMatch.Category;
         }
         else
         {
@@ -545,11 +622,23 @@ public partial class ShoppingListViewModel : ObservableObject
             };
             newItem.UpdateDisplayText();
             await _database.SaveShoppingListItemAsync(newItem);
-        }
 
-        if (!IsEditingTemplateMode && CurrentShoppingList != null && CurrentShoppingList.IsShared)
-        {
-            await PushCurrentListToCloudAsync();
+            if (CurrentShoppingList != null && CurrentShoppingList.IsShared)
+            {
+                var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
+                var firestore = new FirestoreService();
+                var dto = new SharedCloudItemDto
+                {
+                    DocumentId = newItem.Name.Replace("/", "_"),
+                    N = newItem.Name,
+                    Q = newItem.Quantity,
+                    U = newItem.Unit,
+                    C = newItem.Category,
+                    IsBought = newItem.IsBought,
+                    LastActionBy = authService?.GetCurrentUserId()
+                };
+                await firestore.UpdateSharedListItemAsync(CurrentShoppingList.CloudId, dto);
+            }
         }
 
         await GenerateListAsync();
@@ -583,7 +672,7 @@ public partial class ShoppingListViewModel : ObservableObject
                             }
                             else
                             {
-                                await firestore.UpdateSharedListAsync(cloudList);
+                                await firestore.UpdateSharedListMetadataAsync(cloudList);
                             }
                         }
                     }
@@ -606,11 +695,14 @@ public partial class ShoppingListViewModel : ObservableObject
         if (await Application.Current.MainPage.DisplayAlert("איפוס קניות", "האם אתה בטוח שברצונך לנקות את כל הסימונים מהרשימה?", "כן, נקה הכל", "ביטול"))
         {
             foreach (var group in GroupedShoppingItems)
-                foreach (var item in group) if (item.IsBought) item.IsBought = false;
-
-            if (CurrentShoppingList.IsShared)
             {
-                await PushCurrentListToCloudAsync();
+                foreach (var item in group)
+                {
+                    if (item.IsBought)
+                    {
+                        item.IsBought = false; 
+                    }
+                }
             }
         }
     }

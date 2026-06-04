@@ -104,6 +104,7 @@ public class ShoppingListActionService
             var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
             string currentUid = authService?.GetCurrentUserId() ?? "Unknown";
 
+            // 1. Prepare the Parent Document (Metadata)
             var cloudModel = new SharedShoppingListCloudModel
             {
                 ListName = currentList?.Title ?? "רשימה משותפת",
@@ -115,6 +116,7 @@ public class ShoppingListActionService
             var allItemNames = new HashSet<string>();
             var itemsListDto = new List<SharedCloudItemDto>();
 
+            // 2. Prepare the Items Sub-Collection
             foreach (var group in groupedItems)
             {
                 foreach (var item in group)
@@ -122,34 +124,37 @@ public class ShoppingListActionService
                     allItemNames.Add(item.Name);
                     itemsListDto.Add(new SharedCloudItemDto
                     {
+                        DocumentId = item.Name.Replace("/", "_"), // Use item name as Document ID
                         N = item.Name,
                         Q = item.Quantity,
                         U = string.IsNullOrWhiteSpace(item.Unit) ? "יחידות" : item.Unit,
                         C = item.Category,
-                        IsBought = item.IsBought
+                        IsBought = item.IsBought,
+                        LastActionBy = currentUid
                     });
                 }
             }
-            cloudModel.ItemsJson = System.Text.Json.JsonSerializer.Serialize(itemsListDto);
 
             var allConversions = await _database.GetIngredientConversionsAsync();
             var relevantConversions = allConversions.Where(c => allItemNames.Contains(c.Keyword)).ToList();
             var convsListDto = new List<SharedCloudConversionDto>();
 
+            // 3. Prepare the Conversions Sub-Collection
             foreach (var conv in relevantConversions)
             {
                 convsListDto.Add(new SharedCloudConversionDto
                 {
+                    DocumentId = conv.Keyword.Replace("/", "_"),
                     K = conv.Keyword,
                     B = conv.BaseUnit,
                     A = conv.AmountPerCup,
                     C = conv.Category
                 });
             }
-            cloudModel.ConversionsJson = System.Text.Json.JsonSerializer.Serialize(convsListDto);
 
             var firestoreService = new FirestoreService();
-            string newCloudId = await firestoreService.UploadSharedListAsync(cloudModel);
+            // Upload using the new Sub-Collections method
+            string newCloudId = await firestoreService.UploadSharedListWithSubCollectionsAsync(cloudModel, itemsListDto, convsListDto);
 
             if (string.IsNullOrEmpty(newCloudId))
             {

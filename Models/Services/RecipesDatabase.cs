@@ -737,7 +737,7 @@ public class RecipesDatabase
                     else
                     {
                         // Other partners are still active, simply update the reference array in the cloud
-                        await _firestoreService.UpdateSharedListAsync(cloudList);
+                        await _firestoreService.UpdateSharedListMetadataAsync(cloudList);
                         handled = true;
                     }
                 }
