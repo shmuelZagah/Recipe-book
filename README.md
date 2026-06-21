@@ -9,10 +9,12 @@ A cross-platform recipe management app built with .NET MAUI, combining local-fir
 - **Local-first, cloud-synced architecture** — every write goes to a local SQLite database first, so the UI updates instantly regardless of connectivity. Firestore and Cloudinary sync happen in the background when a network is available.
 - **Offline operation queue** — actions that can't reach the cloud immediately (like deletions) are persisted locally as pending operations (`PendingCloudDeletion`, `PendingSharedFolderDeletion`, `PendingSharedListDeletion`) and automatically flushed when `Connectivity.Current.NetworkAccess` reports the device back online — no lost actions, no manual retry.
 - **Shareable recipe folders via expiring links** — an entire folder tree (subfolders + recipes) is serialized into a single JSON document and pushed to Firestore as a time-limited share (15-day expiry), letting one user send a whole recipe collection to another without either needing a live shared database.
+- **Real-time shared shopping lists** — shared shopping lists use a live Firestore snapshot listener (`AddSnapshotListener`), so when one person checks off or adds an item, every other device viewing that list updates immediately — no refresh, no polling.
 - **Automatic shopping list generation** — `ShoppingListBuilderService` aggregates ingredients across a date range of scheduled meals, merges them with an optional reusable template list, and combines quantities by normalized name + unit — including a keyword-based unit/ingredient conversion table for matching variant ingredient names.
 - **Weekly meal planning** — a calendar view groups scheduled meals by day and meal type (breakfast/lunch/dinner), feeding directly into the shopping list builder.
 - **Cloud image hosting** — recipe photos are uploaded to Cloudinary rather than stored as blobs in Firestore or on-device, keeping the database lightweight.
 - **MVVM with source-generated bindings** — built on `CommunityToolkit.Mvvm` (`[ObservableProperty]`, `[RelayCommand]`) with `WeakReferenceMessenger` for decoupled communication between view models.
+
 
 ---
 
