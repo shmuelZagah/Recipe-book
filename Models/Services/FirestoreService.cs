@@ -423,6 +423,14 @@ public class FirestoreService
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error updating single item: {ex.Message}");
+
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                if (App.Current?.MainPage != null)
+                {
+                    await App.Current.MainPage.DisplayAlert("שגיאת סנכרון בענן ☁️", $"לא הצלחנו לעדכן את {item.N}.\nסיבה: {ex.Message}", "הבנתי");
+                }
+            });
         }
     }
 
