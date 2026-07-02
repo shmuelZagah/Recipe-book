@@ -2,9 +2,9 @@ using Microsoft.Maui.Controls;
 using Recipe_book.Models.Recipes;
 using Recipe_book.ViewModels;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Diagnostics; // הוספנו בשביל הלוגים
 
 #if ANDROID
 using Android.Views.InputMethods;
@@ -18,10 +18,10 @@ public partial class RecipeEditorPage : ContentPage
     private bool _isAddingNewRow = false;
     private bool _focusPendingIngredientTab = false;
     private bool _focusPendingStepTab = false;
-
-    // מילונים חכמים לשמירת הרפרנסים של השדות
-    private Dictionary<Ingredient, Entry> _ingredientQuantityEntries = new();
-    private Dictionary<RecipeStep, Entry> _stepDescriptionEntries = new();
+    private bool _isIngredientsAnimatorDisabled = false;
+    private bool _isStepsAnimatorDisabled = false;
+    private bool _forceKeyboard = false;
+    private Dictionary<object, Entry> _activeEntries = new();
 
     public RecipeEditorPage(RecipeEditorViewModel vm)
     {
@@ -29,7 +29,39 @@ public partial class RecipeEditorPage : ContentPage
         BindingContext = vm;
     }
 
-    #region Floating Description Animation
+    #region CollectionView Native Animator Kill
+
+    private bool TryDisableAnimation(CollectionView cv, string logTag)
+    {
+        bool success = false;
+#if ANDROID
+        if (cv?.Handler?.PlatformView is AndroidX.RecyclerView.Widget.RecyclerView rv)
+        {
+            rv.SetItemAnimator(null);
+            success = true;
+            Debug.WriteLine($"[StepDebug] {logTag}: Android ItemAnimator disabled successfully.");
+        }
+        else
+        {
+            Debug.WriteLine($"[StepDebug] {logTag}: Failed to disable animator (PlatformView is null or wrong type).");
+        }
+#endif
+        return success;
+    }
+
+    private void OnCollectionViewLoaded(object sender, EventArgs e)
+    {
+        if (sender is CollectionView cv)
+        {
+            if (cv == IngredientsCollection)
+                _isIngredientsAnimatorDisabled = TryDisableAnimation(cv, "Ingredients_Loaded");
+            else if (cv == StepsCollection)
+                _isStepsAnimatorDisabled = TryDisableAnimation(cv, "Steps_Loaded");
+        }
+    }
+    #endregion
+
+    #region Floating Description Animation (ללא שינוי)
     private void OnDescriptionLoaded(object sender, EventArgs e)
     {
         if (sender is Editor editor && editor.Parent?.Parent is Grid parentGrid)
@@ -78,45 +110,132 @@ public partial class RecipeEditorPage : ContentPage
 
     #region Smart Focus & Navigation (Tabs and Buttons)
 
-    private void OnIngredientsTabTapped(object sender, TappedEventArgs e)
+    private async void OnIngredientsTabTapped(object sender, TappedEventArgs e)
     {
         _focusPendingIngredientTab = true;
+        _forceKeyboard = true;
+        bool newlyFocused = false;
+
         if (BindingContext is RecipeEditorViewModel vm)
         {
             vm.ShowIngredientsCommand.Execute(null);
+
+            // מחפש את השורה האחרונה ומתפקס עליה מיד (מה שגונב את הפוקוס מהטאב המוסתר)
+            var lastItem = vm.IngredientsList.LastOrDefault();
+            if (lastItem != null && _activeEntries.TryGetValue(lastItem, out var entry))
+            {
+                _focusPendingIngredientTab = false;
+                FocusNatively(entry, true, "IngredientsTab_ImmediateFocus");
+                newlyFocused = true;
+            }
+        }
+
+        // אם הרשימה הייתה ריקה ולא מצאנו שדה להתפקס עליו, ננקה את הפוקוס הישן בכוח
+        if (!newlyFocused)
+        {
+            this.Unfocus();
+        }
+
+        if (!_isIngredientsAnimatorDisabled)
+        {
+            await Task.Delay(50);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _isIngredientsAnimatorDisabled = TryDisableAnimation(IngredientsCollection, "Ingredients_TabTapped");
+            });
         }
     }
 
-    private void OnStepsTabTapped(object sender, TappedEventArgs e)
+    private async void OnStepsTabTapped(object sender, TappedEventArgs e)
     {
+        Debug.WriteLine("[StepDebug] Steps tab tapped.");
         _focusPendingStepTab = true;
+        _forceKeyboard = true;
+        bool newlyFocused = false;
+
         if (BindingContext is RecipeEditorViewModel vm)
         {
             vm.ShowStepsCommand.Execute(null);
+
+            // מחפש את השלב האחרון ומתפקס עליו מיד
+            var lastItem = vm.StepsList.LastOrDefault();
+            if (lastItem != null && _activeEntries.TryGetValue(lastItem, out var entry))
+            {
+                _focusPendingStepTab = false;
+                FocusNatively(entry, true, "StepsTab_ImmediateFocus");
+                newlyFocused = true;
+            }
+        }
+
+        if (!newlyFocused)
+        {
+            this.Unfocus();
+        }
+
+        if (!_isStepsAnimatorDisabled)
+        {
+            await Task.Delay(50);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _isStepsAnimatorDisabled = TryDisableAnimation(StepsCollection, "Steps_TabTapped");
+            });
         }
     }
 
     private void OnFooterAddIngredientTapped(object sender, TappedEventArgs e)
     {
         _isAddingNewRow = true;
-        if (BindingContext is RecipeEditorViewModel vm)
-        {
-            vm.AddIngredientCommand.Execute(null);
-        }
+        _forceKeyboard = true;
+        if (BindingContext is RecipeEditorViewModel vm) vm.AddIngredientCommand.Execute(null);
     }
 
     private void OnFooterAddStepTapped(object sender, TappedEventArgs e)
     {
+        Debug.WriteLine("[StepDebug] Footer Add Step tapped.");
         _isAddingNewRow = true;
-        if (BindingContext is RecipeEditorViewModel vm)
-        {
-            vm.AddStepCommand.Execute(null);
-        }
+        _forceKeyboard = true;
+        if (BindingContext is RecipeEditorViewModel vm) vm.AddStepCommand.Execute(null);
     }
     #endregion
 
     #region Row Flow & Native Keyboard Control
 
+    private void FocusNatively(VisualElement element, bool forceKeyboard, string logContext = "")
+    {
+        Debug.WriteLine($"[StepDebug] FocusNatively triggered from: {logContext}. ForceKeyboard: {forceKeyboard}");
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+#if ANDROID
+            if (element.Handler?.PlatformView is Android.Widget.EditText native)
+            {
+                Debug.WriteLine($"[StepDebug] Requesting native focus on EditText.");
+                native.RequestFocus();
+
+                if (forceKeyboard)
+                {
+                    var imm = (Android.Views.InputMethods.InputMethodManager)native.Context.GetSystemService(Android.Content.Context.InputMethodService);
+
+                    // האינטואיציה שלך בפעולה: 
+                    // דוגמים בעדינות את אנדרואיד כדי לגלות מתי חלון הפופ-אפ (כמו הפיקר)
+                    // שחרר את המסך, והשדה שלנו הפך רשמית ל-"Served View".
+                    int attempts = 0;
+                    while (!native.HasWindowFocus && attempts < 20) // הגנת גיבוי למקרה חירום
+                    {
+                        await Task.Delay(10); // ממתינים לשבריר שנייה ובודקים שוב
+                        attempts++;
+                    }
+
+                    Debug.WriteLine($"[StepDebug] Window focus verified after {attempts} checks. Forcing keyboard.");
+                    imm?.ShowSoftInput(native, Android.Views.InputMethods.ShowFlags.Implicit);
+                }
+                return;
+            }
+#endif
+            Debug.WriteLine($"[StepDebug] Fallback to standard MAUI Focus.");
+            element.Focus();
+        });
+    }
     private void OnQuantityCompleted(object sender, EventArgs e)
     {
         if (sender is Entry entry && entry.Parent is Grid grid)
@@ -139,10 +258,9 @@ public partial class RecipeEditorPage : ContentPage
             {
                 if (string.IsNullOrEmpty(nameEntry.Text) && string.IsNullOrEmpty(quantityEntry?.Text)) return;
 
-                MainThread.BeginInvokeOnMainThread(async () =>
+                MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    await Task.Delay(50);
-                    nameEntry.Focus();
+                    FocusNatively(nameEntry, forceKeyboard: true, "OnUnitChanged");
                 });
             }
         }
@@ -151,12 +269,15 @@ public partial class RecipeEditorPage : ContentPage
     private void OnNameCompleted(object sender, EventArgs e)
     {
         _isAddingNewRow = true;
+        _forceKeyboard = false;
         if (BindingContext is RecipeEditorViewModel vm) vm.AddIngredientCommand.Execute(null);
     }
 
     private void OnStepCompleted(object sender, EventArgs e)
     {
+        Debug.WriteLine("[StepDebug] OnStepCompleted fired (Standard MAUI Event).");
         _isAddingNewRow = true;
+        _forceKeyboard = true; // שינינו ל-true
         if (BindingContext is RecipeEditorViewModel vm) vm.AddStepCommand.Execute(null);
     }
 
@@ -171,13 +292,22 @@ public partial class RecipeEditorPage : ContentPage
                 {
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
+                        Debug.WriteLine("[StepDebug] CustomAndroidEditorActionListener fired (Native Enter).");
                         _isAddingNewRow = true;
+
                         if (BindingContext is RecipeEditorViewModel vm)
                         {
                             if (entry.BindingContext is Ingredient)
+                            {
+                                _forceKeyboard = false; // במצרכים המקלדת נשארת טבעית
                                 vm.AddIngredientCommand.Execute(null);
-                            else if (entry.BindingContext is RecipeStep)
+                            }
+                            else if (entry.BindingContext is RecipeStep step)
+                            {
+                                _forceKeyboard = true; // בשלבים אנחנו דורשים מקלדת בכוח!
+                                Debug.WriteLine($"[StepDebug] Executing AddStepCommand for step: {step.StepNumber}");
                                 vm.AddStepCommand.Execute(null);
+                            }
                         }
                     });
                 }));
@@ -190,19 +320,16 @@ public partial class RecipeEditorPage : ContentPage
     {
         if (sender is Entry entry && entry.BindingContext is Ingredient ingredient)
         {
-            if (BindingContext is RecipeEditorViewModel vm && ingredient == vm.IngredientsList.LastOrDefault())
+            _activeEntries[ingredient] = entry; // שומרים את הרפרנס לשדה
+
+            if ((_isAddingNewRow || _focusPendingIngredientTab) && BindingContext is RecipeEditorViewModel vm)
             {
-                if (_isAddingNewRow || _focusPendingIngredientTab)
+                if (ingredient == vm.IngredientsList.LastOrDefault())
                 {
                     _isAddingNewRow = false;
                     _focusPendingIngredientTab = false;
 
-                    MainThread.BeginInvokeOnMainThread(async () =>
-                    {
-                        await Task.Delay(100);
-                        entry.Focus();
-                        IngredientsCollection.ScrollTo(ingredient, position: ScrollToPosition.MakeVisible, animate: true);
-                    });
+                    FocusNatively(entry, _forceKeyboard, "OnQuantityLoaded");
                 }
             }
         }
@@ -210,24 +337,21 @@ public partial class RecipeEditorPage : ContentPage
 
     private void OnStepDescriptionLoaded(object sender, EventArgs e)
     {
-        // קוראים לפונקציה השלישית כדי להפעיל את האזנת ה-Enter לאנדרואיד במקביל לפוקוס
+        Debug.WriteLine("[StepDebug] OnStepDescriptionLoaded fired for a step row.");
         OnSeamlessEntryLoaded(sender, e);
 
         if (sender is Entry entry && entry.BindingContext is RecipeStep step)
         {
-            if (BindingContext is RecipeEditorViewModel vm && step == vm.StepsList.LastOrDefault())
+            _activeEntries[step] = entry; // שומרים את הרפרנס לשדה
+
+            if ((_isAddingNewRow || _focusPendingStepTab) && BindingContext is RecipeEditorViewModel vm)
             {
-                if (_isAddingNewRow || _focusPendingStepTab)
+                if (step == vm.StepsList.LastOrDefault())
                 {
                     _isAddingNewRow = false;
                     _focusPendingStepTab = false;
 
-                    MainThread.BeginInvokeOnMainThread(async () =>
-                    {
-                        await Task.Delay(100);
-                        entry.Focus();
-                        StepsCollection.ScrollTo(step, position: ScrollToPosition.MakeVisible, animate: true);
-                    });
+                    FocusNatively(entry, _forceKeyboard, "OnStepDescriptionLoaded");
                 }
             }
         }

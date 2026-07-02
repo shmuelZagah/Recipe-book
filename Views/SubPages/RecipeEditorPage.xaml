@@ -15,10 +15,8 @@
     </ContentPage.ToolbarItems>
 
     <ContentPage.Resources>
-
         <DataTemplate x:Key="RecipeHeaderTemplate">
             <VerticalStackLayout Spacing="0" BackgroundColor="Transparent">
-
                 <Grid HeightRequest="300" BackgroundColor="#2B3A42">
                     <Grid.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding ChangeImageCommand}"/>
@@ -30,7 +28,6 @@
                     </VerticalStackLayout>
 
                     <Image Source="{Binding RecipeImage}" Aspect="AspectFill" />
-
                     <BoxView BackgroundColor="#30000000" />
 
                     <Border HorizontalOptions="Start" VerticalOptions="Start" Margin="20,20,20,0"
@@ -50,7 +47,6 @@
 
                 <Border Margin="0,-40,0,0" StrokeShape="RoundRectangle 30,30,0,0" BackgroundColor="#F5F5F5" StrokeThickness="0">
                     <VerticalStackLayout Padding="20,25,20,10" Spacing="20">
-
                         <Grid Margin="0,5,0,0">
                             <Border StrokeShape="RoundRectangle 12" BackgroundColor="White" StrokeThickness="0" Padding="15,5">
                                 <Border.Shadow>
@@ -155,7 +151,6 @@
                                 </Border.Triggers>
                             </Border>
                         </Grid>
-
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>
@@ -184,11 +179,12 @@
                 </HorizontalStackLayout>
             </Border>
         </DataTemplate>
-
     </ContentPage.Resources>
 
     <Grid>
+        <!-- רשימת מצרכים -->
         <CollectionView x:Name="IngredientsCollection"
+                        Loaded="OnCollectionViewLoaded"
                         ItemsSource="{Binding IngredientsList}" 
                         IsVisible="{Binding IsIngredientsMode}"
                         Header="{Binding .}" HeaderTemplate="{StaticResource RecipeHeaderTemplate}"
@@ -198,7 +194,7 @@
                         Margin="0,0,0,0">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:Ingredient">
-                    <Border StrokeShape="RoundRectangle 10" Stroke="#EEEEEE" StrokeThickness="1" BackgroundColor="White" Padding="5" Margin="20,0,20,8" HeightRequest="50">
+                    <Border StrokeShape="RoundRectangle 10" Stroke="#EEEEEE" StrokeThickness="1" BackgroundColor="White" Padding="5" Margin="20,0,20,8">
                         <Grid ColumnDefinitions="60, 90, *, Auto">
                             <Entry Grid.Column="0" 
                                    Text="{Binding Quantity}" 
@@ -244,7 +240,9 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
+        <!-- רשימת שלבים -->
         <CollectionView x:Name="StepsCollection"
+                        Loaded="OnCollectionViewLoaded"
                         ItemsSource="{Binding StepsList}" 
                         IsVisible="{Binding IsIngredientsMode, Converter={StaticResource BoolToVis}, ConverterParameter='Invert'}"
                         Header="{Binding .}" HeaderTemplate="{StaticResource RecipeHeaderTemplate}"
@@ -268,8 +266,8 @@
                                    VerticalOptions="Center" 
                                    Margin="5,0"
                                    ReturnType="Next"
-                                   Completed="OnStepCompleted"
-                                   Loaded="OnStepDescriptionLoaded" />
+                                   Loaded="OnStepDescriptionLoaded"
+                                   Completed="OnStepCompleted" />
 
                             <Border Grid.Column="2" StrokeShape="RoundRectangle 8" Stroke="{StaticResource Primary}" StrokeThickness="1" Padding="8,4" Margin="5,0,5,0" VerticalOptions="Center" HeightRequest="30">
                                 <Border.GestureRecognizers>
