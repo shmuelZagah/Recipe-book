@@ -5,6 +5,11 @@
              xmlns:vm="clr-namespace:Recipe_book.ViewModels"
              xmlns:models="clr-namespace:Recipe_book.Models.Recipes"
              xmlns:behaviors="clr-namespace:Recipe_book.Helpers.Behaviors"
+             xmlns:items="clr-namespace:Recipe_book.Views.Items" 
+             
+             xmlns:android="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific;assembly=Microsoft.Maui.Controls"
+             android:Application.WindowSoftInputModeAdjust="Resize"
+             
              FlowDirection="RightToLeft"
              x:Name="RecipeEditor"
              BackgroundColor="#F5F5F5">
@@ -15,19 +20,28 @@
     </ContentPage.ToolbarItems>
 
     <ContentPage.Resources>
+
         <DataTemplate x:Key="RecipeHeaderTemplate">
             <VerticalStackLayout Spacing="0" BackgroundColor="Transparent">
+
                 <Grid HeightRequest="300" BackgroundColor="#2B3A42">
                     <Grid.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding ChangeImageCommand}"/>
                     </Grid.GestureRecognizers>
 
                     <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8">
-                        <Label Text="+" FontSize="32" HorizontalOptions="Center" TextColor="White" Opacity="0.5" FontAttributes="Bold"/>
+                        <ImageButton Source="camera_icon.svg" 
+                                     HeightRequest="45" 
+                                     WidthRequest="45" 
+                                     HorizontalOptions="Center" 
+                                     BackgroundColor="Transparent" 
+                                     Opacity="0.7" 
+                                     Command="{Binding ChangeImageCommand}" />
                         <Label Text="לחץ להוספת תמונת מתכון" TextColor="White" FontAttributes="Bold" FontSize="16" Opacity="0.8"/>
                     </VerticalStackLayout>
 
                     <Image Source="{Binding RecipeImage}" Aspect="AspectFill" />
+
                     <BoxView BackgroundColor="#30000000" />
 
                     <Border HorizontalOptions="Start" VerticalOptions="Start" Margin="20,20,20,0"
@@ -47,59 +61,20 @@
 
                 <Border Margin="0,-40,0,0" StrokeShape="RoundRectangle 30,30,0,0" BackgroundColor="#F5F5F5" StrokeThickness="0">
                     <VerticalStackLayout Padding="20,25,20,10" Spacing="20">
-                        <Grid Margin="0,5,0,0">
-                            <Border StrokeShape="RoundRectangle 12" BackgroundColor="White" StrokeThickness="0" Padding="15,5">
-                                <Border.Shadow>
-                                    <Shadow Brush="Black" Offset="0,2" Opacity="0.03" Radius="4" />
-                                </Border.Shadow>
-                                <Editor Text="{Binding RecipeDescription}" 
-                                        Placeholder="ספר קצת על המתכון (תיאור)..."
-                                        Loaded="OnDescriptionLoaded"
-                                        Focused="OnDescriptionFocused"
-                                        Unfocused="OnDescriptionUnfocused"
-                                        FontSize="15" 
-                                        TextColor="#333333"
-                                        PlaceholderColor="#999999"
-                                        BackgroundColor="Transparent" 
-                                        AutoSize="TextChanges" 
-                                        VerticalOptions="Center"
-                                        MinimumHeightRequest="70" />
-                            </Border>
 
-                            <Border ClassId="TitlePill" 
-                                    StrokeShape="RoundRectangle 12" 
-                                    BackgroundColor="{StaticResource Primary}" 
-                                    HorizontalOptions="Start" 
-                                    VerticalOptions="Start" 
-                                    TranslationY="0" 
-                                    Margin="15,0,0,0"
-                                    Padding="10,2" 
-                                    Opacity="0" 
-                                    InputTransparent="True">
-                                <Label Text="תיאור" TextColor="White" FontSize="11" FontAttributes="Bold" />
-                            </Border>
-                        </Grid>
+                        <items:FloatingEntryControl Text="{Binding RecipeDescription}" 
+                                                    Placeholder="תיאור" 
+                                                    Keyboard="Text"/>
 
                         <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
-                            <Border Grid.Column="0" StrokeShape="RoundRectangle 12" BackgroundColor="White" StrokeThickness="0" Padding="10">
-                                <Border.Shadow>
-                                    <Shadow Brush="Black" Offset="0,2" Opacity="0.03" Radius="4" />
-                                </Border.Shadow>
-                                <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
-                                    <Label Text="זמן הכנה" FontSize="12" TextColor="Gray" FontAttributes="Bold" HorizontalOptions="Center"/>
-                                    <Entry Text="{Binding PrepTime}" Placeholder="למשל: 45 דק'" FontSize="14" FontAttributes="Bold" TextColor="Black" HorizontalTextAlignment="Center" BackgroundColor="Transparent"/>
-                                </VerticalStackLayout>
-                            </Border>
+                            <items:FloatingEntryControl Grid.Column="0"
+                                                        Text="{Binding PrepTime}" 
+                                                        Placeholder="זמן הכנה" />
 
-                            <Border Grid.Column="1" StrokeShape="RoundRectangle 12" BackgroundColor="White" StrokeThickness="0" Padding="10">
-                                <Border.Shadow>
-                                    <Shadow Brush="Black" Offset="0,2" Opacity="0.03" Radius="4" />
-                                </Border.Shadow>
-                                <VerticalStackLayout Spacing="2" HorizontalOptions="Center">
-                                    <Label Text="כמות מנות" FontSize="12" TextColor="Gray" FontAttributes="Bold" HorizontalOptions="Center"/>
-                                    <Entry Text="{Binding Servings}" Placeholder="למשל: 4 מנות" FontSize="14" FontAttributes="Bold" TextColor="Black" HorizontalTextAlignment="Center" BackgroundColor="Transparent"/>
-                                </VerticalStackLayout>
-                            </Border>
+                            <items:FloatingEntryControl Grid.Column="1"
+                                                        Text="{Binding Servings}" 
+                                                        Placeholder="כמות מנות" 
+                                                        Keyboard="Text" />
                         </Grid>
 
                         <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,10,0,0">
@@ -151,6 +126,7 @@
                                 </Border.Triggers>
                             </Border>
                         </Grid>
+
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>
@@ -179,10 +155,10 @@
                 </HorizontalStackLayout>
             </Border>
         </DataTemplate>
+
     </ContentPage.Resources>
 
     <Grid>
-        <!-- רשימת מצרכים -->
         <CollectionView x:Name="IngredientsCollection"
                         Loaded="OnCollectionViewLoaded"
                         ItemsSource="{Binding IngredientsList}" 
@@ -240,7 +216,6 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <!-- רשימת שלבים -->
         <CollectionView x:Name="StepsCollection"
                         Loaded="OnCollectionViewLoaded"
                         ItemsSource="{Binding StepsList}" 
@@ -255,10 +230,10 @@
                     <Border StrokeShape="RoundRectangle 10" Stroke="#EEEEEE" StrokeThickness="1" BackgroundColor="White" Padding="10,5" Margin="20,0,20,8">
                         <Grid ColumnDefinitions="30, *, Auto, Auto">
                             <Label Grid.Column="0" Text="{Binding StepNumber, StringFormat='{0}.'}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Primary}" VerticalOptions="Center" HorizontalOptions="Center" Margin="0,0,0,0"/>
-
+                            
                             <Entry Grid.Column="1" 
                                    Text="{Binding Description}" 
-                                   Placeholder="תיאור השלב..." 
+                                   Placeholder="תיאור" 
                                    PlaceholderColor="Gray" 
                                    TextColor="Black" 
                                    BackgroundColor="Transparent" 
