@@ -3,7 +3,6 @@ using Recipe_book.Services;
 using Recipe_book.Views.Pages;
 using Recipe_book.Views.SubPages;
 
-// --- 1. Correct Firebase usings for v3 ---
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Firebase.Bundled.Shared;
 using Recipe_book.Views.Layouts;

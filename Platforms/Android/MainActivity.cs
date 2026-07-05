@@ -1,6 +1,7 @@
 ﻿using Android.App;
 using Android.Content.PM;
 using Android.Views;
+using Microsoft.Maui.Platform;
 
 namespace com.shmuel.recipebook;
 
@@ -40,6 +41,18 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnCreate(savedInstanceState);
 
+        if (Microsoft.Maui.Controls.Application.Current?.Resources.TryGetValue("SecondaryBack", out var secondaryRes) == true && secondaryRes is Color secondaryColor)
+        {
+            Window.SetStatusBarColor(secondaryColor.ToPlatform());
+        }
+
+        if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.M)
+        {
+            Window.DecorView.SystemUiVisibility = (Android.Views.StatusBarVisibility)Android.Views.SystemUiFlags.LightStatusBar;
+        }
+
+
+        //
         try
         {
             Firebase.FirebaseApp.InitializeApp(this);
