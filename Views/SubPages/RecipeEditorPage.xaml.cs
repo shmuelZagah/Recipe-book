@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.ApplicationModel;
 using Recipe_book.Models.Recipes;
 using Recipe_book.ViewModels;
 using System;
@@ -18,14 +19,12 @@ namespace Recipe_book.Views.SubPages;
 public partial class RecipeEditorPage : ContentPage
 {
     private bool _isAddingNewRow = false;
-    private bool _focusPendingIngredientTab = false;
-    private bool _focusPendingStepTab = false;
     private bool _isIngredientsAnimatorDisabled = false;
     private bool _isStepsAnimatorDisabled = false;
     private bool _forceKeyboard = false;
     private Dictionary<object, Entry> _activeEntries = new();
 
-    // משתנים למנגנון חימום המנועים (Pre-warming)
+    // Pre-warming state flags
     private bool _isWarmingUp = false;
     private bool _hasWarmedUp = false;
 
@@ -37,7 +36,6 @@ public partial class RecipeEditorPage : ContentPage
         vm.PropertyChanged += Vm_PropertyChanged;
     }
 
-    // הפעלת החימום המזוייף ברגע שהעמוד עולה
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -46,15 +44,12 @@ public partial class RecipeEditorPage : ContentPage
         {
             _isWarmingUp = true;
 
-            // 1. מעבירים לשלבים כדי ש-MAUI יקמפל את הרשימה השנייה
             vm.IsIngredientsMode = false;
-            await Task.Delay(120); // נותנים לו זמן לצייר
+            await Task.Delay(120);
 
-            // 2. מחזירים למצרכים (המצב הדיפולטי)
             vm.IsIngredientsMode = true;
             await Task.Delay(120);
 
-            // 3. מעלימים את הוילון ברכות - המשתמש לא הרגיש כלום!
             await LoadingCover.FadeTo(0, 200);
             LoadingCover.IsVisible = false;
 
@@ -82,7 +77,6 @@ public partial class RecipeEditorPage : ContentPage
         {
             rv.SetItemAnimator(null);
             success = true;
-            Debug.WriteLine($"[StepDebug] {logTag}: Android ItemAnimator disabled successfully.");
         }
 #endif
         return success;
@@ -147,38 +141,48 @@ public partial class RecipeEditorPage : ContentPage
     }
     #endregion
 
-    #region Smart Focus & Navigation (Sliding Toggle)
+    #region Smart Focus & Navigation
 
     private void OnModeChanged(bool isIngredients)
     {
         if (BindingContext is not RecipeEditorViewModel vm) return;
 
+        // Force hide keyboard and clear focus on EVERY tab switch
+        if (!_isWarmingUp)
+        {
+            HideKeyboard();
+        }
+
         if (isIngredients)
         {
             vm.ShowIngredientsCommand?.Execute(null);
-
-            // חסימה: אם אנחנו בחימום מנועים, לא מקפיצים מקלדת!
-            if (_isWarmingUp) return;
-
-            var lastItem = vm.IngredientsList?.LastOrDefault();
-            if (lastItem != null && _activeEntries.TryGetValue(lastItem, out var entry))
-            {
-                FocusNatively(entry, forceKeyboard: true, "IngredientsToggle");
-            }
         }
         else
         {
             vm.ShowStepsCommand?.Execute(null);
-
-            // חסימה: אם אנחנו בחימום מנועים, לא מקפיצים מקלדת!
-            if (_isWarmingUp) return;
-
-            var lastItem = vm.StepsList?.LastOrDefault();
-            if (lastItem != null && _activeEntries.TryGetValue(lastItem, out var entry))
-            {
-                FocusNatively(entry, forceKeyboard: true, "StepsToggle");
-            }
         }
+    }
+
+    private void HideKeyboard()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            this.Unfocus();
+
+#if ANDROID
+            var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+
+            // Get the window token even if CurrentFocus is already null
+            var windowToken = activity?.CurrentFocus?.WindowToken ?? activity?.Window?.DecorView?.WindowToken;
+
+            if (windowToken != null)
+            {
+                activity?.CurrentFocus?.ClearFocus();
+                var imm = (InputMethodManager)activity.GetSystemService(Android.Content.Context.InputMethodService);
+                imm?.HideSoftInputFromWindow(windowToken, HideSoftInputFlags.None);
+            }
+#endif
+        });
     }
 
     private void OnFooterAddIngredientTapped(object sender, TappedEventArgs e)
@@ -203,18 +207,18 @@ public partial class RecipeEditorPage : ContentPage
         await Shell.Current.GoToAsync("..");
     }
 
-    private void FocusNatively(VisualElement element, bool forceKeyboard, string logContext = "")
+    private void FocusNatively(VisualElement element, bool forceKeyboard)
     {
         MainThread.BeginInvokeOnMainThread(async () =>
         {
 #if ANDROID
-            if (element.Handler?.PlatformView is Android.Widget.EditText native)
+            if (element.Handler?.PlatformView is EditText native)
             {
                 native.RequestFocus();
 
                 if (forceKeyboard)
                 {
-                    var imm = (Android.Views.InputMethods.InputMethodManager)native.Context.GetSystemService(Android.Content.Context.InputMethodService);
+                    var imm = (InputMethodManager)native.Context.GetSystemService(Android.Content.Context.InputMethodService);
 
                     int attempts = 0;
                     while (!native.HasWindowFocus && attempts < 20)
@@ -223,7 +227,7 @@ public partial class RecipeEditorPage : ContentPage
                         attempts++;
                     }
 
-                    imm?.ShowSoftInput(native, Android.Views.InputMethods.ShowFlags.Implicit);
+                    imm?.ShowSoftInput(native, ShowFlags.Implicit);
                 }
                 return;
             }
@@ -256,7 +260,7 @@ public partial class RecipeEditorPage : ContentPage
 
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
-                    FocusNatively(nameEntry, forceKeyboard: true, "OnUnitChanged");
+                    FocusNatively(nameEntry, forceKeyboard: true);
                 });
             }
         }
@@ -315,14 +319,12 @@ public partial class RecipeEditorPage : ContentPage
         {
             _activeEntries[ingredient] = entry;
 
-            if ((_isAddingNewRow || _focusPendingIngredientTab) && BindingContext is RecipeEditorViewModel vm)
+            if (_isAddingNewRow && BindingContext is RecipeEditorViewModel vm)
             {
                 if (ingredient == vm.IngredientsList.LastOrDefault())
                 {
                     _isAddingNewRow = false;
-                    _focusPendingIngredientTab = false;
-
-                    FocusNatively(entry, _forceKeyboard, "OnQuantityLoaded");
+                    FocusNatively(entry, _forceKeyboard);
                 }
             }
         }
@@ -336,14 +338,12 @@ public partial class RecipeEditorPage : ContentPage
         {
             _activeEntries[step] = entry;
 
-            if ((_isAddingNewRow || _focusPendingStepTab) && BindingContext is RecipeEditorViewModel vm)
+            if (_isAddingNewRow && BindingContext is RecipeEditorViewModel vm)
             {
                 if (step == vm.StepsList.LastOrDefault())
                 {
                     _isAddingNewRow = false;
-                    _focusPendingStepTab = false;
-
-                    FocusNatively(entry, _forceKeyboard, "OnStepDescriptionLoaded");
+                    FocusNatively(entry, _forceKeyboard);
                 }
             }
         }
