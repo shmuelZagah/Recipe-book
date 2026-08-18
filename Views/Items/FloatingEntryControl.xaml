@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Recipe_book.Views.Items.FloatingEntryControl"
+             x:Name="Root"
+             FlowDirection="RightToLeft">
+
+    <Grid Margin="0,15,0,0">
+
+        <!-- תיבת הקלט הראשית -->
+        <Border x:Name="MainBorder"
+                Stroke="#E0E0E0"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 10"
+                BackgroundColor="White"
+                HeightRequest="55"
+                Padding="15,0">
+            <Entry x:Name="MainEntry"
+                   Text="{Binding Text, Source={x:Reference Root}}"
+                   Keyboard="{Binding Keyboard, Source={x:Reference Root}}"
+                   FontSize="16"
+                   TextColor="Black"
+                   BackgroundColor="Transparent"
+                   VerticalOptions="Center"
+                   Focused="OnEntryFocused"
+                   Unfocused="OnEntryUnfocused" />
+        </Border>
+
+        <!-- שכבת התווית הצפה - לא לוכדת מגע, כדי שהאצבע תמיד "תפגע" ב-Entry שמתחתיה -->
+        <Grid HeightRequest="55" InputTransparent="True">
+            <Grid x:Name="FloatingContainer"
+                  HorizontalOptions="Start"
+                  VerticalOptions="Center"
+                  Margin="15,0,15,0"
+                  AnchorX="1"
+                  AnchorY="0.5">
+
+                <!--
+                    "הבועה": רקע לבן + מסגרת שחורה שמופיעים רק במצב פעיל.
+                    היא נמתחת (Fill) בדיוק לגודל התווית + ה-Padding שלה, כך שהיא
+                    תמיד עוטפת את הטקסט בדיוק, לא משנה כמה ה-Placeholder ארוך.
+                    כשהיא אטומה היא גם "מוחקת" ויזואלית את קו המסגרת הראשי שמתחתיה -
+                    לכן אין צורך בשכבת מיסוך נפרדת.
+                -->
+                <Border x:Name="FloatingBubble"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill"
+                        BackgroundColor="White"
+                        Stroke="Black"
+                        StrokeThickness="1.5"
+                        StrokeShape="RoundRectangle 14"
+                        Opacity="0" />
+
+                <!-- התווית עצמה תמיד גלויה (Opacity=1 קבוע) - רק צבע הטקסט מתחלף -->
+                <Label x:Name="FloatingLabel"
+                       Text="{Binding Placeholder, Source={x:Reference Root}}"
+                       TextColor="#999999"
+                       FontSize="16"
+                       LineBreakMode="NoWrap"
+                       VerticalOptions="Center"
+                       HorizontalOptions="Center"
+                       Padding="12,4" />
+            </Grid>
+        </Grid>
+    </Grid>
+</ContentView>

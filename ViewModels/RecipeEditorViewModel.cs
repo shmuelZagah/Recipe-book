@@ -56,6 +56,9 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
     public ObservableCollection<Ingredient> IngredientsList { get; } = new();
     public ObservableCollection<RecipeStep> StepsList { get; } = new();
 
+    [ObservableProperty]
+    private string pageTitle = "צור מתכון";
+
 
     #endregion
     //--------------
@@ -89,6 +92,7 @@ public partial class RecipeEditorViewModel : ObservableObject, IQueryAttributabl
     private async void LoadRecipeForEditing(Recipe recipe)
     {
         _existingRecipeId = recipe.Id;
+        PageTitle = "עריכת מתכון";
         RecipeTitle = recipe.Title;
         RecipeDescription = recipe.Description;
         RecipeImage = recipe.DisplayImage;

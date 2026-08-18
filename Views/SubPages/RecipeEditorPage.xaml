@@ -81,7 +81,7 @@
             </Border.Shadow>
             <Grid ColumnDefinitions="Auto, *, Auto" Padding="20,15,20,15" VerticalOptions="Center" TranslationY="6">
                 <ImageButton Grid.Column="0" Source="arrow_right_icon.svg" WidthRequest="24" HeightRequest="24" BackgroundColor="Transparent" VerticalOptions="Center" Clicked="OnBackButtonClicked" />
-                <Label Grid.Column="1" Text="עריכת מתכון" Style="{StaticResource SubHeadline}" FontSize="20" Margin="15,0,0,0" HorizontalOptions="Start" VerticalOptions="Center" />
+                <Label Grid.Column="1" Text="{Binding PageTitle}" Style="{StaticResource SubHeadline}" FontSize="20" Margin="15,0,0,0" HorizontalOptions="Start" VerticalOptions="Center" />
                 <ImageButton Grid.Column="2" Source="vi_icon.svg" WidthRequest="22" HeightRequest="22" BackgroundColor="Transparent" VerticalOptions="Center" Command="{Binding SaveRecipeCommand}" />
             </Grid>
         </Border>

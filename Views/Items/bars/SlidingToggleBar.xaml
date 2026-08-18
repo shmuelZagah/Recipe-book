@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Recipe_book.Views.bars.Items.SlidingToggleBar"
+             x:Name="Root"
+             FlowDirection="RightToLeft">
+
+    <Border BackgroundColor="{StaticResource Secondary}" 
+            StrokeThickness="0" 
+            HeightRequest="48" 
+            StrokeShape="RoundRectangle 14"
+            Margin="0,10,0,0">
+
+        <Grid x:Name="MainGrid" ColumnDefinitions="*, *">
+
+            <Border x:Name="Slider"
+                    Grid.Column="0"
+                    BackgroundColor="{StaticResource Primary}" 
+                    StrokeThickness="0"
+                    Margin="4"
+                    StrokeShape="RoundRectangle 10" />
+
+            <Grid Grid.Column="0" BackgroundColor="Transparent" ColumnDefinitions="*,Auto,8,Auto,*">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnRightTabTapped" />
+                </Grid.GestureRecognizers>
+                <Image Grid.Column="1" x:Name="RightIconImage" Source="{Binding Source={x:Reference Root}, Path=RightIcon}" 
+                       HeightRequest="20" WidthRequest="20" VerticalOptions="Center"/>
+                <Label Grid.Column="3" x:Name="RightLabel" Text="{Binding Source={x:Reference Root}, Path=RightText}" 
+                       FontSize="15" FontAttributes="Bold" TextColor="White" VerticalOptions="Center"/>
+            </Grid>
+
+            <Grid Grid.Column="1" BackgroundColor="Transparent" ColumnDefinitions="*,Auto,8,Auto,*">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnLeftTabTapped" />
+                </Grid.GestureRecognizers>
+                <Image Grid.Column="1" x:Name="LeftIconImage" Source="{Binding Source={x:Reference Root}, Path=LeftIcon}" 
+                       HeightRequest="20" WidthRequest="20" VerticalOptions="Center"/>
+                <Label Grid.Column="3" x:Name="LeftLabel" Text="{Binding Source={x:Reference Root}, Path=LeftText}" 
+                       FontSize="15" FontAttributes="Bold" TextColor="#555555" VerticalOptions="Center"/>
+            </Grid>
+
+        </Grid>
+    </Border>
+</ContentView>
