@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Diagnostics;
 
 #if ANDROID
 using Android.Views.InputMethods;
@@ -19,12 +18,9 @@ namespace Recipe_book.Views.SubPages;
 public partial class RecipeEditorPage : ContentPage
 {
     private bool _isAddingNewRow = false;
-    private bool _isIngredientsAnimatorDisabled = false;
-    private bool _isStepsAnimatorDisabled = false;
     private bool _forceKeyboard = false;
     private Dictionary<object, Entry> _activeEntries = new();
 
-    // Pre-warming state flags
     private bool _isWarmingUp = false;
     private bool _hasWarmedUp = false;
 
@@ -36,6 +32,19 @@ public partial class RecipeEditorPage : ContentPage
         vm.PropertyChanged += Vm_PropertyChanged;
     }
 
+    protected override void OnSizeAllocated(double width, double height)
+    {
+        base.OnSizeAllocated(width, height);
+
+        if (width > 0 && !_hasWarmedUp)
+        {
+            // Notice the minus sign: Position the steps list off-screen to the LEFT
+            StepsSection.TranslationX = -width;
+
+            CarouselContainer.MinimumHeightRequest = Math.Max(0, height - 150);
+        }
+    }
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -43,14 +52,9 @@ public partial class RecipeEditorPage : ContentPage
         if (!_hasWarmedUp && BindingContext is RecipeEditorViewModel vm)
         {
             _isWarmingUp = true;
+            await Task.Delay(200);
 
-            vm.IsIngredientsMode = false;
-            await Task.Delay(120);
-
-            vm.IsIngredientsMode = true;
-            await Task.Delay(120);
-
-            await LoadingCover.FadeTo(0, 200);
+            await LoadingCover.FadeTo(0, 250);
             LoadingCover.IsVisible = false;
 
             _isWarmingUp = false;
@@ -67,31 +71,55 @@ public partial class RecipeEditorPage : ContentPage
         }
     }
 
-    #region CollectionView Native Animator Kill
+    #region Carousel Transition Logic
 
-    private bool TryDisableAnimation(CollectionView cv, string logTag)
+    private async void OnModeChanged(bool isIngredients)
     {
-        bool success = false;
-#if ANDROID
-        if (cv?.Handler?.PlatformView is AndroidX.RecyclerView.Widget.RecyclerView rv)
+        if (BindingContext is not RecipeEditorViewModel vm) return;
+
+        if (!_isWarmingUp)
         {
-            rv.SetItemAnimator(null);
-            success = true;
+            HideKeyboard();
         }
-#endif
-        return success;
+
+        double screenWidth = this.Width;
+
+        if (isIngredients)
+        {
+            IngredientsSection.InputTransparent = false;
+            StepsSection.InputTransparent = true;
+
+            // Make sure ingredients start from the right before sliding in
+            IngredientsSection.TranslationX = screenWidth;
+
+            // Steps slide out to LEFT (-screenWidth), Ingredients slide in from RIGHT to center (0)
+            Task t1 = StepsSection.TranslateTo(-screenWidth, 0, 300, Easing.CubicOut);
+            Task t2 = IngredientsSection.TranslateTo(0, 0, 300, Easing.CubicOut);
+            Task t3 = StepsSection.FadeTo(0, 200);
+            Task t4 = IngredientsSection.FadeTo(1, 200);
+
+            vm.ShowIngredientsCommand?.Execute(null);
+            await Task.WhenAll(t1, t2, t3, t4);
+        }
+        else
+        {
+            StepsSection.InputTransparent = false;
+            IngredientsSection.InputTransparent = true;
+
+            // Make sure steps start from the left before sliding in
+            StepsSection.TranslationX = -screenWidth;
+
+            // Ingredients slide out to RIGHT (screenWidth), Steps slide in from LEFT to center (0)
+            Task t1 = IngredientsSection.TranslateTo(screenWidth, 0, 300, Easing.CubicOut);
+            Task t2 = StepsSection.TranslateTo(0, 0, 300, Easing.CubicOut);
+            Task t3 = IngredientsSection.FadeTo(0, 200);
+            Task t4 = StepsSection.FadeTo(1, 200);
+
+            vm.ShowStepsCommand?.Execute(null);
+            await Task.WhenAll(t1, t2, t3, t4);
+        }
     }
 
-    private void OnCollectionViewLoaded(object sender, EventArgs e)
-    {
-        if (sender is CollectionView cv)
-        {
-            if (cv == IngredientsCollection)
-                _isIngredientsAnimatorDisabled = TryDisableAnimation(cv, "Ingredients_Loaded");
-            else if (cv == StepsCollection)
-                _isStepsAnimatorDisabled = TryDisableAnimation(cv, "Steps_Loaded");
-        }
-    }
     #endregion
 
     #region Floating Description Animation
@@ -111,6 +139,8 @@ public partial class RecipeEditorPage : ContentPage
             }
         }
     }
+
+
 
     private void OnDescriptionFocused(object sender, FocusEventArgs e)
     {
@@ -135,33 +165,13 @@ public partial class RecipeEditorPage : ContentPage
             {
                 pill.FadeTo(0, 200, Easing.CubicIn);
                 pill.TranslateTo(pill.TranslationX, 0, 200, Easing.CubicIn);
-                editor.Placeholder = "ספר קצת על המתכון (תיאור)...";
+                editor.Placeholder = "ספר קצת על המתכון (תיאור)..."; // Not translated as it's a UI string
             }
         }
     }
     #endregion
 
     #region Smart Focus & Navigation
-
-    private void OnModeChanged(bool isIngredients)
-    {
-        if (BindingContext is not RecipeEditorViewModel vm) return;
-
-        // Force hide keyboard and clear focus on EVERY tab switch
-        if (!_isWarmingUp)
-        {
-            HideKeyboard();
-        }
-
-        if (isIngredients)
-        {
-            vm.ShowIngredientsCommand?.Execute(null);
-        }
-        else
-        {
-            vm.ShowStepsCommand?.Execute(null);
-        }
-    }
 
     private void HideKeyboard()
     {
@@ -171,8 +181,6 @@ public partial class RecipeEditorPage : ContentPage
 
 #if ANDROID
             var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
-
-            // Get the window token even if CurrentFocus is already null
             var windowToken = activity?.CurrentFocus?.WindowToken ?? activity?.Window?.DecorView?.WindowToken;
 
             if (windowToken != null)

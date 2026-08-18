@@ -17,77 +17,65 @@
              BackgroundColor="#F5F5F5">
 
     <ContentPage.Resources>
-
-        <DataTemplate x:Key="RecipeHeaderTemplate">
-            <VerticalStackLayout Spacing="0" BackgroundColor="Transparent">
-
-                <Grid HeightRequest="300" BackgroundColor="#2B3A42">
-                    <Grid.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding ChangeImageCommand}"/>
-                    </Grid.GestureRecognizers>
-
-                    <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8">
-                        <ImageButton Source="camera_icon.svg" HeightRequest="45" WidthRequest="45" HorizontalOptions="Center" BackgroundColor="Transparent" Opacity="0.7" Command="{Binding ChangeImageCommand}" />
-                        <Label Text="לחץ להוספת תמונת מתכון" TextColor="White" FontAttributes="Bold" FontSize="16" Opacity="0.8"/>
-                    </VerticalStackLayout>
-
-                    <Image Source="{Binding RecipeImage}" Aspect="AspectFill" />
-
-                    <BoxView BackgroundColor="#30000000" />
-
-                    <Border HorizontalOptions="Start" VerticalOptions="Start" Margin="20,20,20,0" StrokeShape="RoundRectangle 8" BackgroundColor="#70000000" StrokeThickness="1" Stroke="#80FFFFFF">
-                        <Entry Text="{Binding RecipeTitle}" Placeholder="שם המתכון..." TextColor="White" PlaceholderColor="#E0E0E0" FontAttributes="Bold" FontSize="18" HorizontalTextAlignment="Center" BackgroundColor="Transparent" MinimumWidthRequest="140" Margin="15,2"/>
-                    </Border>
+        <!-- Ingredient Item Template -->
+        <DataTemplate x:Key="IngredientTemplate" x:DataType="models:Ingredient">
+            <Border StrokeShape="RoundRectangle 10" Stroke="#EEEEEE" StrokeThickness="1" BackgroundColor="White" Padding="5" Margin="20,0,20,8">
+                <Grid ColumnDefinitions="60, 90, *, Auto">
+                    <Entry Grid.Column="0" Text="{Binding Quantity}" TextColor="Black" PlaceholderColor="Gray" Keyboard="Numeric" HorizontalTextAlignment="Center" BackgroundColor="Transparent" Placeholder="0" VerticalOptions="Center" ReturnType="Next" Completed="OnQuantityCompleted" Loaded="OnQuantityLoaded">
+                        <Entry.Behaviors>
+                            <behaviors:NumericValidationBehavior />
+                        </Entry.Behaviors>
+                    </Entry>
+                    <Picker Grid.Column="1" ItemsSource="{Binding Source={x:Reference RecipeEditor}, Path=BindingContext.AvailableUnits}" TextColor="Black" SelectedItem="{Binding Unit}" HorizontalTextAlignment="Center" BackgroundColor="Transparent" VerticalOptions="Center" SelectedIndexChanged="OnUnitChanged" />
+                    <Entry Grid.Column="2" Text="{Binding Name}" TextColor="Black" PlaceholderColor="Gray" Placeholder="שם המצרך..." BackgroundColor="Transparent" VerticalOptions="Center" ReturnType="Next" Loaded="OnSeamlessEntryLoaded" Completed="OnNameCompleted" />
+                    <ImageButton Grid.Column="3" Source="minus_icon.svg" HeightRequest="25" WidthRequest="25" Opacity="0.6" VerticalOptions="Center" Margin="0,0,5,0" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RecipeEditorViewModel}}, Path=RemoveIngredientCommand}" CommandParameter="{Binding .}"/>
                 </Grid>
-
-                <Border Margin="0,-40,0,0" StrokeShape="RoundRectangle 30,30,0,0" BackgroundColor="#F5F5F5" StrokeThickness="0">
-                    <VerticalStackLayout Padding="20,25,20,15" Spacing="15">
-                        <items:FloatingEntryControl Text="{Binding RecipeDescription}" Placeholder="תיאור" Keyboard="Text"/>
-                        <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
-                            <items:FloatingEntryControl Grid.Column="0" Text="{Binding PrepTime}" Placeholder="זמן הכנה" />
-                            <items:FloatingEntryControl Grid.Column="1" Text="{Binding Servings}" Placeholder="כמות מנות" Keyboard="Text" />
-                        </Grid>
-
-                        <togglebars:SlidingToggleBar
-                            RightText="מצרכים" 
-                            RightIcon="list_dashes_icon.svg"
-                            LeftText="שלבי בישול" 
-                            LeftIcon="cooking_pot_icon.svg"
-                            IsRightSelected="{Binding IsIngredientsMode, Mode=TwoWay}"
-                            />
-                    </VerticalStackLayout>
-                </Border>
-            </VerticalStackLayout>
-        </DataTemplate>
-
-        <DataTemplate x:Key="IngredientsFooterTemplate">
-            <Border StrokeShape="RoundRectangle 12" Stroke="#CCCCCC" StrokeThickness="2" StrokeDashArray="4,4" BackgroundColor="Transparent" Margin="20,10,20,30" Padding="15,10">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnFooterAddIngredientTapped"/>
-                </Border.GestureRecognizers>
-                <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8">
-                    <Label Text="+" FontSize="20" FontAttributes="Bold" TextColor="Gray" VerticalOptions="Center" TranslationY="-2"/>
-                    <Label Text="הוסף מצרך חדש" FontSize="15" FontAttributes="Bold" TextColor="Gray" VerticalOptions="Center"/>
-                </HorizontalStackLayout>
             </Border>
         </DataTemplate>
 
-        <DataTemplate x:Key="StepsFooterTemplate">
-            <Border StrokeShape="RoundRectangle 12" Stroke="#CCCCCC" StrokeThickness="2" StrokeDashArray="4,4" BackgroundColor="Transparent" Margin="20,10,20,30" Padding="15,10">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnFooterAddStepTapped"/>
-                </Border.GestureRecognizers>
-                <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8">
-                    <Label Text="+" FontSize="20" FontAttributes="Bold" TextColor="Gray" VerticalOptions="Center" TranslationY="-2"/>
-                    <Label Text="הוסף שלב חדש" FontSize="15" FontAttributes="Bold" TextColor="Gray" VerticalOptions="Center"/>
-                </HorizontalStackLayout>
+        <!-- Step Item Template -->
+        <DataTemplate x:Key="StepTemplate" x:DataType="models:RecipeStep">
+            <Border StrokeShape="RoundRectangle 10" Stroke="#EEEEEE" StrokeThickness="1" BackgroundColor="White" Padding="10,5" Margin="20,0,20,8">
+                <Grid ColumnDefinitions="30, *, Auto, Auto">
+                    <Label Grid.Column="0" Text="{Binding StepNumber, StringFormat='{0}.'}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Primary}" VerticalOptions="Center" HorizontalOptions="Center" Margin="0,0,0,0"/>
+                    <Entry Grid.Column="1" Text="{Binding Description}" Placeholder="תיאור" PlaceholderColor="Gray" TextColor="Black" BackgroundColor="Transparent" FontSize="15" VerticalOptions="Center" Margin="5,0" ReturnType="Next" Loaded="OnStepDescriptionLoaded" Completed="OnStepCompleted" />
+                    <Border Grid.Column="2" StrokeShape="RoundRectangle 8" Stroke="{StaticResource Primary}" StrokeThickness="1" Padding="8,4" Margin="5,0,5,0" VerticalOptions="Center" HeightRequest="30">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RecipeEditorViewModel}}, Path=ToggleOptionalStepCommand}" CommandParameter="{Binding .}"/>
+                        </Border.GestureRecognizers>
+                        <Label Text="רשות" FontSize="12" FontAttributes="Bold" VerticalOptions="Center" HorizontalOptions="Center">
+                            <Label.Style>
+                                <Style TargetType="Label">
+                                    <Setter Property="TextColor" Value="{StaticResource Primary}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsOptional}" Value="True">
+                                            <Setter Property="TextColor" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Label.Style>
+                        </Label>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="BackgroundColor" Value="Transparent"/>
+                                <Style.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsOptional}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{StaticResource Primary}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                    <ImageButton Grid.Column="3" Source="minus_icon.svg" HeightRequest="25" WidthRequest="25" Opacity="0.6" VerticalOptions="Center" Margin="0,0,5,0" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RecipeEditorViewModel}}, Path=RemoveStepCommand}" CommandParameter="{Binding .}"/>
+                </Grid>
             </Border>
         </DataTemplate>
-
     </ContentPage.Resources>
 
     <Grid RowDefinitions="Auto, *">
-        <Border Grid.Row="0" BackgroundColor="White" StrokeThickness="0"  ZIndex="5">
+
+        <!-- Fixed Top Header -->
+        <Border Grid.Row="0" BackgroundColor="White" StrokeThickness="0" ZIndex="5">
             <Border.Shadow>
                 <Shadow Brush="Black" Offset="0,4" Opacity="0.05" Radius="6" />
             </Border.Shadow>
@@ -99,82 +87,87 @@
         </Border>
 
         <Grid Grid.Row="1">
+            <!-- Single ScrollView wrapping the entire page -->
+            <ScrollView x:Name="MainScroll" BackgroundColor="Transparent">
+                <VerticalStackLayout Spacing="0">
 
-            <CollectionView x:Name="IngredientsCollection" 
-                            IsVisible="{Binding IsIngredientsMode}"
-                            Loaded="OnCollectionViewLoaded" 
-                            ItemsSource="{Binding IngredientsList}" 
-                            Header="{Binding .}" HeaderTemplate="{StaticResource RecipeHeaderTemplate}" 
-                            Footer="{Binding .}" FooterTemplate="{StaticResource IngredientsFooterTemplate}" 
-                            CanReorderItems="True" BackgroundColor="Transparent" Margin="0,0,0,0">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:Ingredient">
-                        <Border StrokeShape="RoundRectangle 10" Stroke="#EEEEEE" StrokeThickness="1" BackgroundColor="White" Padding="5" Margin="20,0,20,8">
-                            <Grid ColumnDefinitions="60, 90, *, Auto">
-                                <Entry Grid.Column="0" Text="{Binding Quantity}" TextColor="Black" PlaceholderColor="Gray" Keyboard="Numeric" HorizontalTextAlignment="Center" BackgroundColor="Transparent" Placeholder="0" VerticalOptions="Center" ReturnType="Next" Completed="OnQuantityCompleted" Loaded="OnQuantityLoaded">
-                                    <Entry.Behaviors>
-                                        <behaviors:NumericValidationBehavior />
-                                    </Entry.Behaviors>
-                                </Entry>
-                                <Picker Grid.Column="1" ItemsSource="{Binding Source={x:Reference RecipeEditor}, Path=BindingContext.AvailableUnits}" TextColor="Black" SelectedItem="{Binding Unit}" HorizontalTextAlignment="Center" BackgroundColor="Transparent" VerticalOptions="Center" SelectedIndexChanged="OnUnitChanged" />
-                                <Entry Grid.Column="2" Text="{Binding Name}" TextColor="Black" PlaceholderColor="Gray" Placeholder="שם המצרך..." BackgroundColor="Transparent" VerticalOptions="Center" ReturnType="Next" Loaded="OnSeamlessEntryLoaded" Completed="OnNameCompleted" />
-                                <ImageButton Grid.Column="3" Source="minus_icon.svg" HeightRequest="25" WidthRequest="25" Opacity="0.6" VerticalOptions="Center" Margin="0,0,5,0" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RecipeEditorViewModel}}, Path=RemoveIngredientCommand}" CommandParameter="{Binding .}"/>
-                            </Grid>
+                    <!-- Shared Header for both lists -->
+                    <Grid HeightRequest="300" BackgroundColor="#2B3A42">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ChangeImageCommand}"/>
+                        </Grid.GestureRecognizers>
+                        <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8">
+                            <ImageButton Source="camera_icon.svg" HeightRequest="45" WidthRequest="45" HorizontalOptions="Center" BackgroundColor="Transparent" Opacity="0.7" Command="{Binding ChangeImageCommand}" />
+                            <Label Text="לחץ להוספת תמונת מתכון" TextColor="White" FontAttributes="Bold" FontSize="16" Opacity="0.8"/>
+                        </VerticalStackLayout>
+                        <Image Source="{Binding RecipeImage}" Aspect="AspectFill" />
+                        <BoxView BackgroundColor="#30000000" />
+                        <Border HorizontalOptions="Start" VerticalOptions="Start" Margin="20,20,20,0" StrokeShape="RoundRectangle 8" BackgroundColor="#70000000" StrokeThickness="1" Stroke="#80FFFFFF">
+                            <Entry Text="{Binding RecipeTitle}" Placeholder="שם המתכון..." TextColor="White" PlaceholderColor="#E0E0E0" FontAttributes="Bold" FontSize="18" HorizontalTextAlignment="Center" BackgroundColor="Transparent" MinimumWidthRequest="140" Margin="15,2"/>
                         </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+                    </Grid>
 
-            <CollectionView x:Name="StepsCollection" 
-                            IsVisible="{Binding IsIngredientsMode, Converter={StaticResource BoolToVis}, ConverterParameter='Invert'}"
-                            Loaded="OnCollectionViewLoaded" 
-                            ItemsSource="{Binding StepsList}" 
-                            Header="{Binding .}" HeaderTemplate="{StaticResource RecipeHeaderTemplate}" 
-                            Footer="{Binding .}" FooterTemplate="{StaticResource StepsFooterTemplate}" 
-                            CanReorderItems="True" BackgroundColor="Transparent" >
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:RecipeStep">
-                        <Border StrokeShape="RoundRectangle 10" Stroke="#EEEEEE" StrokeThickness="1" BackgroundColor="White" Padding="10,5" Margin="20,0,20,8">
-                            <Grid ColumnDefinitions="30, *, Auto, Auto">
-                                <Label Grid.Column="0" Text="{Binding StepNumber, StringFormat='{0}.'}" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Primary}" VerticalOptions="Center" HorizontalOptions="Center" Margin="0,0,0,0"/>
-                                <Entry Grid.Column="1" Text="{Binding Description}" Placeholder="תיאור" PlaceholderColor="Gray" TextColor="Black" BackgroundColor="Transparent" FontSize="15" VerticalOptions="Center" Margin="5,0" ReturnType="Next" Loaded="OnStepDescriptionLoaded" Completed="OnStepCompleted" />
-                                <Border Grid.Column="2" StrokeShape="RoundRectangle 8" Stroke="{StaticResource Primary}" StrokeThickness="1" Padding="8,4" Margin="5,0,5,0" VerticalOptions="Center" HeightRequest="30">
-                                    <Border.GestureRecognizers>
-                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RecipeEditorViewModel}}, Path=ToggleOptionalStepCommand}" CommandParameter="{Binding .}"/>
-                                    </Border.GestureRecognizers>
-                                    <Label Text="רשות" FontSize="12" FontAttributes="Bold" VerticalOptions="Center" HorizontalOptions="Center">
-                                        <Label.Style>
-                                            <Style TargetType="Label">
-                                                <Setter Property="TextColor" Value="{StaticResource Primary}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger TargetType="Label" Binding="{Binding IsOptional}" Value="True">
-                                                        <Setter Property="TextColor" Value="White"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Label.Style>
-                                    </Label>
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="BackgroundColor" Value="Transparent"/>
-                                            <Style.Triggers>
-                                                <DataTrigger TargetType="Border" Binding="{Binding IsOptional}" Value="True">
-                                                    <Setter Property="BackgroundColor" Value="{StaticResource Primary}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                </Border>
-                                <ImageButton Grid.Column="3" Source="minus_icon.svg" HeightRequest="25" WidthRequest="25" Opacity="0.6" VerticalOptions="Center" Margin="0,0,5,0" Command="{Binding Source={RelativeSource AncestorType={x:Type vm:RecipeEditorViewModel}}, Path=RemoveStepCommand}" CommandParameter="{Binding .}"/>
+                    <Border Margin="0,-40,0,0" StrokeShape="RoundRectangle 30,30,0,0" BackgroundColor="#F5F5F5" StrokeThickness="0">
+                        <VerticalStackLayout Padding="20,25,20,15" Spacing="15">
+                            <items:FloatingEntryControl Text="{Binding RecipeDescription}" Placeholder="תיאור" Keyboard="Text"/>
+                            <Grid ColumnDefinitions="*, *" ColumnSpacing="15">
+                                <items:FloatingEntryControl Grid.Column="0" Text="{Binding PrepTime}" Placeholder="זמן הכנה" />
+                                <items:FloatingEntryControl Grid.Column="1" Text="{Binding Servings}" Placeholder="כמות מנות" Keyboard="Text" />
                             </Grid>
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
 
-            <Grid x:Name="LoadingCover" BackgroundColor="#F5F5F5" ZIndex="10">
-            </Grid>
+                            <togglebars:SlidingToggleBar
+                                RightText="מצרכים" 
+                                RightIcon="list_dashes_icon.svg"
+                                LeftText="שלבי בישול" 
+                                LeftIcon="cooking_pot_icon.svg"
+                                IsRightSelected="{Binding IsIngredientsMode, Mode=TwoWay}" />
+                        </VerticalStackLayout>
+                    </Border>
 
+                    <!-- Carousel Container + Minimum Height applied in CodeBehind -->
+                    <Grid x:Name="CarouselContainer" Margin="0,5,0,40" IsClippedToBounds="True">
+
+                        <!-- Ingredients Section -->
+                        <VerticalStackLayout x:Name="IngredientsSection" TranslationX="0">
+                            <!-- Using BindableLayout resolves nesting and scrolling jump issues -->
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding IngredientsList}"
+                                                 BindableLayout.ItemTemplate="{StaticResource IngredientTemplate}" />
+
+                            <!-- Ingredients Footer -->
+                            <Border StrokeShape="RoundRectangle 12" Stroke="#CCCCCC" StrokeThickness="2" StrokeDashArray="4,4" BackgroundColor="Transparent" Margin="20,10,20,0" Padding="15,10">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnFooterAddIngredientTapped"/>
+                                </Border.GestureRecognizers>
+                                <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8">
+                                    <Label Text="+" FontSize="20" FontAttributes="Bold" TextColor="Gray" VerticalOptions="Center" TranslationY="-2"/>
+                                    <Label Text="הוסף מצרך חדש" FontSize="15" FontAttributes="Bold" TextColor="Gray" VerticalOptions="Center"/>
+                                </HorizontalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Steps Section -->
+                        <VerticalStackLayout x:Name="StepsSection" Opacity="0" InputTransparent="True">
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding StepsList}"
+                                                 BindableLayout.ItemTemplate="{StaticResource StepTemplate}" />
+
+                            <!-- Steps Footer -->
+                            <Border StrokeShape="RoundRectangle 12" Stroke="#CCCCCC" StrokeThickness="2" StrokeDashArray="4,4" BackgroundColor="Transparent" Margin="20,10,20,0" Padding="15,10">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnFooterAddStepTapped"/>
+                                </Border.GestureRecognizers>
+                                <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8">
+                                    <Label Text="+" FontSize="20" FontAttributes="Bold" TextColor="Gray" VerticalOptions="Center" TranslationY="-2"/>
+                                    <Label Text="הוסף שלב חדש" FontSize="15" FontAttributes="Bold" TextColor="Gray" VerticalOptions="Center"/>
+                                </HorizontalStackLayout>
+                            </Border>
+                        </VerticalStackLayout>
+
+                    </Grid>
+
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <Grid x:Name="LoadingCover" BackgroundColor="#F5F5F5" ZIndex="10" />
         </Grid>
     </Grid>
 </ContentPage>
