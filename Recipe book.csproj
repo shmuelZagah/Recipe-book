@@ -188,6 +188,9 @@
 	  <MauiXaml Update="Views\Items\LoadingOverlayControl.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
+	  <MauiXaml Update="Views\Items\Popups\EditDisplayModalControl.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="Views\Items\RecipeCardControl.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>

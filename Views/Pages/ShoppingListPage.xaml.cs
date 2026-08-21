@@ -48,6 +48,11 @@ public partial class ShoppingListPage : ContentView, ISwipeAwarePage
             }
         }
     }
+
+    private void FreeTextInputEntry_Completed(object sender, EventArgs e)
+    {
+        FreeTextInputEntry.Unfocus();
+    }
     #endregion
 
     #region ISwipeAwarePage Implementation

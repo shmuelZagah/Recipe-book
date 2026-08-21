@@ -20,4 +20,6 @@ public class IngredientConversion
     public double AmountPerCup { get; set; }
 
     public string Category { get; set; }
+
+    public string PluralKeyword { get; set; }
 }

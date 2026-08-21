@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Recipe_book.Views.Items.Popups.EditDisplayModalControl"
+             FlowDirection="RightToLeft">
+
+    <!-- הוספנו x:Name לגריד -->
+    <Grid x:Name="OverlayGrid" BackgroundColor="#99000000" IsVisible="{Binding IsEditDisplayModalOpen}">
+
+        <!-- הוספנו x:Name למסגרת הלבנה -->
+        <Frame x:Name="ModalFrame" VerticalOptions="Center" HorizontalOptions="Center" WidthRequest="320" CornerRadius="15" Padding="20" BackgroundColor="White" HasShadow="True">
+            <VerticalStackLayout Spacing="15">
+
+                <Label Text="תיקון טקסט" FontAttributes="Bold" FontSize="18" HorizontalOptions="Center" TextColor="{StaticResource Primary}"/>
+
+                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10" Margin="0,10,0,10" VerticalOptions="Center">
+                    <Label Grid.Column="0" 
+                           Text="{Binding EditModalQuantity}" 
+                           FontSize="20" 
+                           FontAttributes="Bold" 
+                           TextColor="Black" 
+                           VerticalOptions="Center" />
+
+                    <Frame Grid.Column="1" Padding="0" CornerRadius="8" BorderColor="#E0E0E0" HasShadow="False" BackgroundColor="#F9F9F9">
+                        <Entry x:Name="EditEntry"
+                               Text="{Binding EditModalText}" 
+                               ReturnType="Done" 
+                               ReturnCommand="{Binding SaveEditDisplayCommand}" 
+                               Completed="EditEntry_Completed"
+                               Margin="10,0" 
+                               VerticalOptions="Center"/>
+                    </Frame>
+                </Grid>
+
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,5,0,0">
+                    <Button Grid.Column="0" Text="ביטול" Command="{Binding CloseEditDisplayModalCommand}" BackgroundColor="Transparent" TextColor="Gray" BorderColor="Gray" BorderWidth="1" CornerRadius="8" HeightRequest="45" FontAttributes="Bold"/>
+                    <Button Grid.Column="1" Text="שמור" Command="{Binding SaveEditDisplayCommand}" Clicked="EditEntry_Completed" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="8" HeightRequest="45" FontAttributes="Bold"/>
+                </Grid>
+
+            </VerticalStackLayout>
+        </Frame>
+    </Grid>
+</ContentView>

@@ -4,10 +4,12 @@
              xmlns:vm="clr-namespace:Recipe_book.ViewModels"
              xmlns:items ="clr-namespace:Recipe_book.Views.Items"
              x:Class="Recipe_book.Views.Pages.ShoppingListPage"
+             xmlns:popups="clr-namespace:Recipe_book.Views.Items.Popups"
              FlowDirection="RightToLeft">
     <Grid>
         <Grid BackgroundColor="#F5F5F5" RowDefinitions="Auto, *">
 
+            <!-- כותרת עליונה -->
             <Border Grid.Row="0" BackgroundColor="White" StrokeThickness="0" Margin="0,0,0,5" ZIndex="5">
                 <Border.Shadow>
                     <Shadow Brush="Black" Offset="0,4" Opacity="0.05" Radius="6" />
@@ -50,12 +52,13 @@
                 </Grid>
             </Border>
 
+            <!-- תוכן מרכזי -->
             <Grid Grid.Row="1">
 
                 <Grid RowDefinitions="Auto, *">
 
+                    <!-- סרגל כלים: הסר פריטים -->
                     <Grid Grid.Row="0" Padding="20,10,20,5" ColumnDefinitions="*, Auto">
-
                         <Label Grid.Column="1" 
                            HorizontalOptions="End" 
                            Text="הסר פריטים שסומנו" 
@@ -70,6 +73,7 @@
                         </Label>
                     </Grid>
 
+                    <!-- רשימת הקניות -->
                     <CollectionView Grid.Row="1" ItemsSource="{Binding GroupedShoppingItems}" IsGrouped="True" Margin="20,0,20,0">
                         <CollectionView.Triggers>
                             <DataTrigger TargetType="CollectionView" Binding="{Binding IsHeaderOpen}" Value="True">
@@ -84,12 +88,16 @@
                             </DataTemplate>
                         </CollectionView.GroupHeaderTemplate>
 
+                        <!-- תבנית המצרך הבודד -->
                         <CollectionView.ItemTemplate>
                             <DataTemplate>
                                 <Frame Padding="10,5" Margin="0,5" CornerRadius="8" HasShadow="False" BorderColor="#EEEEEE" BackgroundColor="White">
-                                    <Grid ColumnDefinitions="Auto, *">
+                                    <Grid ColumnDefinitions="Auto, *, Auto">
+
+                                        <!-- צ'קבוקס -->
                                         <CheckBox Grid.Column="0" IsChecked="{Binding IsBought}" Color="{StaticResource Primary}" VerticalOptions="Center"/>
 
+                                        <!-- שם המצרך -->
                                         <Label Grid.Column="1" Text="{Binding DisplayText}" VerticalOptions="Center" FontSize="16" TextColor="Black" Margin="15,0">
                                             <Label.Triggers>
                                                 <DataTrigger TargetType="Label" Binding="{Binding IsBought}" Value="True">
@@ -98,6 +106,17 @@
                                                 </DataTrigger>
                                             </Label.Triggers>
                                         </Label>
+
+                                        <!-- כפתור העריכה החדש -->
+                                        <ImageButton Grid.Column="2" 
+                                                     Source="pencil_light_withline_icon.svg"
+                                                     WidthRequest="22" HeightRequest="22" 
+                                                     VerticalOptions="Center"
+                                                     BackgroundColor="Transparent"
+                                                     Opacity="0.4"
+                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:ShoppingListViewModel}}, Path=EditItemDisplayCommand}"
+                                                     CommandParameter="{Binding .}" />
+
                                     </Grid>
                                 </Frame>
                             </DataTemplate>
@@ -109,6 +128,7 @@
                     </CollectionView>
                 </Grid>
 
+                <!-- תפריט משיכה מתפריט (Header Dropdown) -->
                 <Border IsVisible="{Binding IsHeaderOpen}" 
                     Padding="15,20" 
                     StrokeShape="RoundRectangle 12" 
@@ -266,6 +286,7 @@
                     </ScrollView>
                 </Border>
 
+                <!-- מסך מיזוג רשימות -->
                 <Grid BackgroundColor="#99000000" IsVisible="{Binding IsMergeModeActive}" ZIndex="20">
                     <Frame VerticalOptions="Center" HorizontalOptions="Center" WidthRequest="320" MaximumHeightRequest="450" CornerRadius="15" Padding="20">
                         <VerticalStackLayout Spacing="15">
@@ -291,17 +312,45 @@
                     </Frame>
                 </Grid>
 
+                <!-- כפתור פלוס מרחף -->
                 <VerticalStackLayout HorizontalOptions="End" VerticalOptions="End" Margin="20,10,20,10" Spacing="15" ZIndex="5">
                     <items:FloatingActionControl 
                     IconSource="add_icon.svg" 
                     ButtonColor="{StaticResource Primary}"
                     ButtonSize="56"
                     IconSize="32"
-                    Command="{Binding AddManualItemCommand}" />
+                    Command="{Binding OpenFreeTextModalCommand}" />
                 </VerticalStackLayout>
 
             </Grid>
         </Grid>
-        <items:LoadingOverlayControl  VerticalOptions="Center" IsLoading="{Binding IsLoading}" LoadingText="{Binding LoadingText}" ZIndex="30"/>
+
+        <!-- חלונית צפה חכמה להוספת מצרך בטקסט חופשי -->
+        <Grid BackgroundColor="#99000000" IsVisible="{Binding IsFreeTextModalOpen}" ZIndex="25">
+            <Frame VerticalOptions="Center" HorizontalOptions="Center" WidthRequest="340" CornerRadius="15" Padding="20" BackgroundColor="White" HasShadow="True">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="מה תרצה להוסיף?" FontAttributes="Bold" FontSize="18" HorizontalOptions="Center" TextColor="{StaticResource Primary}"/>
+                    <Label Text="לדוגמה: 2 קילו עגבניות, חצי חבילת פסטה..." FontSize="12" TextColor="Gray" HorizontalOptions="Center" Margin="0,-5,0,5"/>
+
+                    <Frame Padding="0" CornerRadius="8" BorderColor="#E0E0E0" HasShadow="False" BackgroundColor="#F9F9F9">
+                        <Entry x:Name="FreeTextInputEntry"
+                               Text="{Binding FreeTextInput}" 
+                               Placeholder="הקלד כאן..." 
+                               ReturnType="Done" 
+                               ReturnCommand="{Binding ConfirmFreeTextAddCommand}"
+                               Completed="FreeTextInputEntry_Completed"
+                               Margin="10,0" />
+                    </Frame>
+
+                    <Grid ColumnDefinitions="*, *" ColumnSpacing="15" Margin="0,10,0,0">
+                        <Button Grid.Column="0" Text="ביטול" Command="{Binding CloseFreeTextModalCommand}" BackgroundColor="Transparent" TextColor="Gray" BorderColor="Gray" BorderWidth="1" CornerRadius="8" HeightRequest="45" FontAttributes="Bold"/>
+                        <Button Grid.Column="1" Text="הוסף" Command="{Binding ConfirmFreeTextAddCommand}" Clicked="FreeTextInputEntry_Completed" BackgroundColor="{StaticResource Primary}" TextColor="White" CornerRadius="8" HeightRequest="45" FontAttributes="Bold"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+        </Grid>
+
+        <items:LoadingOverlayControl VerticalOptions="Center" IsLoading="{Binding IsLoading}" LoadingText="{Binding LoadingText}" ZIndex="30"/>
+        <popups:EditDisplayModalControl ZIndex="26" />
     </Grid>
 </ContentView>

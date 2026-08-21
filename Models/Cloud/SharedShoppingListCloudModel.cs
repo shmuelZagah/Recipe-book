@@ -13,6 +13,7 @@ public class SharedCloudItemDto
     [FirestoreProperty("Q")] public double Q { get; set; }
     [FirestoreProperty("U")] public string U { get; set; }
     [FirestoreProperty("C")] public string C { get; set; }
+    public string CD { get; set; }
     [FirestoreProperty("IsBought")] public bool IsBought { get; set; }
 
     [FirestoreProperty("LastActionBy")] public string LastActionBy { get; set; }

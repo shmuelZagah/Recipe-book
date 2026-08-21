@@ -85,6 +85,7 @@ public class RecipesDatabase
         await Database.CreateTableAsync<IngredientConversion>();
         await Database.CreateTableAsync<AbstractShoppingList>();
         await Database.CreateTableAsync<AbstractShoppingListItem>();
+        await Database.CreateTableAsync<UserDictionary>();
 
         // --- Cloud & Garbage Collection ---
         await Database.CreateTableAsync<PendingCloudDeletion>();
@@ -830,6 +831,12 @@ public class RecipesDatabase
     #region Ingredient Conversion Seeding
     //--------------
 
+    public async Task UpdateIngredientConversionAsync(IngredientConversion conversion)
+    {
+        await Init();
+        await Database.UpdateAsync(conversion);
+    }
+
     /// <summary>
     /// Loads the initial dictionary of ingredient measurements and categories from an embedded JSON file.
     /// </summary>
@@ -984,6 +991,23 @@ public class RecipesDatabase
         {
             await Database.InsertAsync(item);
         }
+
+    }
+
+    public async Task<UserDictionary> GetUserDictionaryAsync(string itemName, string unit)
+    {
+        await Init();
+        return await Database.Table<UserDictionary>()
+                             .FirstOrDefaultAsync(u => u.ItemBaseName == itemName && u.UnitBaseName == unit);
+    }
+
+    public async Task SaveUserDictionaryAsync(UserDictionary dict)
+    {
+        await Init();
+        if (dict.Id != 0)
+            await Database.UpdateAsync(dict);
+        else
+            await Database.InsertAsync(dict);
     }
     #endregion
     //--------------

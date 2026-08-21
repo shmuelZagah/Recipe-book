@@ -17,7 +17,10 @@ public partial class SavedShoppingListItem : ObservableObject
     public double Quantity { get; set; }
     public string Unit { get; set; }
 
+    public string PluralName { get; set; }
+
     private string displayText;
+    public string CustomDisplay { get; set; }
     public string DisplayText
     {
         get => displayText;
@@ -34,9 +37,53 @@ public partial class SavedShoppingListItem : ObservableObject
 
     public void UpdateDisplayText()
     {
-        string displayUnit = (string.IsNullOrWhiteSpace(Unit) || Unit.Trim() == "יחידות") ? "" : Unit.Trim();
-        DisplayText = string.IsNullOrWhiteSpace(displayUnit) ?
-            $"{Quantity} {Name?.Trim()}" :
-            $"{Quantity} {displayUnit} {Name?.Trim()}";
+        // אם למדנו משהו ספציפי עבור המצב הנוכחי (יחיד או רבים) - נשתמש בו וזהו.
+        if (!string.IsNullOrWhiteSpace(CustomDisplay))
+        {
+            DisplayText = $"{Quantity} {CustomDisplay}";
+            return;
+        }
+
+        // --- מכאן והלאה: מנוע הניחוש החכם של המערכת (Fallback) ---
+        string displayUnit = string.IsNullOrWhiteSpace(Unit) || Unit.Trim() == "יחידות" ? "" : Unit.Trim();
+        string displayName = Name?.Trim();
+        bool hasUnit = !string.IsNullOrWhiteSpace(displayUnit);
+
+        var packagingUnits = new List<string> { "חבילה", "קופסה", "בקבוק", "צנצנת", "פחית", "שקית", "מארז", "קרטון", "ארגז" }; // הוספנו ארגז
+        bool isPackagingUnit = packagingUnits.Contains(displayUnit);
+
+        if (Quantity > 1 || (Quantity != 1 && Quantity > 0))
+        {
+            if (hasUnit && isPackagingUnit)
+            {
+                // מנחש ישר את הרבים עבור האריזה
+                if (displayUnit == "חבילה") displayUnit = "חבילות";
+                else if (displayUnit == "קופסה") displayUnit = "קופסאות";
+                else if (displayUnit == "בקבוק") displayUnit = "בקבוקים";
+                else if (displayUnit == "צנצנת") displayUnit = "צנצנות";
+                else if (displayUnit == "פחית") displayUnit = "פחיות";
+                else if (displayUnit == "שקית") displayUnit = "שקיות";
+                else if (displayUnit == "מארז") displayUnit = "מארזים";
+                else if (displayUnit == "קרטון") displayUnit = "קרטונים";
+                else if (displayUnit == "ארגז") displayUnit = "ארגזים"; // הוספנו ארגז
+            }
+            else if (!hasUnit && !string.IsNullOrWhiteSpace(PluralName))
+            {
+                displayName = PluralName.Trim();
+            }
+        }
+
+        if (!hasUnit)
+        {
+            DisplayText = $"{Quantity} {displayName}";
+        }
+        else if (isPackagingUnit)
+        {
+            DisplayText = $"{Quantity} {displayUnit} של {displayName}";
+        }
+        else
+        {
+            DisplayText = $"{Quantity} {displayUnit} {displayName}";
+        }
     }
 }

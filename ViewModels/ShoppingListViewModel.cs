@@ -63,6 +63,15 @@ public partial class ShoppingListViewModel : ObservableObject
     private IDisposable _cloudListener;
     private bool _isSyncingFromCloud = false;
 
+    [ObservableProperty] private bool isFreeTextModalOpen = false;
+    [ObservableProperty] private string freeTextInput;
+
+
+    [ObservableProperty] private bool isEditDisplayModalOpen;
+    [ObservableProperty] private string editModalText;
+    [ObservableProperty] private double editModalQuantity;
+    private SavedShoppingListItem _itemBeingEdited;
+
     #endregion
     //------------------------------
 
@@ -455,6 +464,376 @@ public partial class ShoppingListViewModel : ObservableObject
     #endregion
 
     #region Standard Maintenance Commands
+
+    // 1. פתיחת החלון והזנת הנתונים
+    [RelayCommand]
+    public void EditItemDisplay(object itemObj)
+    {
+        if (itemObj is not SavedShoppingListItem item) return;
+
+        _itemBeingEdited = item;
+
+        // מעבירים לחלון את הכמות, ואת הטקסט הנוכחי 
+        EditModalQuantity = item.Quantity;
+        EditModalText = !string.IsNullOrWhiteSpace(item.CustomDisplay) ? item.CustomDisplay :
+                        (!string.IsNullOrWhiteSpace(item.Unit) ? $"{item.Unit} {item.Name}" : item.Name);
+
+        IsEditDisplayModalOpen = true;
+    }
+
+    // 2. סגירת החלון בלי לשמור (ביטול)
+    [RelayCommand]
+    public void CloseEditDisplayModal()
+    {
+        IsEditDisplayModalOpen = false;
+        _itemBeingEdited = null;
+        EditModalText = string.Empty;
+    }
+
+    // 3. שמירה, עדכון, ולמידה!
+    [RelayCommand]
+    public async Task SaveEditDisplayAsync()
+    {
+        // אם אין מצרך או שהטקסט ריק - סוגרים ויוצאים
+        if (_itemBeingEdited == null || string.IsNullOrWhiteSpace(EditModalText))
+        {
+            CloseEditDisplayModal();
+            return;
+        }
+
+        var item = _itemBeingEdited;
+        IsEditDisplayModalOpen = false;
+
+        // בודקים אם בכלל היה שינוי
+        string currentText = !string.IsNullOrWhiteSpace(item.CustomDisplay) ? item.CustomDisplay :
+                            (!string.IsNullOrWhiteSpace(item.Unit) ? $"{item.Unit} {item.Name}" : item.Name);
+
+        if (EditModalText.Trim() == currentText)
+        {
+            _itemBeingEdited = null;
+            return;
+        }
+
+        bool isPlural = item.Quantity > 1 || (item.Quantity != 1 && item.Quantity > 0);
+
+        // --- א. עדכון המצרך ---
+        item.CustomDisplay = EditModalText.Trim();
+        item.UpdateDisplayText();
+        await _database.SaveShoppingListItemAsync(item);
+
+        // --- ב. אימון המודל (הזיכרון) ---
+        string safeUnit = string.IsNullOrWhiteSpace(item.Unit) ? "" : item.Unit;
+        var dict = await _database.GetUserDictionaryAsync(item.Name, safeUnit) ?? new UserDictionary
+        {
+            ItemBaseName = item.Name,
+            UnitBaseName = safeUnit
+        };
+
+        if (isPlural) dict.PluralDisplay = item.CustomDisplay;
+        else dict.SingularDisplay = item.CustomDisplay;
+
+        await _database.SaveUserDictionaryAsync(dict);
+
+        // --- ג. סנכרון ויראלי לענן ---
+        if (CurrentShoppingList != null && CurrentShoppingList.IsShared)
+        {
+            var firestore = new FirestoreService();
+            var dto = new SharedCloudItemDto
+            {
+                DocumentId = item.Name.Replace("/", "_"),
+                N = item.Name,
+                Q = item.Quantity,
+                U = item.Unit,
+                C = item.Category,
+                IsBought = item.IsBought,
+                CD = item.CustomDisplay
+            };
+            await firestore.UpdateSharedListItemAsync(CurrentShoppingList.CloudId, dto);
+        }
+
+        _itemBeingEdited = null;
+    }
+
+    [RelayCommand]
+    public void OpenFreeTextModal()
+    {
+        if (!IsEditingTemplateMode && (CurrentShoppingList == null || CurrentShoppingList.Id == -1)) return;
+        if (IsEditingTemplateMode && CurrentAbstractTemplate == null) return;
+
+        FreeTextInput = string.Empty; // איפוס השדה
+        IsFreeTextModalOpen = true;
+        IsListsMenuOpen = false; // סגירת תפריט צדדי אם פתוח
+    }
+
+    [RelayCommand]
+    public void CloseFreeTextModal() => IsFreeTextModalOpen = false;
+
+    [RelayCommand]
+    public async Task ConfirmFreeTextAddAsync()
+    {
+        if (string.IsNullOrWhiteSpace(FreeTextInput)) return;
+
+        var parsedResult = TextHelpers.ParseIngredientText(FreeTextInput);
+
+        IsFreeTextModalOpen = false;
+
+        if (string.IsNullOrWhiteSpace(parsedResult.Name)) return;
+
+        string itemName = parsedResult.Name;
+        double addedQty = parsedResult.Quantity;
+        string safeUnit = parsedResult.Unit;
+        string rawText = parsedResult.RawText; // הטקסט שהמשתמש כתב בלי המספר!
+        string finalCategory = null;
+
+        var itemVariations = TextHelpers.GetPossibleSingulars(itemName);
+
+        double normalizedAddedQty = addedQty;
+        string normalizedSafeUnit = safeUnit;
+
+        if (safeUnit == "ק״ג") { normalizedAddedQty = addedQty * 1000; normalizedSafeUnit = "גרם"; }
+        else if (safeUnit == "ליטר") { normalizedAddedQty = addedQty * 1000; normalizedSafeUnit = "מ״ל"; }
+
+        // שלב א' - נרמול
+        var conversions = await _database.GetIngredientConversionsAsync();
+        var convMatch = conversions.FirstOrDefault(c => itemVariations.Any(p => p == c.Keyword));
+
+        string pluralToSave = null;
+
+        if (convMatch != null && !string.IsNullOrWhiteSpace(convMatch.Category))
+        {
+            finalCategory = convMatch.Category;
+
+            if (itemName != convMatch.Keyword && string.IsNullOrWhiteSpace(convMatch.PluralKeyword))
+            {
+                convMatch.PluralKeyword = itemName;
+                await _database.UpdateIngredientConversionAsync(convMatch);
+            }
+
+            pluralToSave = convMatch.PluralKeyword;
+
+            var packagingUnits = new List<string> { "חבילה", "קופסה", "בקבוק", "צנצנת", "פחית", "שקית", "מארז", "קרטון" };
+            if (!packagingUnits.Contains(safeUnit))
+            {
+                itemName = convMatch.Keyword;
+            }
+
+            itemVariations = itemVariations.Union(TextHelpers.GetPossibleSingulars(itemName)).ToList();
+        }
+        else
+        {
+            // מוודאים ש"כללי" נמצאת כאופציה לבחירה מתוך הרשימה
+            var categoriesList = AppConstants.ShoppingCategories.ToList();
+            if (!categoriesList.Contains("כללי")) categoriesList.Add("כללי");
+
+            // מקפיצים חלון עם כפתור "ביטול" אמיתי
+            string selectedCategory = await Application.Current.MainPage.DisplayActionSheet(
+                $"לאיזו מחלקה שייך '{itemName}'?",
+                "ביטול",
+                null,
+                categoriesList.ToArray());
+
+            // אם המשתמש לחץ על "ביטול" או מחוץ לחלון - עוצרים הכל ולא מוסיפים כלום!
+            if (selectedCategory == "ביטול" || string.IsNullOrEmpty(selectedCategory))
+            {
+                return;
+            }
+
+            finalCategory = selectedCategory;
+
+            var newConversion = new Recipe_book.Models.Recipes.IngredientConversion
+            {
+                Keyword = itemName,
+                BaseUnit = safeUnit,
+                AmountPerCup = 0,
+                Category = finalCategory
+            };
+            await _database.AddIngredientConversionAsync(newConversion);
+        }
+
+        // ==========================================
+        // הזיכרון החכם מכה שנית - למידה אוטומטית!
+        // ==========================================
+        string actualUnitToSave = normalizedSafeUnit == "יחידות" ? "" : normalizedSafeUnit;
+        var dict = await _database.GetUserDictionaryAsync(itemName, actualUnitToSave) ?? new UserDictionary { ItemBaseName = itemName, UnitBaseName = actualUnitToSave };
+
+        // הלמידה האגרסיבית: ברגע שהקלדת, הוא שומר את הסגנון שלך מיד!
+        if (!string.IsNullOrWhiteSpace(rawText))
+        {
+            if (addedQty > 1 || (addedQty != 1 && addedQty > 0))
+                dict.PluralDisplay = rawText; // שומר "קרטונים של פחיות סודה"
+            else
+                dict.SingularDisplay = rawText; // שומר "קרטון פחיות סודה" או "חבילת סוכריות"
+
+            await _database.SaveUserDictionaryAsync(dict);
+        }
+
+        bool wasMerged = false;
+
+        // שלב ב' - חיפוש ומיזוג
+        if (IsEditingTemplateMode)
+        {
+            var templateItems = await _database.GetItemsForAbstractListAsync(CurrentAbstractTemplate.Id);
+            var match = templateItems.FirstOrDefault(i =>
+            {
+                if (!itemVariations.Intersect(TextHelpers.GetPossibleSingulars(i.Name)).Any()) return false;
+                string iUnit = string.IsNullOrWhiteSpace(i.Unit) ? "יחידות" : i.Unit;
+                string normalizedIUnit = iUnit == "ק״ג" ? "גרם" : (iUnit == "ליטר" ? "מ״ל" : iUnit);
+                return normalizedSafeUnit == normalizedIUnit;
+            });
+
+            if (match != null)
+            {
+                double existingQty = match.Quantity;
+                string existingUnit = string.IsNullOrWhiteSpace(match.Unit) ? "יחידות" : match.Unit;
+                if (existingUnit == "ק״ג" || existingUnit == "ליטר") existingQty *= 1000;
+
+                double totalBaseQty = existingQty + normalizedAddedQty;
+                string finalUnit = normalizedSafeUnit;
+
+                if ((finalUnit == "גרם" || finalUnit == "מ״ל") && totalBaseQty >= 1000)
+                {
+                    totalBaseQty /= 1000.0;
+                    finalUnit = finalUnit == "גרם" ? "ק״ג" : "ליטר";
+                }
+
+                match.Quantity = totalBaseQty;
+                match.Unit = finalUnit == "יחידות" ? "" : finalUnit;
+                if (!string.IsNullOrEmpty(pluralToSave)) match.PluralName = pluralToSave;
+
+                // שימוש בלמידה!
+                match.CustomDisplay = match.Quantity > 1 ? dict.PluralDisplay : dict.SingularDisplay;
+
+                match.UpdateDisplayText();
+                await _database.SaveAbstractShoppingListItemAsync(match);
+                wasMerged = true;
+            }
+        }
+        else
+        {
+            var currentItems = await _database.GetItemsForShoppingListAsync(CurrentShoppingList.Id);
+            var match = currentItems.FirstOrDefault(i =>
+            {
+                if (!itemVariations.Intersect(TextHelpers.GetPossibleSingulars(i.Name)).Any()) return false;
+                string iUnit = string.IsNullOrWhiteSpace(i.Unit) ? "יחידות" : i.Unit;
+                string normalizedIUnit = iUnit == "ק״ג" ? "גרם" : (iUnit == "ליטר" ? "מ״ל" : iUnit);
+                return normalizedSafeUnit == normalizedIUnit;
+            });
+
+            if (match != null)
+            {
+                double existingQty = match.Quantity;
+                string existingUnit = string.IsNullOrWhiteSpace(match.Unit) ? "יחידות" : match.Unit;
+                if (existingUnit == "ק״ג" || existingUnit == "ליטר") existingQty *= 1000;
+
+                double totalBaseQty = existingQty + normalizedAddedQty;
+                string finalUnit = normalizedSafeUnit;
+
+                if ((finalUnit == "גרם" || finalUnit == "מ״ל") && totalBaseQty >= 1000)
+                {
+                    totalBaseQty /= 1000.0;
+                    finalUnit = finalUnit == "גרם" ? "ק״ג" : "ליטר";
+                }
+
+                match.Quantity = totalBaseQty;
+                match.Unit = finalUnit == "יחידות" ? "" : finalUnit;
+                if (!string.IsNullOrEmpty(pluralToSave)) match.PluralName = pluralToSave;
+
+                // שימוש בלמידה!
+                match.CustomDisplay = match.Quantity > 1 ? dict.PluralDisplay : dict.SingularDisplay;
+
+                match.UpdateDisplayText();
+                await _database.SaveShoppingListItemAsync(match);
+
+                if (CurrentShoppingList.IsShared)
+                {
+                    var firestore = new FirestoreService();
+                    var dto = new SharedCloudItemDto
+                    {
+                        DocumentId = match.Name.Replace("/", "_"),
+                        N = match.Name,
+                        Q = match.Quantity,
+                        U = match.Unit,
+                        C = match.Category,
+                        IsBought = match.IsBought,
+                        CD = match.CustomDisplay
+                    };
+                    await firestore.UpdateSharedListItemAsync(CurrentShoppingList.CloudId, dto);
+                }
+                wasMerged = true;
+            }
+        }
+
+        // שלב ג' - יצירת מצרך חדש
+        if (!wasMerged)
+        {
+            double finalQty = normalizedAddedQty;
+            string finalUnit = normalizedSafeUnit;
+
+            if ((finalUnit == "גרם" || finalUnit == "מ״ל") && finalQty >= 1000)
+            {
+                finalQty /= 1000.0;
+                finalUnit = finalUnit == "גרם" ? "ק״ג" : "ליטר";
+            }
+
+            if (finalUnit == "יחידות") finalUnit = "";
+
+            string newCustomDisplay = finalQty > 1 ? dict.PluralDisplay : dict.SingularDisplay;
+            if (string.IsNullOrWhiteSpace(newCustomDisplay) && finalQty > 1) newCustomDisplay = dict.SingularDisplay;
+
+            if (IsEditingTemplateMode)
+            {
+                var newItem = new AbstractShoppingListItem
+                {
+                    ListId = CurrentAbstractTemplate.Id,
+                    Name = itemName,
+                    PluralName = pluralToSave,
+                    Quantity = finalQty,
+                    Unit = finalUnit,
+                    Category = finalCategory,
+                    CustomDisplay = newCustomDisplay
+                };
+                newItem.UpdateDisplayText();
+                await _database.SaveAbstractShoppingListItemAsync(newItem);
+            }
+            else
+            {
+                var newItem = new SavedShoppingListItem
+                {
+                    ListId = CurrentShoppingList.Id,
+                    Name = itemName,
+                    PluralName = pluralToSave,
+                    Quantity = finalQty,
+                    Unit = finalUnit,
+                    Category = finalCategory,
+                    IsBought = false,
+                    CustomDisplay = newCustomDisplay
+                };
+                newItem.UpdateDisplayText();
+                await _database.SaveShoppingListItemAsync(newItem);
+
+                if (CurrentShoppingList != null && CurrentShoppingList.IsShared)
+                {
+                    var authService = IPlatformApplication.Current.Services.GetService<IFirebaseAuthService>();
+                    var firestore = new FirestoreService();
+                    var dto = new SharedCloudItemDto
+                    {
+                        DocumentId = newItem.Name.Replace("/", "_"),
+                        N = newItem.Name,
+                        Q = newItem.Quantity,
+                        U = newItem.Unit,
+                        C = newItem.Category,
+                        IsBought = newItem.IsBought,
+                        LastActionBy = authService?.GetCurrentUserId(),
+                        CD = newItem.CustomDisplay
+                    };
+                    await firestore.UpdateSharedListItemAsync(CurrentShoppingList.CloudId, dto);
+                }
+            }
+        }
+
+        await GenerateListAsync();
+    }
+
     [RelayCommand]
     public async Task GenerateListAsync()
     {
@@ -584,16 +963,30 @@ public partial class ShoppingListViewModel : ObservableObject
         }
 
         var conversions = await _database.GetIngredientConversionsAsync();
-        var convMatch = conversions.FirstOrDefault(c => itemVariations.Contains(c.Keyword));
+        var convMatch = conversions.FirstOrDefault(c => itemVariations.Any(p => c.Keyword == p || itemName.Contains(c.Keyword) || p.Contains(c.Keyword)));
 
         if (convMatch != null && !string.IsNullOrWhiteSpace(convMatch.Category))
         {
             finalCategory = convMatch.Category;
+            itemName = convMatch.Keyword;
         }
         else
         {
             string selectedCategory = await Application.Current.MainPage.DisplayActionSheet($"לאיזו מחלקה שייך '{itemName}'?", "דלג", null, AppConstants.ShoppingCategories);
             finalCategory = (selectedCategory == "דלג" || string.IsNullOrEmpty(selectedCategory)) ? "כללי" : selectedCategory;
+
+            if (selectedCategory != "דלג" && !string.IsNullOrEmpty(selectedCategory))
+            {
+                var newConversion = new Recipe_book.Models.Recipes.IngredientConversion
+                {
+                    Keyword = itemName,
+                    BaseUnit = "יחידות",
+                    AmountPerCup = 0,
+                    Category = finalCategory
+                };
+
+                await _database.AddIngredientConversionAsync(newConversion);
+            }
         }
 
         if (IsEditingTemplateMode)
